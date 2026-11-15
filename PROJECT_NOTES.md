@@ -1,10 +1,10 @@
-# Wobbly Life: House Mods for Our Daughter (project notes)
+# Wobbly Life: House Mods for Skylar (project notes)
 
 This file is the project's memory and handoff. Anyone picking up work (including the project manager or Opus) starts here.
 
 ## Goal
 
-Let a 5-year-old decorate her house in the main world of Wobbly Life, then later become a black cat everywhere in the game.
+Let Skylar, age 5, decorate her house in the main world of Wobbly Life, then later become a black cat everywhere in the game.
 
 Playing on one computer, with family. Steam version only, using BepInEx 5 (Mono).
 

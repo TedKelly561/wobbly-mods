@@ -68,3 +68,7 @@ Tell the parent:
 - `HideManagerGameObject = true` is set, with a backup kept.
 - Scout 0.3 is installed and verified by its hash.
 - `WobblyScout-run2.zip` is on the Desktop, with scene snapshots in it, and the parent knows to send it.
+
+## Handoff
+
+When done, log a handoff in Switchyard Hub to the project **"🐟 Wobbly Life mods (Skylar & family)"**, with your own agent name.

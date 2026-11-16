@@ -58,3 +58,7 @@ offer to rename it to `WobblyMods.Scout.dll.off`. Only do it if the parent says 
 ## Done when
 
 The two settings lines are correct (with a backup kept), the parent has tested, and the summary is ready to paste.
+
+## Handoff
+
+When done, log a handoff in Switchyard Hub to the project **"🐟 Wobbly Life mods (Skylar & family)"**, with your own agent name.

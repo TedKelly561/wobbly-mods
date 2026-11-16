@@ -177,6 +177,8 @@ The current menu assumes one player: one mouse, one camera (`Camera.main`), one 
 
 ## How the agent team works
 
+- **Switchyard Hub project: "🐟 Wobbly Life mods (Skylar & family)"** (created 2026-11-16). Every session logs its handoff there with its own agent name, and test or setup jobs for the home PC go there as tasks.
+
 - The project manager session owns this file and the task board. It writes the decisions and marks tasks done.
 - A task goes to another session only when its row lists everything it needs and how to check it's done.
 - Each session works on its own branch and opens a draft PR. The project manager reviews it before anything merges.

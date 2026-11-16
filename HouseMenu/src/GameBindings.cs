@@ -82,7 +82,7 @@ namespace WobblyMods.HouseMenu
         /// <summary>
         /// The part of the screen that belongs to that player, in IMGUI coordinates (top-left origin).
         /// TODO(T14): use the game's split-screen layout (for example the player's camera pixelRect,
-        /// flipped to top-left origin). Until then: 1 player = whole screen, 2 = left/right halves,
+        /// flipped to top-left origin). Until then: 1 player = whole screen, 2 = top/bottom halves,
         /// 3 or 4 = quarters.
         /// </summary>
         public static Rect ScreenAreaFor(int playerIndex, int playerCount)
@@ -108,7 +108,8 @@ namespace WobblyMods.HouseMenu
             }
             if (playerCount == 2)
             {
-                return new Rect(playerIndex == 0 ? 0 : w / 2, 0, w / 2, h);
+                // The game stacks two players top and bottom (Scout report 2).
+                return new Rect(0, playerIndex == 0 ? 0 : h / 2, w, h / 2);
             }
             float x = (playerIndex % 2) * (w / 2);
             float y = (playerIndex / 2) * (h / 2);

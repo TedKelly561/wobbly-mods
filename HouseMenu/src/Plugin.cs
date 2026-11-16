@@ -33,6 +33,11 @@ namespace WobblyMods.HouseMenu
         private readonly object[] _rewiredPlayers = new object[SessionManager.MaxPlayers];
         private float _nextPlayerSync;
 
+        // The game's own PlayerControllers (by split-screen index), and whether we've paused each one's controls.
+        private readonly object[] _playerControllers = new object[SessionManager.MaxPlayers];
+        private readonly object[] _pauseHandles = new object[SessionManager.MaxPlayers];
+        private readonly object[] _pausedController = new object[SessionManager.MaxPlayers];
+
         private void Awake()
         {
             Log = Logger;
@@ -78,6 +83,7 @@ namespace WobblyMods.HouseMenu
             }
 
             _sessions.Update();
+            UpdateGamePause();
 
             if (Input.GetKeyDown(_undoKey.Value))
             {
@@ -98,6 +104,7 @@ namespace WobblyMods.HouseMenu
 
             for (int i = 0; i < SessionManager.MaxPlayers; i++)
             {
+                _playerControllers[i] = i < count ? locals[i] : null;
                 _rewiredPlayers[i] = i < count ? GameReflection.RewiredPlayerOf(locals[i]) : null;
             }
 
@@ -139,6 +146,49 @@ namespace WobblyMods.HouseMenu
                 else
                 {
                     _sessions.Leave(i);
+                }
+            }
+        }
+
+        /// <summary>
+        /// While a player's menu is open, pause that player's game controls (so A doesn't also jump)
+        /// and show their cursor, using the game's own per-player calls. Every pause is matched by a resume
+        /// with the same handle, including when a player leaves.
+        /// </summary>
+        private void UpdateGamePause()
+        {
+            for (int i = 0; i < SessionManager.MaxPlayers; i++)
+            {
+                PlayerSession session = _sessions.Get(i);
+                object controller = _playerControllers[i];
+                bool wantPaused = session != null && session.IsOpen && controller != null;
+
+                // Resume if the menu closed, or the paused controller is no longer this player's.
+                if (_pausedController[i] != null && (!wantPaused || !ReferenceEquals(_pausedController[i], controller)))
+                {
+                    GameReflection.SetGameplayPaused(_pausedController[i], _pauseHandles[i], false);
+                    _pausedController[i] = null;
+                }
+
+                if (wantPaused && _pausedController[i] == null)
+                {
+                    if (_pauseHandles[i] == null) _pauseHandles[i] = new object();
+                    if (GameReflection.SetGameplayPaused(controller, _pauseHandles[i], true))
+                    {
+                        _pausedController[i] = controller;
+                    }
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            for (int i = 0; i < SessionManager.MaxPlayers; i++)
+            {
+                if (_pausedController[i] != null)
+                {
+                    GameReflection.SetGameplayPaused(_pausedController[i], _pauseHandles[i], false);
+                    _pausedController[i] = null;
                 }
             }
         }

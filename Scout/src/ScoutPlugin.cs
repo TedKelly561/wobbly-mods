@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,7 +25,7 @@ namespace WobblyMods.Scout
     /// A scene snapshot is taken automatically 15 seconds after every scene loads,
     /// and again any time F9 is pressed (if the game uses Unity's legacy input).
     /// </summary>
-    [BepInPlugin("wobblymods.scout", "Wobbly Scout", "0.2.0")]
+    [BepInPlugin("wobblymods.scout", "Wobbly Scout", "0.3.0")]
     public class ScoutPlugin : BaseUnityPlugin
     {
         private const float SnapshotDelaySeconds = 15f;
@@ -45,6 +44,16 @@ namespace WobblyMods.Scout
             "material", "decor", "customi"
         };
 
+        // Exact class names to always report, even though they match no keyword.
+        private static readonly string[] ExactTypes =
+        {
+            "GameInstance", "GameplayCamera", "DynamicObject", "WorldDynamicObject", "NetworkPrefab",
+            "WorldManager", "FreemodeGamemode", "ModGamemode", "UnitySingleton`1", "PlayerBody"
+        };
+
+        private readonly List<float> _pendingSnapshots = new List<float>();
+        private readonly List<string> _pendingReasons = new List<string>();
+
         private string _outDir;
         private int _snapshotCount;
         private bool _legacyInputWorks = true;
@@ -60,6 +69,13 @@ namespace WobblyMods.Scout
                 WriteSafe("01_types.txt", BuildTypeReport);
 
                 SceneManager.sceneLoaded += OnSceneLoaded;
+
+                // Run from our own hidden object: some games destroy BepInEx's object on the first scene
+                // load, which stopped Scout 0.2's snapshots.
+                var runnerObject = new GameObject("WobblyScoutRunner");
+                runnerObject.hideFlags = HideFlags.HideAndDontSave;
+                DontDestroyOnLoad(runnerObject);
+                runnerObject.AddComponent<ScoutRunner>().Owner = this;
                 Logger.LogInfo("Wobbly Scout ready. Reports go to " + _outDir + ". Press F9 for a snapshot.");
             }
             catch (Exception e)
@@ -68,12 +84,27 @@ namespace WobblyMods.Scout
             }
         }
 
-        private void OnDestroy()
+        // No OnDestroy unsubscribe on purpose: if the game destroys BepInEx's object, Scout must keep
+        // hearing scene loads. Scout lives for the whole game session.
+
+        /// <summary>Called every frame by ScoutRunner.</summary>
+        internal void Tick()
         {
-            SceneManager.sceneLoaded -= OnSceneLoaded;
+            float now = Time.realtimeSinceStartup;
+            for (int i = _pendingSnapshots.Count - 1; i >= 0; i--)
+            {
+                if (now >= _pendingSnapshots[i])
+                {
+                    string reason = _pendingReasons[i];
+                    _pendingSnapshots.RemoveAt(i);
+                    _pendingReasons.RemoveAt(i);
+                    TakeSnapshot(reason);
+                }
+            }
+            PollF9();
         }
 
-        private void Update()
+        private void PollF9()
         {
             if (!_legacyInputWorks)
             {
@@ -97,13 +128,8 @@ namespace WobblyMods.Scout
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            StartCoroutine(SnapshotAfterDelay(scene.name));
-        }
-
-        private IEnumerator SnapshotAfterDelay(string sceneName)
-        {
-            yield return new WaitForSecondsRealtime(SnapshotDelaySeconds);
-            TakeSnapshot("auto-" + sceneName);
+            _pendingSnapshots.Add(Time.realtimeSinceStartup + SnapshotDelaySeconds);
+            _pendingReasons.Add("auto-" + scene.name);
         }
 
         private void TakeSnapshot(string reason)
@@ -179,7 +205,7 @@ namespace WobblyMods.Scout
 
                 Type[] types = GetTypesSafe(asm);
                 List<Type> matches = types
-                    .Where(t => t != null && MatchesKeyword(t.Name))
+                    .Where(t => t != null && (MatchesKeyword(t.Name) || ExactTypes.Contains(t.Name)))
                     .OrderBy(t => t.FullName)
                     .ToList();
                 if (matches.Count == 0)

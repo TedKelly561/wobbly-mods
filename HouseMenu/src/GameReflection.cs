@@ -44,8 +44,50 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         public static UnityEngine.Camera CameraOf(object playerController)
         {
-            object gameplayCamera = Call(playerController, "GetGameplayCamera");
+            object gameplayCamera = Call(playerController, "GetGameplayCamera") ?? Get(playerController, "gameplayCamera");
             return Call(gameplayCamera, "GetCamera") as UnityEngine.Camera;
+        }
+
+        /// <summary>Player N's PlayerControllerInputManager (method or field, both seen in Scout report 1).</summary>
+        public static object InputManagerOf(object playerController)
+        {
+            return Call(playerController, "GetPlayerControllerInputManager") ?? Get(playerController, "controllerInputManager");
+        }
+
+        /// <summary>
+        /// Pauses or resumes one player's game controls and shows or hides their cursor, using the game's own
+        /// per-player calls (Scout report 1): DisableGameplayInput(handle, bResetTransformInput) /
+        /// EnableGameplayInput(handle), ShowCursor(handle) / HideCursor(handle).
+        /// Each pause must be matched by a resume with the same handle. Returns false if the calls aren't found.
+        /// </summary>
+        public static bool SetGameplayPaused(object playerController, object handle, bool paused)
+        {
+            object input = InputManagerOf(playerController);
+            if (input == null) return false;
+
+            bool ok = paused
+                ? CallWith(input, "DisableGameplayInput", handle, true)
+                : CallWith(input, "EnableGameplayInput", handle);
+            CallWith(input, paused ? "ShowCursor" : "HideCursor", handle);
+            return ok;
+        }
+
+        /// <summary>Calls a method with exactly these arguments. Returns false if it isn't found or throws.</summary>
+        public static bool CallWith(object target, string method, params object[] args)
+        {
+            if (target == null) return false;
+            try
+            {
+                MethodInfo m = target.GetType().GetMethods(Any)
+                    .FirstOrDefault(x => x.Name == method && x.GetParameters().Length == args.Length);
+                if (m == null) return false;
+                m.Invoke(m.IsStatic ? null : target, args);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -54,8 +96,8 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         public static object RewiredPlayerOf(object playerController)
         {
-            object inputManager = Call(playerController, "GetPlayerControllerInputManager");
-            return Get(inputManager, "player");
+            object inputManager = InputManagerOf(playerController);
+            return Call(inputManager, "GetRewiredPlayer") ?? Get(inputManager, "player");
         }
 
         public static object Get(object target, string member)

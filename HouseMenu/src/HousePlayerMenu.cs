@@ -88,17 +88,20 @@ namespace WobblyMods.HouseMenu
 
         private void Spawn(CatalogItem item)
         {
-            GameObject placed = GameBindings.Spawn(item, Player);
-            if (placed == null)
+            _session.Status = "Placing " + item.DisplayName + "...";
+            PlayerSession session = _session;
+            GameBindings.Spawn(item, Player, (placed, problem) =>
             {
-                _session.Status = GameBindings.SpawnReady
-                    ? "Could not place " + item.DisplayName + "."
-                    : "Spawning isn't connected to the game yet.";
-                return;
-            }
+                if (placed == null)
+                {
+                    session.Status = "Couldn't place " + item.DisplayName + ".";
+                    Plugin.Log.LogWarning("Player " + (Player + 1) + " couldn't place " + item.Id + ": " + problem);
+                    return;
+                }
 
-            _session.Undo.Push("placed " + item.DisplayName, () => ObjectEdits.Remove(placed));
-            _session.Status = "Placed " + item.DisplayName + ".";
+                session.Undo.Push("placed " + item.DisplayName, () => ObjectEdits.Remove(placed));
+                session.Status = "Placed " + item.DisplayName + ".";
+            });
         }
 
         private void Nudge(Vector3 direction)

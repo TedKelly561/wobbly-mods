@@ -6,9 +6,7 @@ namespace WobblyMods.HouseMenu
     /// <summary>
     /// The only file that talks to Wobbly Life's own code. Everything else in the mod is generic.
     ///
-    /// Each TODO(decompile) needs the real class and method names from the game's
-    /// Assembly-CSharp.dll, found with a decompiler and Cinematic Unity Explorer.
-    /// Until a TODO is filled in, the menu says the feature isn't connected yet.
+    /// Game names come from Scout reports 1 and 2 (docs/research/), reached through reflection.
     ///
     /// Split screen: methods take a 0-based playerIndex (0 = player 1). TODO(T14) marks
     /// where we still need the game's own per-player camera and screen area.
@@ -36,28 +34,108 @@ namespace WobblyMods.HouseMenu
             return null;
         }
 
-        /// <summary>True once Spawn is connected to the game's own spawning code.</summary>
-        public static bool SpawnReady
+        /// <summary>
+        /// Places a copy of the catalog item in front of that player, on the floor and facing them.
+        /// The game spawns networked props a moment later, so the result arrives through done:
+        /// done(placedObject, null) on success, or done(null, reason) on failure.
+        /// </summary>
+        public static void Spawn(CatalogItem item, int playerIndex, System.Action<GameObject, string> done)
         {
-            get { return false; } // TODO(decompile): set to true once Spawn is implemented
+            if (string.IsNullOrEmpty(item.Address))
+            {
+                done(null, "no address for " + item.DisplayName);
+                return;
+            }
+
+            Vector3 position;
+            Quaternion rotation;
+            if (!PlacementFor(playerIndex, item.Scale, out position, out rotation))
+            {
+                done(null, "couldn't find where player " + (playerIndex + 1) + " is");
+                return;
+            }
+
+            System.Action<GameObject> finish = placed =>
+            {
+                if (placed == null)
+                {
+                    done(null, "the game couldn't place " + item.DisplayName);
+                    return;
+                }
+                if (item.Scale != 1f)
+                {
+                    placed.transform.localScale = placed.transform.localScale * item.Scale;
+                }
+                Spawned.Add(new Placed { Item = placed, Owner = playerIndex });
+                done(placed, null);
+            };
+
+            string problem;
+            if (item.Local)
+            {
+                finish(GameSpawner.SpawnLocal(item.Address, position, rotation, out problem));
+                if (problem != null) Plugin.Log.LogWarning("Spawn " + item.Id + ": " + problem);
+                return;
+            }
+
+            if (!GameSpawner.TrySpawnNetworked(item.Address, position, rotation, finish, out problem))
+            {
+                Plugin.Log.LogWarning("Spawn " + item.Id + ": " + problem + ". Trying a local copy instead.");
+                string localProblem;
+                GameObject local = GameSpawner.SpawnLocal(item.Address, position, rotation, out localProblem);
+                if (localProblem != null) Plugin.Log.LogWarning("Spawn " + item.Id + " (local): " + localProblem);
+                finish(local);
+            }
         }
 
-        /// <summary>Creates a copy of the catalog item in front of that player. Returns null if not possible.</summary>
-        public static GameObject Spawn(CatalogItem item, int playerIndex)
+        /// <summary>
+        /// Where to put a new item for that player: a few meters in front of their character (bigger items
+        /// further away), dropped onto the floor below, facing the player. The floor check starts just above
+        /// the player's height, so it finds the floor inside a house rather than the roof.
+        /// </summary>
+        public static bool PlacementFor(int playerIndex, float scale, out Vector3 position, out Quaternion rotation)
         {
-            if (!SpawnReady || item.PrefabName == null)
+            position = Vector3.zero;
+            rotation = Quaternion.identity;
+
+            Camera cam = CameraFor(playerIndex);
+            if (cam == null)
             {
-                return null;
+                return false;
             }
 
-            // TODO(decompile): find the game's prefab for item.PrefabName, instantiate it
-            // at the spot CameraFor(playerIndex) is looking, then register it below.
-            GameObject placed = null;
-            if (placed != null)
+            Vector3 origin = CharacterPosition(playerIndex) ?? cam.transform.position;
+            Vector3 forward = cam.transform.forward;
+            forward.y = 0f;
+            if (forward.sqrMagnitude < 0.001f)
             {
-                Spawned.Add(new Placed { Item = placed, Owner = playerIndex });
+                forward = Vector3.forward;
             }
-            return placed;
+            forward.Normalize();
+
+            float distance = 2.5f + 1.5f * Mathf.Max(1f, scale);
+            Vector3 spot = origin + forward * distance;
+
+            RaycastHit hit;
+            Vector3 rayStart = new Vector3(spot.x, origin.y + 1.5f, spot.z);
+            position = Physics.Raycast(rayStart, Vector3.down, out hit, 10f) ? hit.point + Vector3.up * 0.05f : spot;
+            rotation = Quaternion.LookRotation(-forward, Vector3.up);
+            return true;
+        }
+
+        /// <summary>The player's character position (PlayerCharacter.GetPlayerPosition, from research), or null.</summary>
+        private static Vector3? CharacterPosition(int playerIndex)
+        {
+            List<object> locals = GameReflection.LocalPlayerControllers();
+            if (playerIndex < 0 || playerIndex >= locals.Count) return null;
+
+            object character = GameReflection.Call(locals[playerIndex], "GetPlayerCharacter")
+                               ?? GameReflection.Get(locals[playerIndex], "playerCharacter");
+            object pos = GameReflection.Call(character, "GetPlayerPosition");
+            if (pos is Vector3) return (Vector3)pos;
+
+            Component c = character as Component;
+            return c != null ? (Vector3?)c.transform.position : null;
         }
 
         /// <summary>

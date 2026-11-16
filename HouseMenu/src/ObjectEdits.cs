@@ -64,7 +64,7 @@ namespace WobblyMods.HouseMenu
             }
 
             GameBindings.Forget(target);
-            Object.Destroy(target);
+            GameSpawner.Despawn(target);
         }
     }
 }

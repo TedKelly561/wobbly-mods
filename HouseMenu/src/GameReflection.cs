@@ -48,6 +48,36 @@ namespace WobblyMods.HouseMenu
             return Call(gameplayCamera, "GetCamera") as UnityEngine.Camera;
         }
 
+        /// <summary>
+        /// Player N's Rewired player: PlayerController.GetPlayerControllerInputManager().player
+        /// (CONFIRMED in research). Returns null if not available.
+        /// </summary>
+        public static object RewiredPlayerOf(object playerController)
+        {
+            object inputManager = Call(playerController, "GetPlayerControllerInputManager");
+            return Get(inputManager, "player");
+        }
+
+        public static object Get(object target, string member)
+        {
+            if (target == null) return null;
+            try
+            {
+                for (Type t = target.GetType(); t != null; t = t.BaseType)
+                {
+                    PropertyInfo p = t.GetProperty(member, Any | BindingFlags.DeclaredOnly);
+                    if (p != null && p.GetIndexParameters().Length == 0) return p.GetValue(target, null);
+                    FieldInfo f = t.GetField(member, Any | BindingFlags.DeclaredOnly);
+                    if (f != null) return f.GetValue(target);
+                }
+            }
+            catch (Exception)
+            {
+                // fall through
+            }
+            return null;
+        }
+
         public static object Call(object target, string method)
         {
             if (target == null) return null;

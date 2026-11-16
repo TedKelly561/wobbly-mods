@@ -61,6 +61,7 @@ Not planned: public release (Thunderstore or Nexus).
 - Not tested in the game yet. The build used stand-in libraries, so the real game DLLs may need fixes.
 - **Shared Core (done, 23 tests pass):** `Core/` holds the undo stack, input abstraction (`IPlayerInput`), controller-navigable `MenuModel`, and `PlayerSession`/`SessionManager` for up to 4 split-screen players with their own undo. HouseMenu renders it; keyboard input is a placeholder until the Rewired adapter (T18).
 - **Scout (done, sent to parent):** read-only mod in `Scout/` that writes reports to `BepInEx\WobblyScout`: Unity version, input, assemblies, keyword-matching game classes, local players and their cameras, Rewired actions and controllers, managers, and every Addressables prefab key. Builds from the BepInEx NuGet feed, so no game files are needed.
+- **Build-mode core (done, 82 tests pass):** `BuildMode.Core/` is pure C#: grid snapping (1 m or 0.5 m), 10 block types, 7 materials, paint colors, overlap checks, per-chunk dirty tracking for big builds, per-player undo and redo with conflict detection, and a versioned save format. Its README explains the Unity layer still to build (meshes per chunk, materials, aiming).
 - **Research (done):** `docs/research/game-internals.md` lists confirmed game names from open-source mods. `docs/research/assets.md` lists CC0 cat models, sounds, materials, and building kits.
 - Draft PR #1 is open: https://github.com/TedKelly561/wobbly-mods/pull/1
 - Home setup started 2026-11-16 (step 1: find the game folder).
@@ -148,6 +149,8 @@ Skylar asked for a giant redtail catfish (dark back, white belly band, whiskers,
 1. **Prop:** a giant redtail catfish she can spawn in the sandbox.
 2. **Boat:** a rideable catfish that floats and steers like a boat.
 3. **Car:** a drivable catfish on wheels.
+
+Skylar's choices: **boat-sized** (a couple of players can ride), **tail wags**, **bubbles and splashes**, **fish sounds**, and the car should drive on **land and water** (amphibious, only possible if the game has a vehicle that does both; otherwise the boat and car stay separate).
 
 Approach: reskin real game vehicles. Spawn a game boat or car, hide its body, and attach the catfish model as a visual-only child, scaled big. The game's own driving, floating, and seats keep working. Colliders stay on the game vehicle. The same "hide the body, attach a model" technique powers the cat costume, so the work is shared. Model search: `docs/research/redtail-catfish.md`.
 

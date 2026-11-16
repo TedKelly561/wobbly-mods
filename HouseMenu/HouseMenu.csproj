@@ -11,7 +11,10 @@
     <!-- Your game folder. Override on the command line if it differs:
          dotnet build -p:GameDir="D:\Games\Wobbly Life" -->
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Wobbly Life</GameDir>
-    <ManagedDir Condition="'$(ManagedDir)' == ''">$(GameDir)\Wobbly Life_Data\Managed</ManagedDir>
+    <!-- The family plays the EOS (crossplay) build, so build against its DLLs.
+         For the plain build, pass -p:GameDataDir="Wobbly Life_Data". -->
+    <GameDataDir Condition="'$(GameDataDir)' == ''">Wobbly Life_EOS_Data</GameDataDir>
+    <ManagedDir Condition="'$(ManagedDir)' == ''">$(GameDir)\$(GameDataDir)\Managed</ManagedDir>
 
     <!-- Copy the built DLL into BepInEx\plugins after each build. Use -p:DeployToGame=false to skip. -->
     <DeployToGame Condition="'$(DeployToGame)' == ''">true</DeployToGame>
@@ -50,11 +53,11 @@
     <Error Condition="!Exists('$(GameDir)\BepInEx\core\BepInEx.dll')"
            Text="BepInEx 5 not found at '$(GameDir)'. Install BepInEx 5 into the game folder, or pass -p:GameDir=&quot;...&quot;." />
     <Error Condition="!Exists('$(ManagedDir)\UnityEngine.CoreModule.dll')"
-           Text="Unity DLLs not found at '$(ManagedDir)'. Check the 'Wobbly Life_Data\Managed' folder name, or pass -p:ManagedDir=&quot;...&quot;." />
+           Text="Unity DLLs not found at '$(ManagedDir)'. Check the '$(GameDataDir)\Managed' folder name, or pass -p:ManagedDir=&quot;...&quot;." />
   </Target>
 
   <Target Name="DeployToGame" AfterTargets="Build"
-          Condition="'$(DeployToGame)' == 'true' And Exists('$(GameDir)\BepInEx\plugins')">
+          Condition="'$(DeployToGame)' == 'true' And Exists('$(GameDir)\BepInEx\core')">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\WobblyMods" />
   </Target>
 

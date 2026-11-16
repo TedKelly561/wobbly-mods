@@ -11,9 +11,9 @@
     <!-- Your game folder. Override on the command line if it differs:
          dotnet build -p:GameDir="D:\Games\Wobbly Life" -->
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Wobbly Life</GameDir>
-    <!-- The family plays the normal build (not EOS crossplay).
-         For the EOS build, pass -p:GameDataDir="Wobbly Life_EOS_Data". -->
-    <GameDataDir Condition="'$(GameDataDir)' == ''">Wobbly Life_Data</GameDataDir>
+    <!-- The family plays "Play Crossplay" in Steam (Wobbly Life_EOS.exe), so build against its DLLs.
+         For "Play Steam Workshop" (Wobbly Life.exe), pass -p:GameDataDir="Wobbly Life_Data". -->
+    <GameDataDir Condition="'$(GameDataDir)' == ''">Wobbly Life_EOS_Data</GameDataDir>
     <ManagedDir Condition="'$(ManagedDir)' == ''">$(GameDir)\$(GameDataDir)\Managed</ManagedDir>
 
     <!-- Copy the built DLL into BepInEx\plugins after each build. Use -p:DeployToGame=false to skip. -->

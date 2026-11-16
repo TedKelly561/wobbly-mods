@@ -19,12 +19,14 @@ namespace WobblyMods.Scout
     /// Reports:
     ///   00_summary.txt   Unity version, input system, controllers, loaded assemblies
     ///   01_types.txt     game classes whose names match modding keywords, with their members
-    ///   scene_*.txt      a snapshot of each scene: cameras (split screen), objects, components, prefabs
+    ///   02_props.txt     every Addressables prefab key (what a spawner can place), refreshed each snapshot
+    ///   scene_*.txt      a snapshot of each scene: local players and their cameras (split screen),
+    ///                    Rewired actions and controllers, managers, objects, components, prefabs
     ///
     /// A scene snapshot is taken automatically 15 seconds after every scene loads,
     /// and again any time F9 is pressed (if the game uses Unity's legacy input).
     /// </summary>
-    [BepInPlugin("wobblymods.scout", "Wobbly Scout", "0.1.0")]
+    [BepInPlugin("wobblymods.scout", "Wobbly Scout", "0.2.0")]
     public class ScoutPlugin : BaseUnityPlugin
     {
         private const float SnapshotDelaySeconds = 15f;
@@ -110,6 +112,7 @@ namespace WobblyMods.Scout
             string sceneName = SceneManager.GetActiveScene().name;
             string file = string.Format("scene_{0:00}_{1}_{2}.txt", _snapshotCount, Sanitize(sceneName), Sanitize(reason));
             WriteSafe(file, () => BuildSceneReport(reason));
+            WriteSafe("02_props.txt", LiveProbe.BuildPropReport);
             Logger.LogInfo("Wobbly Scout snapshot written: " + file);
         }
 
@@ -264,6 +267,14 @@ namespace WobblyMods.Scout
             }
             sb.AppendLine();
 
+            // Live game state through the names from the research (reflection, so wrong names just report "not found").
+            TryAppend(sb, LiveProbe.AppendPlayers);
+            sb.AppendLine();
+            TryAppend(sb, LiveProbe.AppendRewired);
+            sb.AppendLine();
+            TryAppend(sb, LiveProbe.AppendManagers);
+            sb.AppendLine();
+
             // Objects whose name matches a keyword, anywhere in loaded scenes.
             sb.AppendLine("== Scene objects matching keywords ==");
             int matchCount = 0;
@@ -324,6 +335,19 @@ namespace WobblyMods.Scout
         }
 
         // ---------- helpers ----------
+
+        private void TryAppend(StringBuilder sb, Action<StringBuilder> section)
+        {
+            try
+            {
+                section(sb);
+            }
+            catch (Exception e)
+            {
+                sb.AppendLine("  (section failed: " + e.GetType().Name + ": " + e.Message + ")");
+                Logger.LogWarning("Wobbly Scout section failed: " + e);
+            }
+        }
 
         private void WriteSafe(string fileName, Func<string> build)
         {

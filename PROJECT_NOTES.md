@@ -62,6 +62,7 @@ Not planned: public release (Thunderstore or Nexus).
 - **Shared Core (done, 23 tests pass):** `Core/` holds the undo stack, input abstraction (`IPlayerInput`), controller-navigable `MenuModel`, and `PlayerSession`/`SessionManager` for up to 4 split-screen players with their own undo. HouseMenu renders it; keyboard input is a placeholder until the Rewired adapter (T18).
 - **Scout (done, sent to parent):** read-only mod in `Scout/` that writes reports to `BepInEx\WobblyScout`: Unity version, input, assemblies, keyword-matching game classes, local players and their cameras, Rewired actions and controllers, managers, and every Addressables prefab key. Builds from the BepInEx NuGet feed, so no game files are needed.
 - **Build-mode core (done, 82 tests pass):** `BuildMode.Core/` is pure C#: grid snapping (1 m or 0.5 m), 10 block types, 7 materials, paint colors, overlap checks, per-chunk dirty tracking for big builds, per-player undo and redo with conflict detection, and a versioned save format. Its README explains the Unity layer still to build (meshes per chunk, materials, aiming).
+- **Visuals (started, builds):** `Visuals/` is shared Unity-side code. `ModelLibrary` loads our models from AssetBundles, `Reskin` hides a game object's body and attaches our model as visual-only (with Restore for undo), and `TailWag` swishes a tail faster when moving. Used by the cat and catfish (T22). Not tested in game.
 - **Research (done):** `docs/research/game-internals.md` lists confirmed game names from open-source mods. `docs/research/assets.md` lists CC0 cat models, sounds, materials, and building kits.
 - Draft PR #1 is open: https://github.com/TedKelly561/wobbly-mods/pull/1
 - Home setup started 2026-11-16 (step 1: find the game folder).
@@ -129,6 +130,7 @@ Each task says who checks it. Mark it done here when finished.
 | T20 | Redtail catfish boat: reskin a game boat | Catfish model, vehicle spawn names from Scout | Skylar can ride it on water |
 | T21 | Redtail catfish car: reskin a game car | Catfish model, vehicle spawn names from Scout | Skylar can drive it |
 | T22 | Shared "reskin" helper: hide a game object's body and attach a visual model (used by cat, catfish boat, catfish car) | Scout reports | Works on one vehicle and on the player |
+| T23 | Install Unity Hub and the game's exact Unity version on the home PC, and make a small "asset project" that packs our models (cat, catfish, blocks) into AssetBundles | Unity version from Scout | One test bundle loads in game via `ModelLibrary` |
 | T18 | Controller menu: replace mouse clicks with controller navigation, one menu per player | T5, T14 | Each player opens and drives their own menu with their controller |
 
 ## Family mods
@@ -171,6 +173,8 @@ The current menu assumes one player: one mouse, one camera (`Camera.main`), one 
 - Anything that needs the game (T1 to T5) waits for the home PC to be connected, or for the parent to report what they see.
 
 ## Open questions
+
+- **Unity Editor on the home PC (T23):** our own models only load into the game as AssetBundles built with the game's exact Unity version. That needs the free Unity Editor installed once. Scout reports the version.
 
 - **Parent switch:** none was chosen. Recommend a grown-up key that opens or closes the menu. Ask a parent again.
 - **The "giant" object:** the giant ball is a placeholder in the catalog. Needs a description, and a model if it's new.

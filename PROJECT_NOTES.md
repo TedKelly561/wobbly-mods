@@ -38,6 +38,8 @@ Not planned: public release (Thunderstore or Nexus).
 | Repo layout | `main` starts empty. Work goes to review through draft PRs | 2026-11-16 |
 | Family play | Split screen together on one computer | Question answers |
 | Family wishes | House menus, fun powers, vehicles and spawning, sandbox build mode | Question answers |
+| Controls | Everyone uses a controller. Replaces the mouse-click menu; F1/F2 stay as a keyboard backup | Question answers |
+| Build mode priorities | Snapping blocks, good materials, big builds without lag, save and load | Question answers |
 
 ## Stages
 
@@ -105,18 +107,19 @@ Each task says who checks it. Mark it done here when finished.
 | T15 | Sandbox build mode: study the game's current building system and design snapping blocks and materials | Decompiled building code, family's wish list | Design written here |
 | T16 | Fun powers mod (flying, super jump, physics gun) | T14 | Each power works per player and can be turned off |
 | T17 | Vehicles and spawning mod | T3, T14 | Family can spawn vehicles and giant objects |
+| T18 | Controller menu: replace mouse clicks with controller navigation, one menu per player | T5, T14 | Each player opens and drives their own menu with their controller |
 
 ## Family mods
 
-Players: Skylar (5), parent (the project owner), another parent, and siblings (ages still to be asked).
-They play **split screen together** on one computer.
+Players: Skylar (5), parent (the project owner), another parent, and cousin LL (age not given).
+They play **split screen together** on one computer, and **everyone uses a controller**.
 
 | Wish | Who | Notes |
 |---|---|---|
 | House menu for their own houses | Family | Reuse Skylar's menu (T11) |
 | Fun powers (flying, super jump, physics gun) | Family | New mod |
 | Vehicles and spawning (cars, boats, giant objects) | Family | New mod. The original sandbox-spawner goal |
-| **Sandbox build mode** with real building blocks and materials | Family | The game's current building isn't good enough for anything substantial. Needs snapping walls, floors, roofs, and stairs, plus good materials. Large: its own stage |
+| **Sandbox build mode** with real building blocks and materials | Family | The game's current building isn't good enough for anything substantial. All four matter: snapping walls, floors, roofs, and stairs; good materials (wood, brick, glass, stone, paint); big builds without lag; save and load. Large: its own stage |
 
 ### Split screen changes the design (T14)
 
@@ -124,7 +127,7 @@ The current menu assumes one player: one mouse, one camera (`Camera.main`), one 
 - Each player needs their own menu, opened and driven by their own controller.
 - "Look at it" must use that player's camera, not `Camera.main`.
 - Undo should be per player, so one person's undo doesn't remove someone else's work.
-- Mouse-only buttons won't work for controller players.
+- Everyone uses a controller, so the current mouse-click menu doesn't work for anyone, Skylar included. The menu must be navigable with a controller (D-pad or stick to move, A to pick, B to back out). How the game reads controllers depends on T5.
 
 ## How the agent team works
 

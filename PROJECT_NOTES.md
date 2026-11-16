@@ -42,7 +42,7 @@ Not planned: public release (Thunderstore or Nexus).
 | Two game builds | The folder has `Wobbly Life.exe` + `Wobbly Life_Data` and `Wobbly Life_EOS.exe` + `Wobbly Life_EOS_Data`, plus `SharedAssets`. Steam offers two launch options: **"Play Crossplay"** (`Wobbly Life_EOS.exe`) and **"Play Steam Workshop"** (`Wobbly Life.exe`). The family plays **Crossplay** (confirmed from the Steam launch screen, 2026-11-16; an earlier note said otherwise). The project builds against `Wobbly Life_EOS_Data\Managed`; for the Workshop build, pass `-p:GameDataDir="Wobbly Life_Data"`. BepInEx loads in both. Research notes say the crossplay build uses Unity 2022.3.62f2 (Scout will confirm). Mods are for local split-screen play; avoid using them in online crossplay lobbies with strangers | Screenshot 2026-11-16 |
 | BepInEx | 5.4.23.5 win x64 extracted into the game folder | 2026-11-16 |
 | Family wishes | House menus, fun powers, vehicles and spawning, sandbox build mode | Question answers |
-| Menu button | **Hold Map for 1 second** opens/closes the menu (a tap still opens the map). Config: `ToggleAction`, `ToggleHoldSeconds` | Parent, 2026-11-16 |
+| Menu button | **Press LB and RB together** opens/closes the menu (parent: LB and RB do nothing in normal play). Replaced "hold Map", which got no response in test 1. Config: `ToggleAction` (`UILB+UIRB`), `ToggleHoldSeconds` | Parent, 2026-11-16 |
 | Controls | Everyone uses a controller. Replaces the mouse-click menu; F1/F2 stay as a keyboard backup | Question answers |
 | Build mode priorities | Snapping blocks, good materials, big builds without lag, save and load | Question answers |
 

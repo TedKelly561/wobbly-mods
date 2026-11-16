@@ -18,8 +18,8 @@ namespace WobblyMods.HouseMenu
         public string Horizontal;  // axis: right is positive
         public string Select;      // button
         public string Back;        // button
-        public string Toggle;      // button held to open/close the menu; empty = no controller toggle
-        public float ToggleHoldSeconds = 1f; // 0 = a normal press toggles
+        public string Toggle;      // button or "A+B" combo (comma list of choices); empty = no controller toggle
+        public float ToggleHoldSeconds = 0f; // 0 = toggles as soon as the button or combo is pressed
     }
 
     /// <summary>
@@ -51,6 +51,7 @@ namespace WobblyMods.HouseMenu
 
         private static readonly MenuAction[] Directions = { MenuAction.Up, MenuAction.Down, MenuAction.Left, MenuAction.Right };
         private static readonly Dictionary<string, bool> ActionExists = new Dictionary<string, bool>();
+        private static readonly HashSet<string> SeenPressed = new HashSet<string>();
 
         public RewiredPlayerInput(Func<object> rewiredPlayer, RewiredMenuActions names)
         {
@@ -99,18 +100,14 @@ namespace WobblyMods.HouseMenu
         }
 
         /// <summary>
-        /// Toggle by holding a button (the family chose: hold Map for 1 second). A quick tap still does the
-        /// button's normal game job. Fires once per hold.
+        /// Opens/closes the menu. The toggle setting is a list of choices separated by commas; each choice is
+        /// one button or a combo joined with "+", e.g. "UILB+UIRB" (the family's choice: LB and RB together).
+        /// The toggle fires once when a choice has been held for ToggleHoldSeconds (0 = as soon as it's pressed),
+        /// and again only after it's released.
         /// </summary>
         private void UpdateToggle(object player)
         {
-            if (_names.ToggleHoldSeconds <= 0f)
-            {
-                if (ButtonDown(player, _names.Toggle)) _pressed.Add(MenuAction.ToggleMenu);
-                return;
-            }
-
-            if (!ButtonHeld(player, _names.Toggle))
+            if (!AnyChoiceHeld(player, _names.Toggle))
             {
                 _toggleHeldSince = -1f;
                 _toggleFired = false;
@@ -127,6 +124,37 @@ namespace WobblyMods.HouseMenu
                 _toggleFired = true;
                 _pressed.Add(MenuAction.ToggleMenu);
             }
+        }
+
+        /// <summary>True if every button of at least one choice ("A+B" or "C") is held right now.</summary>
+        private static bool AnyChoiceHeld(object player, string choices)
+        {
+            foreach (string choice in Split(choices))
+            {
+                if (choice.Length == 0) continue;
+                bool all = true;
+                foreach (string part in choice.Split('+'))
+                {
+                    string action = part.Trim();
+                    if (action.Length == 0 || !Usable(action))
+                    {
+                        all = false;
+                        break;
+                    }
+                    object result = Invoke(player, "GetButton", action);
+                    if (!(result is bool) || !(bool)result)
+                    {
+                        all = false;
+                        break;
+                    }
+                    if (SeenPressed.Add(action))
+                    {
+                        Plugin.Log.LogInfo("Menu button '" + action + "' pressed (first time seen).");
+                    }
+                }
+                if (all) return true;
+            }
+            return false;
         }
 
         /// <summary>The strongest stick/D-pad direction past the threshold, or -1.</summary>

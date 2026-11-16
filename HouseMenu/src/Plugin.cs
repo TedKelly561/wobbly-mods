@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.4.1";
+        public const string PluginVersion = "0.4.2";
 
         internal static ManualLogSource Log;
 
@@ -58,10 +58,11 @@ namespace WobblyMods.HouseMenu
                 "Rewired button that picks the highlighted item (usually A).").Value;
             _actions.Back = Config.Bind("Controller", "BackAction", "UICancel",
                 "Rewired button that goes back or closes (usually B).").Value;
-            _actions.Toggle = Config.Bind("Controller", "ToggleAction", "Map",
-                "Rewired button to HOLD to open and close the menu (family's choice: Map). Empty = keyboard only.").Value;
-            _actions.ToggleHoldSeconds = Config.Bind("Controller", "ToggleHoldSeconds", 1f,
-                "How long to hold the toggle button. A quick tap still does its normal job. 0 = a press toggles.").Value;
+            _actions.Toggle = Config.Bind("Controller", "ToggleAction", "UILB+UIRB",
+                "Button or combo that opens and closes the menu. Combos use +, choices use commas. " +
+                "Family's choice: LB and RB together (UILB+UIRB). Example alternative: Map. Empty = keyboard only.").Value;
+            _actions.ToggleHoldSeconds = Config.Bind("Controller", "ToggleHoldSeconds", 0f,
+                "Seconds the button or combo must be held. 0 = as soon as it's pressed.").Value;
 
             _sessions = new SessionManager(HousePlayerMenu.BuildRootPage);
 

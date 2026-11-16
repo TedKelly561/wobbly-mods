@@ -47,6 +47,12 @@
     </Reference>
   </ItemGroup>
 
+  <!-- Shared, game-independent code (undo, controller menu model, split-screen players).
+       WobblyMods.Core.dll is copied to the output and deployed next to this plugin. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Core\WobblyMods.Core.csproj" />
+  </ItemGroup>
+
   <!-- Fail early with a clear message if the game or BepInEx is missing.
        Runs before references are resolved, so this shows instead of a wall of compiler errors. -->
   <Target Name="CheckGameInstall" BeforeTargets="ResolveAssemblyReferences">
@@ -58,7 +64,8 @@
 
   <Target Name="DeployToGame" AfterTargets="Build"
           Condition="'$(DeployToGame)' == 'true' And Exists('$(GameDir)\BepInEx\core')">
-    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(GameDir)\BepInEx\plugins\WobblyMods" />
+    <!-- The plugin and the shared Core library it needs go in the same folder. -->
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)WobblyMods.Core.dll" DestinationFolder="$(GameDir)\BepInEx\plugins\WobblyMods" />
   </Target>
 
 </Project>

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Shared, game-independent code for every family mod: undo, the controller-driven
+    menu model, and per-player (split screen) sessions.
+    Pure C#: NO Unity, BepInEx or game references, so it can be unit tested
+    (see ../Core.Tests) and reused by every plugin. Ship WobblyMods.Core.dll next to
+    each plugin DLL in BepInEx\plugins\WobblyMods.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>WobblyMods.Core</AssemblyName>
+    <RootNamespace>WobblyMods.Core</RootNamespace>
+    <Description>Shared core for Wobbly Life family mods (undo, controller menu, split-screen players)</Description>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+</Project>

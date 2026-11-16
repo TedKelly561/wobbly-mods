@@ -2,53 +2,62 @@ using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
 using UnityEngine;
+using WobblyMods.Core;
 
 namespace WobblyMods.HouseMenu
 {
     /// <summary>
-    /// BepInEx entry point. Handles keys and hands everything else to HouseMenuWindow.
+    /// BepInEx entry point. Owns the players (Core's SessionManager), feeds them input each frame,
+    /// and hands drawing to HouseMenuWindow.
     /// </summary>
     [BepInPlugin(PluginGuid, PluginName, PluginVersion)]
     public class Plugin : BaseUnityPlugin
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.1.0";
+        public const string PluginVersion = "0.2.0";
 
         internal static ManualLogSource Log;
 
         private ConfigEntry<KeyCode> _menuKey;
         private ConfigEntry<KeyCode> _undoKey;
-        private HouseMenuWindow _menu;
+        private SessionManager _sessions;
+        private PlayerSession _keyboardPlayer;
+        private HouseMenuWindow _window;
 
         private void Awake()
         {
             Log = Logger;
             _menuKey = Config.Bind("Controls", "MenuKey", KeyCode.F1,
-                "Opens and closes the house menu.");
+                "Keyboard backup: opens and closes player 1's house menu.");
             _undoKey = Config.Bind("Controls", "UndoKey", KeyCode.F2,
-                "Undoes the most recent house change.");
+                "Keyboard backup: undoes player 1's most recent house change.");
 
-            _menu = new HouseMenuWindow();
+            _sessions = new SessionManager(HousePlayerMenu.BuildRootPage);
+
+            // PLACEHOLDER (T5/T18): one keyboard-driven player until the controller adapter exists.
+            // The adapter will Join one session per connected controller instead.
+            _keyboardPlayer = _sessions.Join(0, new KeyboardPlayerInput(() => _menuKey.Value));
+
+            _window = new HouseMenuWindow(_sessions);
             Log.LogInfo(PluginName + " " + PluginVersion + " loaded.");
         }
 
         private void Update()
         {
-            if (Input.GetKeyDown(_menuKey.Value))
-            {
-                _menu.Toggle();
-            }
+            _sessions.Update();
 
             if (Input.GetKeyDown(_undoKey.Value))
             {
-                _menu.UndoLast();
+                HousePlayerMenu.UndoLast(_keyboardPlayer);
             }
+
+            _window.UpdateCursor();
         }
 
         private void OnGUI()
         {
-            _menu.Draw();
+            _window.Draw();
         }
     }
 }

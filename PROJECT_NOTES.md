@@ -32,7 +32,8 @@ Not planned: public release (Thunderstore or Nexus).
 | Cat moves | Meows, jumps, and climbs. Four-legged walking undecided | Question answers |
 | Cat location | Everywhere in the game | Question answers |
 | Cat plan | Decide after stage 1 | Question answers |
-| Cat model | Undecided. Needs a clear license | Question answers |
+| Cat model | Undecided. Top pick: Vuena "Cute Pets FREE Sample" cat (CC0; walk, run, jump, sit, call). See `docs/research/assets.md`. A better cat can come later | Parent + research |
+| Cat approach | Hide the body, attach the cat model, drive its animations from movement (1-2 evenings). True four-legged physics would take weeks | Research |
 | Project scope | Big: more for Skylar, family mods, agent team. Not public | Question answers |
 | Access to game files | Connect the home PC to the cloud session (Remote Control). Fallback: parent reports what they see | Question answers |
 | Repo layout | `main` starts empty. Work goes to review through draft PRs | 2026-11-16 |
@@ -58,6 +59,9 @@ Not planned: public release (Thunderstore or Nexus).
 - Game connections (not done): every `TODO(decompile)` in `HouseMenu/src/GameBindings.cs`. Until these are filled in, spawning shows "isn't connected yet", and moving, recoloring, and undo only work on items the menu itself spawned.
 - Review fixes (done): the menu unlocks the mouse while open, aiming skips her own character, buttons fall back to the last placed item, and a missing game folder shows a clear message.
 - Not tested in the game yet. The build used stand-in libraries, so the real game DLLs may need fixes.
+- **Shared Core (done, 23 tests pass):** `Core/` holds the undo stack, input abstraction (`IPlayerInput`), controller-navigable `MenuModel`, and `PlayerSession`/`SessionManager` for up to 4 split-screen players with their own undo. HouseMenu renders it; keyboard input is a placeholder until the Rewired adapter (T18).
+- **Scout (done, sent to parent):** read-only mod in `Scout/` that writes reports to `BepInEx\WobblyScout`: Unity version, input, assemblies, keyword-matching game classes, local players and their cameras, Rewired actions and controllers, managers, and every Addressables prefab key. Builds from the BepInEx NuGet feed, so no game files are needed.
+- **Research (done):** `docs/research/game-internals.md` lists confirmed game names from open-source mods. `docs/research/assets.md` lists CC0 cat models, sounds, materials, and building kits.
 - Draft PR #1 is open: https://github.com/TedKelly561/wobbly-mods/pull/1
 - Home setup started 2026-11-16 (step 1: find the game folder).
 
@@ -80,6 +84,16 @@ HouseMenu/
 2. Open `HouseMenu/HouseMenu.csproj` in a build tool, or run `dotnet build` in `HouseMenu`.
 3. If the game isn't in the default Steam folder, add `-p:GameDir="D:\path\to\Wobbly Life"`.
 4. The DLL is copied to `BepInEx\plugins\WobblyMods\` automatically.
+
+## Key game facts (from research, confirmed in open-source mods)
+
+- Players: `GameInstance.Instance.GetLocalPlayerControllers()` gives one `PlayerController` per split-screen player. Each has `GetPlayerCharacter()`, `GetGameplayCamera().GetCamera()`, and `GetPlayerControllerInputManager()`.
+- Input is **Rewired**: each local player has their own Rewired player (`PlayerControllerInputManager.player`); buttons are read with `GetButtonDown("<Action>")`. Scout 0.2 lists all the action names.
+- Networking is **HawkNetworking**. Only the host spawns networked objects (`NetworkPrefab.SpawnNetworkPrefab`).
+- Props come from **Addressables**. Scout writes every prefab key to `02_props.txt`.
+- Clothing: `CharacterCustomize.SetClothingPiece`. Pets: `PetManager.Instance.GetAllPets()`.
+- Not found anywhere: a furniture placement or free-form building system. Build mode has to be our own.
+- `WobblyLife.GameLibs` (NuGet) ships the game's own DLLs and would give exact signatures. **Not used**: it redistributes the game's binaries, so it's the parent's call.
 
 ## Rules for this project
 
@@ -150,4 +164,5 @@ The current menu assumes one player: one mouse, one camera (`Camera.main`), one 
 ## Handoff log
 
 - 2026-11-15: framework, undo tests, and planning notes created. The game wasn't available in the sandbox. Waiting on home tasks T1 and T5.
+- 2026-11-16 (later): Opus took over as project manager. Shared Core with per-player menus and undo, Scout 0.1 and 0.2 (sent), and game-internals and asset research. Build-mode core library in progress. Waiting on the Scout reports from the home PC.
 - 2026-11-16: review fixes (mouse unlock, aiming past the player, last-placed fallback, build message). `main` rebuilt as an empty base, and draft PR #1 opened. Scope expanded to the big project. Home setup started.

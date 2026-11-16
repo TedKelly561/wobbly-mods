@@ -284,3 +284,210 @@ namespace WobblyMods.Scout
         }
     }
 }
+
+namespace WobblyMods.Scout
+{
+    /// <summary>
+    /// Scout 0.4: the game's catalogs (costumes, vehicles, pets) with readable addresses, for the T-Rex
+    /// dress-up and the monster truck. Reflection only; anything missing is reported, not fatal.
+    /// </summary>
+    internal static class CatalogProbe
+    {
+        private const System.Reflection.BindingFlags Any =
+            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic |
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Static;
+
+        public static string Build()
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("== Scout catalog (costumes, vehicles, pets) at " + System.DateTime.Now.ToString("HH:mm:ss") + " ==");
+            Section(sb, "Clothing (ClothingManager.Instance.GetAllClothingReferences())", Clothing());
+            Section(sb, "Vehicles (AllVehiclesAssetReferences.GetAllVehicleReferences())", Vehicles());
+            Section(sb, "Pets (PetManager.Instance.GetAllPets())", Pets());
+            return sb.ToString();
+        }
+
+        private static void Section(System.Text.StringBuilder sb, string title, System.Collections.IEnumerable items)
+        {
+            sb.AppendLine();
+            sb.AppendLine("== " + title + " ==");
+            if (items == null)
+            {
+                sb.AppendLine("  (not available here)");
+                return;
+            }
+            int n = 0;
+            bool shapeShown = false;
+            foreach (object item in items)
+            {
+                if (item == null) continue;
+                if (!shapeShown)
+                {
+                    sb.AppendLine("  item type: " + item.GetType().FullName + "  fields: " + Fields(item));
+                    shapeShown = true;
+                }
+                sb.AppendLine("  " + Describe(item));
+                n++;
+            }
+            sb.AppendLine("  count: " + n);
+        }
+
+        private static System.Collections.IEnumerable Clothing()
+        {
+            object manager = Static("ClothingManager", "Instance");
+            return Call(manager, "GetAllClothingReferences") as System.Collections.IEnumerable;
+        }
+
+        private static System.Collections.IEnumerable Vehicles()
+        {
+            System.Type t = LiveProbe.FindType("AllVehiclesAssetReferences");
+            if (t == null) return null;
+            var all = new System.Collections.Generic.List<object>();
+            foreach (UnityEngine.Object so in UnityEngine.Resources.FindObjectsOfTypeAll(t))
+            {
+                System.Collections.IEnumerable refs = Call(so, "GetAllVehicleReferences") as System.Collections.IEnumerable;
+                if (refs == null) continue;
+                foreach (object r in refs) all.Add(r);
+            }
+            return all;
+        }
+
+        private static System.Collections.IEnumerable Pets()
+        {
+            return Call(Static("PetManager", "Instance"), "GetAllPets") as System.Collections.IEnumerable;
+        }
+
+        /// <summary>One line per item: its id fields plus every AssetReference resolved to an address.</summary>
+        private static string Describe(object item)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            foreach (System.Reflection.FieldInfo f in item.GetType().GetFields(Any))
+            {
+                if (f.IsStatic) continue;
+                object v;
+                try { v = f.GetValue(item); } catch (System.Exception) { continue; }
+                if (v == null) continue;
+                string typeName = v.GetType().Name;
+                if (typeName.Contains("AssetReference"))
+                {
+                    parts.Add(f.Name + "=" + Resolve(v));
+                }
+                else if (v is string || v is System.Guid || v.GetType().IsPrimitive || v.GetType().IsEnum)
+                {
+                    parts.Add(f.Name + "=" + v);
+                }
+                else if (v is UnityEngine.Object)
+                {
+                    UnityEngine.Object uo = (UnityEngine.Object)v;
+                    parts.Add(f.Name + "=" + (uo ? uo.name : "null"));
+                }
+            }
+            return string.Join("  ", parts.ToArray());
+        }
+
+        private static string Fields(object item)
+        {
+            var names = new System.Collections.Generic.List<string>();
+            foreach (System.Reflection.FieldInfo f in item.GetType().GetFields(Any))
+            {
+                if (!f.IsStatic) names.Add(f.FieldType.Name + " " + f.Name);
+            }
+            return string.Join(", ", names.ToArray());
+        }
+
+        /// <summary>An AssetReference's key, and the address/path Addressables knows it by.</summary>
+        private static string Resolve(object assetReference)
+        {
+            object key = Get(assetReference, "RuntimeKey") ?? Get(assetReference, "AssetGUID") ?? Get(assetReference, "m_AssetGUID");
+            if (key == null) return "?";
+            string where = Locate(key);
+            return key + (where != null ? " -> " + where : "");
+        }
+
+        private static string Locate(object key)
+        {
+            System.Type addressables = LiveProbe.FindType("UnityEngine.AddressableAssets.Addressables");
+            System.Collections.IEnumerable locators = GetStatic(addressables, "ResourceLocators") as System.Collections.IEnumerable;
+            if (locators == null) return null;
+            foreach (object locator in locators)
+            {
+                foreach (System.Reflection.MethodInfo m in locator.GetType().GetMethods(Any))
+                {
+                    if (m.Name != "Locate" || m.GetParameters().Length != 3) continue;
+                    try
+                    {
+                        object[] args = { key, null, null };
+                        object found = m.Invoke(locator, args);
+                        System.Collections.IList list = args[2] as System.Collections.IList;
+                        if (found is bool && (bool)found && list != null && list.Count > 0)
+                        {
+                            object loc = list[0];
+                            return (Get(loc, "PrimaryKey") ?? Get(loc, "InternalId") ?? loc).ToString();
+                        }
+                    }
+                    catch (System.Exception)
+                    {
+                        // try the next locator
+                    }
+                }
+            }
+            return null;
+        }
+
+        private static object Static(string typeName, string member)
+        {
+            return GetStatic(LiveProbe.FindType(typeName), member);
+        }
+
+        private static object GetStatic(System.Type type, string member)
+        {
+            for (System.Type t = type; t != null; t = t.BaseType)
+            {
+                try
+                {
+                    System.Reflection.PropertyInfo p = t.GetProperty(member, Any | System.Reflection.BindingFlags.DeclaredOnly);
+                    if (p != null && p.GetIndexParameters().Length == 0) return p.GetValue(null, null);
+                    System.Reflection.FieldInfo f = t.GetField(member, Any | System.Reflection.BindingFlags.DeclaredOnly);
+                    if (f != null && f.IsStatic) return f.GetValue(null);
+                }
+                catch (System.Exception)
+                {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        private static object Get(object target, string member)
+        {
+            if (target == null) return null;
+            for (System.Type t = target.GetType(); t != null; t = t.BaseType)
+            {
+                try
+                {
+                    System.Reflection.PropertyInfo p = t.GetProperty(member, Any | System.Reflection.BindingFlags.DeclaredOnly);
+                    if (p != null && p.GetIndexParameters().Length == 0) return p.GetValue(target, null);
+                    System.Reflection.FieldInfo f = t.GetField(member, Any | System.Reflection.BindingFlags.DeclaredOnly);
+                    if (f != null) return f.GetValue(target);
+                }
+                catch (System.Exception)
+                {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        private static object Call(object target, string method)
+        {
+            if (target == null) return null;
+            foreach (System.Reflection.MethodInfo m in target.GetType().GetMethods(Any))
+            {
+                if (m.Name != method || m.GetParameters().Length != 0) continue;
+                try { return m.Invoke(m.IsStatic ? null : target, null); }
+                catch (System.Exception) { return null; }
+            }
+            return null;
+        }
+    }
+}

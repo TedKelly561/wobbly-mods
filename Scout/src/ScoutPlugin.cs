@@ -19,13 +19,14 @@ namespace WobblyMods.Scout
     ///   00_summary.txt   Unity version, input system, controllers, loaded assemblies
     ///   01_types.txt     game classes whose names match modding keywords, with their members
     ///   02_props.txt     every Addressables prefab key (what a spawner can place), refreshed each snapshot
+    ///   03_catalog.txt   costumes, vehicles and pets with their addresses (Scout 0.4), refreshed each snapshot
     ///   scene_*.txt      a snapshot of each scene: local players and their cameras (split screen),
     ///                    Rewired actions and controllers, managers, objects, components, prefabs
     ///
     /// A scene snapshot is taken automatically 15 seconds after every scene loads,
     /// and again any time F9 is pressed (if the game uses Unity's legacy input).
     /// </summary>
-    [BepInPlugin("wobblymods.scout", "Wobbly Scout", "0.3.0")]
+    [BepInPlugin("wobblymods.scout", "Wobbly Scout", "0.4.0")]
     public class ScoutPlugin : BaseUnityPlugin
     {
         private const float SnapshotDelaySeconds = 15f;
@@ -48,8 +49,21 @@ namespace WobblyMods.Scout
         private static readonly string[] ExactTypes =
         {
             "GameInstance", "GameplayCamera", "DynamicObject", "WorldDynamicObject", "NetworkPrefab",
-            "WorldManager", "FreemodeGamemode", "ModGamemode", "UnitySingleton`1", "PlayerBody"
+            "WorldManager", "FreemodeGamemode", "ModGamemode", "UnitySingleton`1", "PlayerBody",
+            "PlayerClothesData", "ClothingPieceData", "ClothingAssetReference", "ClothingScriptableObject",
+            "AllClothingAssetReferences", "TelephoneBox", "PetAssetReference", "PlayerControllerPet"
         };
+
+        // Classes listed with ALL their members (no cap), for exact calls (dress-up, vehicles, pets).
+        private static readonly string[] FullTypes =
+        {
+            "CharacterCustomize", "PlayerClothesData", "ClothingPieceData", "ClothingAssetReference",
+            "ClothingManager", "PlayerController", "PlayerCharacter", "PlayerVehicle", "TelephoneBox",
+            "VehicleAssetReference", "PetAssetReference", "PlayerControllerPet", "PetManager"
+        };
+
+        private const int MaxAutoSnapshots = 12;
+        private int _autoSnapshots;
 
         private readonly List<float> _pendingSnapshots = new List<float>();
         private readonly List<string> _pendingReasons = new List<string>();
@@ -128,6 +142,9 @@ namespace WobblyMods.Scout
 
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
+            // The main world streams dozens of chunk scenes; a dozen snapshots per run is plenty.
+            if (_autoSnapshots >= MaxAutoSnapshots) return;
+            _autoSnapshots++;
             _pendingSnapshots.Add(Time.realtimeSinceStartup + SnapshotDelaySeconds);
             _pendingReasons.Add("auto-" + scene.name);
         }
@@ -139,6 +156,7 @@ namespace WobblyMods.Scout
             string file = string.Format("scene_{0:00}_{1}_{2}.txt", _snapshotCount, Sanitize(sceneName), Sanitize(reason));
             WriteSafe(file, () => BuildSceneReport(reason));
             WriteSafe("02_props.txt", LiveProbe.BuildPropReport);
+            WriteSafe("03_catalog.txt", CatalogProbe.Build);
             Logger.LogInfo("Wobbly Scout snapshot written: " + file);
         }
 
@@ -225,6 +243,7 @@ namespace WobblyMods.Scout
 
         private static void AppendType(StringBuilder sb, Type t)
         {
+            int maxMembers = FullTypes.Contains(t.Name) ? int.MaxValue : MaxMembersPerType;
             try
             {
                 string kind = t.IsEnum ? "enum" : t.IsInterface ? "interface" : t.IsValueType ? "struct" : "class";
@@ -244,23 +263,23 @@ namespace WobblyMods.Scout
 
                 foreach (FieldInfo f in t.GetFields(flags))
                 {
-                    if (f.Name.Contains("<") || ++count > MaxMembersPerType) continue;
+                    if (f.Name.Contains("<") || ++count > maxMembers) continue;
                     sb.AppendLine("  field  " + (f.IsStatic ? "static " : "") + TypeName(f.FieldType) + " " + f.Name);
                 }
                 foreach (PropertyInfo p in t.GetProperties(flags))
                 {
-                    if (++count > MaxMembersPerType) continue;
+                    if (++count > maxMembers) continue;
                     sb.AppendLine("  prop   " + TypeName(p.PropertyType) + " " + p.Name);
                 }
                 foreach (MethodInfo m in t.GetMethods(flags))
                 {
-                    if (m.IsSpecialName || m.Name.Contains("<") || ++count > MaxMembersPerType) continue;
+                    if (m.IsSpecialName || m.Name.Contains("<") || ++count > maxMembers) continue;
                     string args = string.Join(", ", m.GetParameters().Select(a => TypeName(a.ParameterType) + " " + a.Name).ToArray());
                     sb.AppendLine("  method " + (m.IsStatic ? "static " : "") + TypeName(m.ReturnType) + " " + m.Name + "(" + args + ")");
                 }
-                if (count > MaxMembersPerType)
+                if (count > maxMembers)
                 {
-                    sb.AppendLine("  ... " + (count - MaxMembersPerType) + " more members not shown");
+                    sb.AppendLine("  ... " + (count - maxMembers) + " more members not shown");
                 }
             }
             catch (Exception e)

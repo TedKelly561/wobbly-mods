@@ -38,7 +38,7 @@ Not planned: public release (Thunderstore or Nexus).
 | Repo layout | `main` starts empty. Work goes to review through draft PRs | 2026-11-16 |
 | Family play | Split screen together on one computer | Question answers |
 | Game folder | `C:\Program Files (x86)\Steam\steamapps\common\Wobbly Life` (the default). `Wobbly Life_Data` confirmed | Screenshot 2026-11-16 |
-| Two game builds | The folder has `Wobbly Life.exe` + `Wobbly Life_Data` and `Wobbly Life_EOS.exe` + `Wobbly Life_EOS_Data`, plus `SharedAssets`. Which one the family plays is still to be checked; if it's EOS, build with `-p:ManagedDir=...\Wobbly Life_EOS_Data\Managed` | Screenshot 2026-11-16 |
+| Two game builds | The folder has `Wobbly Life.exe` + `Wobbly Life_Data` and `Wobbly Life_EOS.exe` + `Wobbly Life_EOS_Data`, plus `SharedAssets`. The family plays the **normal build, not EOS crossplay** (parent confirmed). The project builds against `Wobbly Life_Data\Managed`; for EOS, pass `-p:GameDataDir="Wobbly Life_EOS_Data"` | Screenshot 2026-11-16 |
 | BepInEx | 5.4.23.5 win x64 extracted into the game folder | 2026-11-16 |
 | Family wishes | House menus, fun powers, vehicles and spawning, sandbox build mode | Question answers |
 | Controls | Everyone uses a controller. Replaces the mouse-click menu; F1/F2 stay as a keyboard backup | Question answers |

@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.4.2";
+        public const string PluginVersion = "0.4.3";
 
         internal static ManualLogSource Log;
 
@@ -34,6 +34,7 @@ namespace WobblyMods.HouseMenu
         private float _nextPlayerSync;
         private int _lastPlayerCount = -1;
         private readonly bool[] _warnedNoRewired = new bool[SessionManager.MaxPlayers];
+        private readonly bool[] _warnedNoPause = new bool[SessionManager.MaxPlayers];
 
         // The game's own PlayerControllers (by split-screen index), and whether we've paused each one's controls.
         private readonly object[] _playerControllers = new object[SessionManager.MaxPlayers];
@@ -197,6 +198,12 @@ namespace WobblyMods.HouseMenu
                     if (GameReflection.SetGameplayPaused(controller, _pauseHandles[i], true))
                     {
                         _pausedController[i] = controller;
+                        Log.LogInfo("Paused player " + (i + 1) + "'s controls while their menu is open.");
+                    }
+                    else if (!_warnedNoPause[i])
+                    {
+                        _warnedNoPause[i] = true;
+                        Log.LogWarning("Could not pause player " + (i + 1) + "'s controls (input manager not found).");
                     }
                 }
             }

@@ -55,7 +55,7 @@ namespace WobblyMods.HouseMenu
         }
 
         /// <summary>
-        /// Pauses or resumes one player's game controls and shows or hides their cursor, using the game's own
+        /// Pauses or resumes one player's game controls and camera, and shows or hides their cursor, using the game's own
         /// per-player calls (Scout report 1): DisableGameplayInput(handle, bResetTransformInput) /
         /// EnableGameplayInput(handle), ShowCursor(handle) / HideCursor(handle).
         /// Each pause must be matched by a resume with the same handle. Returns false if the calls aren't found.
@@ -68,6 +68,7 @@ namespace WobblyMods.HouseMenu
             bool ok = paused
                 ? CallWith(input, "DisableGameplayInput", handle, true)
                 : CallWith(input, "EnableGameplayInput", handle);
+            CallWith(input, paused ? "DisableGameplayCameraInput" : "EnableGameplayCameraInput", handle);
             CallWith(input, paused ? "ShowCursor" : "HideCursor", handle);
             return ok;
         }

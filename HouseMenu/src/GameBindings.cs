@@ -41,7 +41,7 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         public static void Spawn(CatalogItem item, int playerIndex, System.Action<GameObject, string> done)
         {
-            if (string.IsNullOrEmpty(item.Address))
+            if (string.IsNullOrEmpty(item.Address) && item.Build == null)
             {
                 done(null, "no address for " + item.DisplayName);
                 return;
@@ -49,7 +49,7 @@ namespace WobblyMods.HouseMenu
 
             Vector3 position;
             Quaternion rotation;
-            if (!PlacementFor(playerIndex, item.Scale, out position, out rotation))
+            if (!PlacementFor(playerIndex, item.Scale, item.Distance, out position, out rotation))
             {
                 done(null, "couldn't find where player " + (playerIndex + 1) + " is");
                 return;
@@ -71,6 +71,21 @@ namespace WobblyMods.HouseMenu
             };
 
             string problem;
+            if (item.Build != null)
+            {
+                GameObject built = null;
+                try
+                {
+                    built = item.Build(position, rotation);
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogError("Building " + item.Id + " failed: " + e);
+                }
+                finish(built);
+                return;
+            }
+
             if (item.Local)
             {
                 finish(GameSpawner.SpawnLocal(item.Address, position, rotation, out problem));
@@ -93,7 +108,7 @@ namespace WobblyMods.HouseMenu
         /// further away), dropped onto the floor below, facing the player. The floor check starts just above
         /// the player's height, so it finds the floor inside a house rather than the roof.
         /// </summary>
-        public static bool PlacementFor(int playerIndex, float scale, out Vector3 position, out Quaternion rotation)
+        public static bool PlacementFor(int playerIndex, float scale, float distanceOverride, out Vector3 position, out Quaternion rotation)
         {
             position = Vector3.zero;
             rotation = Quaternion.identity;
@@ -113,7 +128,7 @@ namespace WobblyMods.HouseMenu
             }
             forward.Normalize();
 
-            float distance = 2.5f + 1.5f * Mathf.Max(1f, scale);
+            float distance = distanceOverride > 0f ? distanceOverride : 2.5f + 1.5f * Mathf.Max(1f, scale);
             Vector3 spot = origin + forward * distance;
 
             RaycastHit hit;

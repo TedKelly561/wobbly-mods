@@ -35,9 +35,9 @@ namespace WobblyMods.HouseMenu
             foreach (Renderer renderer in target.GetComponentsInChildren<Renderer>())
             {
                 Material material = renderer.material;
-                if (material == null)
+                if (material == null || material.renderQueue >= 3000)
                 {
-                    continue;
+                    continue; // skip see-through things like tank glass, so they stay see-through
                 }
 
                 saved.Add(new KeyValuePair<Material, Color>(material, material.color));

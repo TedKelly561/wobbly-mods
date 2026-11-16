@@ -20,6 +20,15 @@ namespace WobblyMods.HouseMenu
         /// as local copies instead of through the game's network spawner.
         /// </summary>
         public bool Local;
+
+        /// <summary>
+        /// For things we build ourselves (like the fish tank) instead of loading one game prop.
+        /// Given the floor point and facing, returns the built object.
+        /// </summary>
+        public System.Func<UnityEngine.Vector3, UnityEngine.Quaternion, UnityEngine.GameObject> Build;
+
+        /// <summary>How far in front of the player to place it, in meters. 0 = automatic from Scale.</summary>
+        public float Distance;
     }
 
     /// <summary>
@@ -56,6 +65,11 @@ namespace WobblyMods.HouseMenu
 
             Item("castle",     "Foam castle",    "Fun",       Sandbox + "FoamBlock/FoamCastle_1.prefab"),
             Item("ramp",       "Ramp",           "Fun",       Sandbox + "Stadium/Ramp_1.prefab"),
+            new CatalogItem
+            {
+                Id = "fishtank", DisplayName = "Giant fish tank", Category = "Fun",
+                Build = Tanks.FishTank.Build, Distance = 7f
+            },
             new CatalogItem
             {
                 Id = "giantcatfish", DisplayName = "Giant catfish", Category = "Fun",

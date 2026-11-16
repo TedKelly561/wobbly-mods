@@ -139,7 +139,7 @@ namespace WobblyMods.HouseMenu
         }
 
         /// <summary>The player's character position (PlayerCharacter.GetPlayerPosition, from research), or null.</summary>
-        private static Vector3? CharacterPosition(int playerIndex)
+        internal static Vector3? CharacterPosition(int playerIndex)
         {
             List<object> locals = GameReflection.LocalPlayerControllers();
             if (playerIndex < 0 || playerIndex >= locals.Count) return null;

@@ -25,6 +25,37 @@ namespace WobblyMods.BuildMode.Tests
         }
 
         [Fact]
+        public void RemoveAll_IsOneUndoStep_AndKeepsOtherHistoriesWorking()
+        {
+            var ed = new BuildEditor(T.Model());
+            Assert.Equal(BuildResult.NotFound, ed.RemoveAll(Skylar, "Clear build").Result);
+
+            Assert.True(ed.Place(Skylar, T.Spec("wall", 0, 0, 0)).Ok);
+            Assert.True(ed.Place(Cousin, T.Spec("wall", 1, 0, 0)).Ok);
+            Assert.True(ed.Place(Skylar, T.Spec("floor", 0, 0, 0)).Ok);
+
+            EditResult clear = ed.RemoveAll(Skylar, "Clear build");
+            Assert.True(clear.Ok);
+            Assert.Equal(3, clear.BlocksChanged);
+            Assert.Equal(0, ed.Model.Count);
+
+            // The cousin's block is gone, so their undo can't take it away.
+            Assert.Equal(BuildResult.Conflict, ed.Undo(Cousin).Result);
+
+            Assert.True(ed.Undo(Skylar).Ok);
+            Assert.Equal(3, ed.Model.Count);
+            Assert.Equal("wall", ed.Model.GetBlockAt(new GridPos(1, 0, 0)).Spec.Type.Id);
+
+            // Skylar's older steps still undo normally after the restore.
+            Assert.True(ed.Undo(Skylar).Ok);
+            Assert.Null(ed.Model.GetBlockAt(GridPos.Zero, OccupancyLayer.Floor));
+
+            Assert.True(ed.Redo(Skylar).Ok);
+            Assert.True(ed.Redo(Skylar).Ok);
+            Assert.Equal(0, ed.Model.Count);
+        }
+
+        [Fact]
         public void FailedPlace_IsNotRecorded()
         {
             var ed = new BuildEditor(T.Model());
@@ -207,6 +238,40 @@ namespace WobblyMods.BuildMode.Tests
             Assert.Equal("brick", s.Material.Id);
             Assert.Equal(1, s.Rotation.QuarterTurns);
             Assert.Equal(new GridPos(1, 0, 1), s.Anchor);
+        }
+
+        [Fact]
+        public void CustomPalette_CyclesInGivenOrder()
+        {
+            var orange = new PaintColor(255, 128, 0);
+            var green = new PaintColor(51, 191, 51);
+            var colors = new System.Collections.Generic.List<PaintColor> { orange, green };
+            var p = new PlayerBuildState(0, T.Catalog, colors);
+            colors.Add(PaintColor.White); // copied: later changes don't leak in
+
+            Assert.Equal(2, p.Palette.Count);
+            Assert.Equal(-1, p.PaintIndex);
+            Assert.Equal(p.Material.DefaultColor, p.Paint);
+            p.CyclePaint(1);
+            Assert.Equal(0, p.PaintIndex);
+            Assert.Equal(orange, p.Paint);
+            p.CyclePaint(1);
+            Assert.Equal(green, p.Paint);
+            p.CyclePaint(1);
+            Assert.Equal(-1, p.PaintIndex); // wraps back to the material's own colour
+            p.CyclePaint(-1);
+            Assert.Equal(green, p.Paint);
+        }
+
+        [Fact]
+        public void NullOrEmptyPalette_UsesDefault()
+        {
+            var a = new PlayerBuildState(0, T.Catalog, null);
+            var b = new PlayerBuildState(0, T.Catalog, new PaintColor[0]);
+            Assert.Equal(PaintColor.Palette.Length, a.Palette.Count);
+            Assert.Equal(PaintColor.Palette.Length, b.Palette.Count);
+            b.CyclePaint(1);
+            Assert.Equal(PaintColor.Palette[0], b.Paint);
         }
 
         [Fact]

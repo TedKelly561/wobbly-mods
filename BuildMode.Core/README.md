@@ -4,8 +4,9 @@ The game-independent heart of the sandbox build mode: snapping blocks, materials
 model that stays fast for big builds, per-player undo/redo for split screen, and save/load.
 
 It has **no Unity references** (netstandard2.0, C# 7.3), so it loads in BepInEx 5 / Unity Mono and
-is fully unit-tested with plain `dotnet test` (see `../BuildMode.Core.Tests`). A separate Unity
-layer (not written yet) turns it into meshes, colliders, input and menus.
+is fully unit-tested with plain `dotnet test` (see `../BuildMode.Core.Tests`). The Unity layer
+(first version) lives in the house menu: `../HouseMenu/src/Build/` turns it into chunk meshes,
+colliders, a ghost preview per player and the menu's Build tab.
 
 ## Design
 
@@ -17,7 +18,7 @@ layer (not written yet) turns it into meshes, colliders, input and menus.
 | `Footprint` | `src/Footprint.cs` | Which cells a block covers for a given anchor and rotation. |
 | `BuildModel`, `BlockSpec`, `PlacedBlock` | `src/BuildModel.cs` | The build. Place, remove, repaint, query; overlaps are rejected. Chunk index and dirty-chunk tracking. |
 | `BuildEditor`, `BuildHistory` | `src/BuildHistory.cs` | The front door for edits. Records every change in the acting **player's own** undo/redo history. Fill a box as one undo step. |
-| `PlayerBuildState` | `src/PlayerBuildState.cs` | One player's selection (block, material, paint, rotation, cursor) with controller-friendly "cycle"/"rotate"/"move" calls. |
+| `PlayerBuildState` | `src/PlayerBuildState.cs` | One player's selection (block, material, paint, rotation, cursor) with controller-friendly "cycle"/"rotate"/"move" calls. Takes an optional paint palette (favourite colours first). |
 | `BuildSerializer`, `LoadResult` | `src/BuildSerializer.cs` | Versioned, human-readable text save format. Exact round trip. Unknown ids are skipped with warnings. |
 
 ### Cells, layers and footprints
@@ -46,7 +47,7 @@ layer (not written yet) turns it into meshes, colliders, input and menus.
 ### Per-player undo (split screen)
 
 `BuildEditor.Place(player, ...)`, `RemoveAt`, `PaintAt`, `Fill`, `PlaceMany`, `Undo(player)`,
-`Redo(player)`. Each player number gets its own `BuildHistory` (200 steps by default). Actions refer
+`Redo(player)`, and `RemoveAll(player, ...)` (clear the build as one undoable step). Each player number gets its own `BuildHistory` (200 steps by default). Actions refer
 to blocks by id, and ids are never reused, so one player's undo never removes another player's
 block. If someone else changed the spot in the meantime (removed the block, or built where it
 used to be), undo returns `Conflict` ("Someone else changed that") and drops that step instead of

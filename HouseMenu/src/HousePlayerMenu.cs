@@ -1,5 +1,6 @@
 using UnityEngine;
 using WobblyMods.Core;
+using WobblyMods.HouseMenu.Build;
 
 namespace WobblyMods.HouseMenu
 {
@@ -64,7 +65,10 @@ namespace WobblyMods.HouseMenu
                 }
             }
 
+            // The tab row only fits about five tabs at the menu's font size (MaxPanelWidth 560, fontSize 26),
+            // so Undo and Reset house moved from their own tab into Change, making room for Build.
             MenuTab change = root.AddTab("Change");
+            change.Add("Undo", () => UndoLast(_session));
             change.Add("Left", () => Nudge(CameraRelative(Vector3.left)));
             change.Add("Right", () => Nudge(CameraRelative(Vector3.right)));
             change.Add("Closer", () => Nudge(CameraRelative(Vector3.forward)));
@@ -83,9 +87,10 @@ namespace WobblyMods.HouseMenu
                 _session.Menu.Back();
             });
 
-            MenuTab undo = root.AddTab("Undo");
-            undo.Add("Undo", () => UndoLast(_session));
-            undo.AddSubPage("Reset house", confirmReset);
+            change.AddSubPage("Reset house", confirmReset);
+
+            // Sandbox build mode: blocks on a grid, with its own per-player undo (BuildMode.Core).
+            BuildMenu.AddTo(root, _session);
 
             return root;
         }

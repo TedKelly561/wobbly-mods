@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.7.0";
+        public const string PluginVersion = "0.8.0";
 
         internal static ManualLogSource Log;
 
@@ -35,6 +35,7 @@ namespace WobblyMods.HouseMenu
         private int _lastPlayerCount = -1;
         private readonly bool[] _warnedNoRewired = new bool[SessionManager.MaxPlayers];
         private readonly bool[] _warnedNoPause = new bool[SessionManager.MaxPlayers];
+        private bool _warnedBuild;
 
         // The game's own PlayerControllers (by split-screen index), and whether we've paused each one's controls.
         private readonly object[] _playerControllers = new object[SessionManager.MaxPlayers];
@@ -90,6 +91,19 @@ namespace WobblyMods.HouseMenu
 
             _sessions.Update();
             UpdateGamePause();
+
+            try
+            {
+                Build.BuildWorld.Instance.Update(_sessions);
+            }
+            catch (System.Exception e)
+            {
+                if (!_warnedBuild)
+                {
+                    _warnedBuild = true;
+                    Log.LogError("Build mode update failed: " + e);
+                }
+            }
 
             if (Input.GetKeyDown(_undoKey.Value))
             {

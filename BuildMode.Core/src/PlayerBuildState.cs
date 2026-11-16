@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace WobblyMods.BuildMode
 {
@@ -10,11 +11,20 @@ namespace WobblyMods.BuildMode
     public sealed class PlayerBuildState
     {
         private readonly BuildCatalog _catalog;
+        private readonly PaintColor[] _palette;
         private int _blockIndex;
         private int _materialIndex;
         private int _paintIndex = -1; // -1 = material's default colour
 
-        public PlayerBuildState(int playerIndex, BuildCatalog catalog)
+        public PlayerBuildState(int playerIndex, BuildCatalog catalog) : this(playerIndex, catalog, null)
+        {
+        }
+
+        /// <summary>
+        /// Same, with the player's own paint palette (e.g. favourite colours first). Null or empty uses
+        /// <see cref="PaintColor.Palette"/>. The list is copied, so later changes to it have no effect.
+        /// </summary>
+        public PlayerBuildState(int playerIndex, BuildCatalog catalog, IList<PaintColor> palette)
         {
             if (catalog == null)
             {
@@ -26,6 +36,15 @@ namespace WobblyMods.BuildMode
             }
             PlayerIndex = playerIndex;
             _catalog = catalog;
+            if (palette == null || palette.Count == 0)
+            {
+                _palette = (PaintColor[])PaintColor.Palette.Clone();
+            }
+            else
+            {
+                _palette = new PaintColor[palette.Count];
+                palette.CopyTo(_palette, 0);
+            }
         }
 
         public int PlayerIndex { get; private set; }
@@ -48,7 +67,19 @@ namespace WobblyMods.BuildMode
         /// <summary>The chosen paint, or the material's default if none chosen.</summary>
         public PaintColor Paint
         {
-            get { return _paintIndex < 0 ? Material.DefaultColor : PaintColor.Palette[_paintIndex]; }
+            get { return _paintIndex < 0 ? Material.DefaultColor : _palette[_paintIndex]; }
+        }
+
+        /// <summary>The paint colours <see cref="CyclePaint"/> steps through (after "material default").</summary>
+        public IList<PaintColor> Palette
+        {
+            get { return Array.AsReadOnly(_palette); }
+        }
+
+        /// <summary>Index into <see cref="Palette"/> of the chosen paint, or -1 for the material's default colour.</summary>
+        public int PaintIndex
+        {
+            get { return _paintIndex; }
         }
 
         /// <summary>Selects by id (e.g. from a picture menu). Returns false if the id is unknown.</summary>
@@ -88,7 +119,7 @@ namespace WobblyMods.BuildMode
         /// <summary>Cycles through "material default" then each palette colour.</summary>
         public void CyclePaint(int step)
         {
-            int slots = PaintColor.Palette.Length + 1;
+            int slots = _palette.Length + 1;
             _paintIndex = Wrap(_paintIndex + 1 + step, slots) - 1;
         }
 

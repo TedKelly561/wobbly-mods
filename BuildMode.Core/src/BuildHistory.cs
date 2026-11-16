@@ -486,6 +486,26 @@ namespace WobblyMods.BuildMode
             return RecordCompound(player, description ?? "Place blocks", parts);
         }
 
+        /// <summary>
+        /// Removes every block in the build as ONE undo step for this player (a "clear build" button
+        /// that can still be undone). Blocks keep their ids, so undo puts them all back and other
+        /// players' histories keep working. Returns NotFound when the build is already empty.
+        /// </summary>
+        public EditResult RemoveAll(int player, string description)
+        {
+            List<PlacedBlock> blocks = Model.BlocksInPlacementOrder();
+            if (blocks.Count == 0)
+            {
+                return new EditResult(BuildResult.NotFound, 0, MessageFor(BuildResult.NotFound));
+            }
+            var parts = new List<BuildAction>(blocks.Count);
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                parts.Add(new RemoveAction(blocks[i].Id));
+            }
+            return RecordCompound(player, description ?? "Clear build", parts);
+        }
+
         public EditResult Undo(int player)
         {
             string description;

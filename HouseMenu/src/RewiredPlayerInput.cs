@@ -225,7 +225,11 @@ namespace WobblyMods.HouseMenu
 
             exists = found != null;
             ActionExists[action] = exists;
-            if (!exists)
+            if (exists)
+            {
+                Plugin.Log.LogInfo("Rewired action '" + action + "' found.");
+            }
+            else
             {
                 Plugin.Log.LogWarning("Rewired action '" + action + "' not found. Set the right name in the config " +
                                       "(Scout's scene report lists the game's actions).");

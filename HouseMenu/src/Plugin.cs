@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.4.0";
+        public const string PluginVersion = "0.4.1";
 
         internal static ManualLogSource Log;
 
@@ -32,6 +32,8 @@ namespace WobblyMods.HouseMenu
         private readonly Dictionary<int, RewiredPlayerInput> _controllers = new Dictionary<int, RewiredPlayerInput>();
         private readonly object[] _rewiredPlayers = new object[SessionManager.MaxPlayers];
         private float _nextPlayerSync;
+        private int _lastPlayerCount = -1;
+        private readonly bool[] _warnedNoRewired = new bool[SessionManager.MaxPlayers];
 
         // The game's own PlayerControllers (by split-screen index), and whether we've paused each one's controls.
         private readonly object[] _playerControllers = new object[SessionManager.MaxPlayers];
@@ -103,6 +105,13 @@ namespace WobblyMods.HouseMenu
         {
             List<object> locals = GameReflection.LocalPlayerControllers();
             int count = System.Math.Min(locals.Count, SessionManager.MaxPlayers);
+            if (count != _lastPlayerCount)
+            {
+                _lastPlayerCount = count;
+                Log.LogInfo("Local players found: " + count +
+                            (GameReflection.FindType("GameInstance") == null ? " (GameInstance class not found)" :
+                             GameReflection.GetStatic("GameInstance", "Instance") == null ? " (GameInstance.Instance is null)" : ""));
+            }
 
             for (int i = 0; i < SessionManager.MaxPlayers; i++)
             {
@@ -112,8 +121,17 @@ namespace WobblyMods.HouseMenu
 
             for (int i = 0; i < count; i++)
             {
-                if (_controllers.ContainsKey(i) || _rewiredPlayers[i] == null)
+                if (_controllers.ContainsKey(i))
                 {
+                    continue;
+                }
+                if (_rewiredPlayers[i] == null)
+                {
+                    if (!_warnedNoRewired[i])
+                    {
+                        _warnedNoRewired[i] = true;
+                        Log.LogWarning("Player " + (i + 1) + ": no Rewired player found yet.");
+                    }
                     continue;
                 }
 

@@ -135,21 +135,28 @@ namespace WobblyMods.HouseMenu
             }
         }
 
+        /// <summary>
+        /// Reads a static property or field, searching parent classes too. Needed because many game
+        /// singletons (like GameInstance.Instance) are declared on a generic parent class.
+        /// </summary>
         public static object GetStatic(string typeName, string member)
         {
             Type type = FindType(typeName);
-            if (type == null) return null;
             try
             {
-                PropertyInfo p = type.GetProperty(member, Any);
-                if (p != null) return p.GetValue(null, null);
-                FieldInfo f = type.GetField(member, Any);
-                return f != null ? f.GetValue(null) : null;
+                for (Type t = type; t != null; t = t.BaseType)
+                {
+                    PropertyInfo p = t.GetProperty(member, Any | BindingFlags.DeclaredOnly);
+                    if (p != null && p.GetIndexParameters().Length == 0) return p.GetValue(null, null);
+                    FieldInfo f = t.GetField(member, Any | BindingFlags.DeclaredOnly);
+                    if (f != null && f.IsStatic) return f.GetValue(null);
+                }
             }
             catch (Exception)
             {
-                return null;
+                // fall through
             }
+            return null;
         }
 
         public static Type FindType(string name)

@@ -42,6 +42,15 @@ namespace WobblyMods.HouseMenu.Tanks
             return new KeyValuePair<string, float>(name, size);
         }
 
+        /// <summary>A tabletop-sized copy of the giant tank (same contents, scaled down).</summary>
+        public static GameObject BuildSmall(Vector3 position, Quaternion rotation)
+        {
+            GameObject tank = Build(position, rotation);
+            tank.name = "Skylar Small Fish Tank";
+            tank.transform.localScale = Vector3.one * 0.3f;
+            return tank;
+        }
+
         /// <summary>Builds the whole tank. position is the floor point under the tank's center.</summary>
         public static GameObject Build(Vector3 position, Quaternion rotation)
         {
@@ -194,7 +203,7 @@ namespace WobblyMods.HouseMenu.Tanks
         /// and puts it at localPos inside the tank. The model sits inside a holder object, so swimming and
         /// swaying move the holder while the model keeps its own orientation. Returns the holder, or null.
         /// </summary>
-        private static GameObject Place(Transform root, string address, float size, Vector3 localPos, System.Random rng)
+        internal static GameObject Place(Transform root, string address, float size, Vector3 localPos, System.Random rng)
         {
             string problem;
             GameObject model = GameSpawner.SpawnLocal(address, Vector3.zero, Quaternion.identity, out problem);
@@ -232,14 +241,14 @@ namespace WobblyMods.HouseMenu.Tanks
             return holder;
         }
 
-        private static void MakeVisualOnly(GameObject model)
+        internal static void MakeVisualOnly(GameObject model)
         {
             foreach (Joint j in model.GetComponentsInChildren<Joint>(true)) Object.Destroy(j);
             foreach (Rigidbody rb in model.GetComponentsInChildren<Rigidbody>(true)) Object.Destroy(rb);
             foreach (Collider c in model.GetComponentsInChildren<Collider>(true)) Object.Destroy(c);
         }
 
-        private static bool TryGetBounds(GameObject go, out Bounds bounds)
+        internal static bool TryGetBounds(GameObject go, out Bounds bounds)
         {
             bounds = new Bounds();
             bool any = false;
@@ -259,7 +268,7 @@ namespace WobblyMods.HouseMenu.Tanks
             return new Vector3(x, 0.2f + SandHeight, z);
         }
 
-        private static GameObject Box(Transform root, string name, Vector3 localPos, Vector3 size, Material material, bool keepCollider)
+        internal static GameObject Box(Transform root, string name, Vector3 localPos, Vector3 size, Material material, bool keepCollider)
         {
             GameObject box = GameObject.CreatePrimitive(PrimitiveType.Cube);
             box.name = name;

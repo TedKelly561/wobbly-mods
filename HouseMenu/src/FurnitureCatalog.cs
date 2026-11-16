@@ -40,7 +40,7 @@ namespace WobblyMods.HouseMenu
         private const string Sandbox = "Assets/Content/Arcade/Sandbox/Prefabs/Props/";
         private const string Fish = "Assets/Content/Game/Prefabs/Props/Fishing_Props/Fish/Static/";
 
-        public static readonly string[] Categories = { "Furniture", "Toys", "Fun" };
+        public static readonly string[] Categories = { "Furniture", "Toys", "Animals" };
 
         public static readonly CatalogItem[] Items =
         {
@@ -63,16 +63,37 @@ namespace WobblyMods.HouseMenu
             Item("snakes",     "Snakes & ladders", "Toys",    Sandbox + "Props/SnakesAndLadders.prefab"),
             Item("darts",      "Dart board",     "Toys",      Sandbox + "Props/DartBoard.prefab"),
 
-            Item("castle",     "Foam castle",    "Fun",       Sandbox + "FoamBlock/FoamCastle_1.prefab"),
-            Item("ramp",       "Ramp",           "Fun",       Sandbox + "Stadium/Ramp_1.prefab"),
+            Item("castle",     "Foam castle",    "Toys",       Sandbox + "FoamBlock/FoamCastle_1.prefab"),
+            Item("ramp",       "Ramp",           "Toys",       Sandbox + "Stadium/Ramp_1.prefab"),
+            // Skylar's animal tanks (task T24). Built from simple shapes and the game's own models.
             new CatalogItem
             {
-                Id = "fishtank", DisplayName = "Giant fish tank", Category = "Fun",
+                Id = "fishtank", DisplayName = "Giant fish tank", Category = "Animals",
                 Build = Tanks.FishTank.Build, Distance = 7f
             },
             new CatalogItem
             {
-                Id = "giantcatfish", DisplayName = "Giant catfish", Category = "Fun",
+                Id = "smallfishtank", DisplayName = "Small fish tank", Category = "Animals",
+                Build = Tanks.FishTank.BuildSmall, Distance = 2.5f
+            },
+            new CatalogItem
+            {
+                Id = "frogtank", DisplayName = "Frog tank", Category = "Animals",
+                Build = Tanks.Terrarium.BuildFrogTank, Distance = 5f
+            },
+            new CatalogItem
+            {
+                Id = "lizardtank", DisplayName = "Lizard tank", Category = "Animals",
+                Build = Tanks.Terrarium.BuildLizardTank, Distance = 5f
+            },
+            new CatalogItem
+            {
+                Id = "turtletank", DisplayName = "Turtle tank", Category = "Animals",
+                Build = Tanks.Terrarium.BuildTurtleTank, Distance = 5f
+            },
+            new CatalogItem
+            {
+                Id = "giantcatfish", DisplayName = "Giant catfish", Category = "Animals",
                 Address = Fish + "CatFish_Static.prefab", Scale = 8f, Local = true
             },
         };

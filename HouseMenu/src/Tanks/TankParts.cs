@@ -198,6 +198,14 @@ namespace WobblyMods.HouseMenu.Tanks
             return _bubble;
         }
 
+        /// <summary>A see-through colored material (water, ponds), based on the glass material.</summary>
+        public static Material Tinted(Color color)
+        {
+            var m = new Material(Glass()) { name = "Tank Tinted" };
+            SetColor(m, color);
+            return m;
+        }
+
         /// <summary>A solid colored material, copied from Unity's default material (works with any render setup).</summary>
         public static Material Solid(Color color)
         {

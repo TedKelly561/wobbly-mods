@@ -15,6 +15,13 @@ This is now a **big project** with three parts:
 
 Not planned: public release (Thunderstore or Nexus).
 
+## What Skylar likes (use this for every design choice)
+
+- Monster trucks, dinosaurs, animals.
+- Favorite colors: **orange and green**.
+- Wants to decorate her house with **fish tanks, lizard tanks, frog tanks and turtle tanks**.
+- Already asked for: playing as a black cat with yellow eyes, and a giant redtail catfish to ride.
+
 ## Decisions so far
 
 | Topic | Decision | Source |
@@ -142,6 +149,9 @@ Each task says who checks it. Mark it done here when finished.
 | T21 | Redtail catfish car: reskin a game car | Catfish model, vehicle spawn names from Scout | Skylar can drive it |
 | T22 | Shared "reskin" helper: hide a game object's body and attach a visual model (used by cat, catfish boat, catfish car) | Scout reports | Works on one vehicle and on the player |
 | T23 | Install Unity Hub and the game's exact Unity version on the home PC, and make a small "asset project" that packs our models (cat, catfish, blocks) into AssetBundles | Unity version from Scout | One test bundle loads in game via `ModelLibrary` |
+| T24 | Animal tanks for the house: fish tank built from a glass box, sand and the game's fishing fish (gently swimming); then frog, lizard and turtle tanks (need free models) | Spawning working (T3) | Skylar can place tanks and they look alive |
+| T25 | Dinosaur dress-up: put the game's own T-Rex / DinoSteed / crocodile / frog / shark clothes on a player from the menu (`CharacterCustomize.SetClothingPiece`) | Clothing API check | Skylar can become a T-Rex from the menu |
+| T26 | Monster truck: list the game's vehicles (Scout 0.4: `AllVehiclesAssetReferences`), then a big-wheeled orange/green truck reskin | Scout 0.4 | Skylar can drive a monster truck |
 | T18 | Controller menu: replace mouse clicks with controller navigation, one menu per player | T5, T14 | Each player opens and drives their own menu with their controller |
 
 ## Family mods

@@ -13,10 +13,14 @@ namespace WobblyMods.HouseMenu
     {
         private const float MoveStep = 0.5f;
 
+        // Skylar's favorites first: orange and green.
         private static readonly Color[] Palette =
         {
-            Color.red, Color.blue, Color.green, Color.yellow,
-            Color.black, Color.white, Color.magenta
+            new Color(1f, 0.5f, 0f),      // orange
+            new Color(0.2f, 0.75f, 0.2f), // green
+            new Color(1f, 0.75f, 0.3f),   // light orange
+            new Color(0.5f, 0.9f, 0.3f),  // lime green
+            Color.red, Color.blue, Color.yellow, Color.black, Color.white
         };
 
         private readonly PlayerSession _session;

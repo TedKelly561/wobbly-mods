@@ -36,6 +36,8 @@ Not planned: public release (Thunderstore or Nexus).
 | Project scope | Big: more for Skylar, family mods, agent team. Not public | Question answers |
 | Access to game files | Connect the home PC to the cloud session (Remote Control). Fallback: parent reports what they see | Question answers |
 | Repo layout | `main` starts empty. Work goes to review through draft PRs | 2026-11-16 |
+| Family play | Split screen together on one computer | Question answers |
+| Family wishes | House menus, fun powers, vehicles and spawning, sandbox build mode | Question answers |
 
 ## Stages
 
@@ -99,10 +101,30 @@ Each task says who checks it. Mark it done here when finished.
 | T11 | Design a shared base so each family mod reuses the menu, undo, and GameBindings | T3, T10 | Second mod builds without copying code |
 | T12 | Big-picture buttons: replace text buttons with item thumbnails | T2 | Skylar can pick items without reading |
 | T13 | Write a "how to hand off a task" checklist for agent sessions | None | Checklist added below |
+| T14 | Split-screen design: find how the game tracks each local player, their camera, and their controller | Decompiled player and camera code | Design written here, menu works per player |
+| T15 | Sandbox build mode: study the game's current building system and design snapping blocks and materials | Decompiled building code, family's wish list | Design written here |
+| T16 | Fun powers mod (flying, super jump, physics gun) | T14 | Each power works per player and can be turned off |
+| T17 | Vehicles and spawning mod | T3, T14 | Family can spawn vehicles and giant objects |
 
 ## Family mods
 
-To be filled in from T10: who plays, what they want, and which stage it fits.
+Players: Skylar (5), parent (the project owner), another parent, and siblings (ages still to be asked).
+They play **split screen together** on one computer.
+
+| Wish | Who | Notes |
+|---|---|---|
+| House menu for their own houses | Family | Reuse Skylar's menu (T11) |
+| Fun powers (flying, super jump, physics gun) | Family | New mod |
+| Vehicles and spawning (cars, boats, giant objects) | Family | New mod. The original sandbox-spawner goal |
+| **Sandbox build mode** with real building blocks and materials | Family | The game's current building isn't good enough for anything substantial. Needs snapping walls, floors, roofs, and stairs, plus good materials. Large: its own stage |
+
+### Split screen changes the design (T14)
+
+The current menu assumes one player: one mouse, one camera (`Camera.main`), one keyboard. In split screen:
+- Each player needs their own menu, opened and driven by their own controller.
+- "Look at it" must use that player's camera, not `Camera.main`.
+- Undo should be per player, so one person's undo doesn't remove someone else's work.
+- Mouse-only buttons won't work for controller players.
 
 ## How the agent team works
 

@@ -61,12 +61,21 @@ namespace WobblyMods.HouseMenu
         }
 
         /// <summary>
-        /// That player's camera.
-        /// TODO(T14): in split screen each player has their own camera. Find how the game
-        /// tracks local players and return player N's camera. Camera.main is only right for one player.
+        /// That player's camera. Uses the game's own local players (GameInstance, confirmed in research),
+        /// and falls back to Camera.main if they can't be read.
+        /// TODO(T14): confirm with the Scout report that player order matches controller order.
         /// </summary>
         public static Camera CameraFor(int playerIndex)
         {
+            List<object> locals = GameReflection.LocalPlayerControllers();
+            if (playerIndex >= 0 && playerIndex < locals.Count)
+            {
+                Camera cam = GameReflection.CameraOf(locals[playerIndex]);
+                if (cam != null)
+                {
+                    return cam;
+                }
+            }
             return Camera.main;
         }
 
@@ -78,6 +87,19 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         public static Rect ScreenAreaFor(int playerIndex, int playerCount)
         {
+            // Best source: the player's own camera area. Camera pixelRect starts bottom-left,
+            // IMGUI starts top-left, so flip y.
+            List<object> locals = GameReflection.LocalPlayerControllers();
+            if (playerIndex >= 0 && playerIndex < locals.Count)
+            {
+                Camera cam = GameReflection.CameraOf(locals[playerIndex]);
+                if (cam != null)
+                {
+                    Rect p = cam.pixelRect;
+                    return new Rect(p.x, Screen.height - p.y - p.height, p.width, p.height);
+                }
+            }
+
             float w = Screen.width;
             float h = Screen.height;
             if (playerCount <= 1)

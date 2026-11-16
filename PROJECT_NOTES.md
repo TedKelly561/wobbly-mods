@@ -156,7 +156,7 @@ Skylar asked for a giant redtail catfish (dark back, white belly band, whiskers,
 
 Skylar's choices: **boat-sized** (a couple of players can ride), **tail wags**, **bubbles and splashes**, **fish sounds**, and the car should drive on **land and water** (amphibious, only possible if the game has a vehicle that does both; otherwise the boat and car stay separate).
 
-Approach: reskin real game vehicles. Spawn a game boat or car, hide its body, and attach the catfish model as a visual-only child, scaled big. The game's own driving, floating, and seats keep working. Colliders stay on the game vehicle. The same "hide the body, attach a model" technique powers the cat costume, so the work is shared. Model search: `docs/research/redtail-catfish.md`.
+Approach: reskin real game vehicles. Spawn a game boat or car, hide its body, and attach the catfish model as a visual-only child, scaled big. The game's own driving, floating, and seats keep working. Colliders stay on the game vehicle. The same "hide the body, attach a model" technique powers the cat costume, so the work is shared. Model search: `docs/research/redtail-catfish.md`. Top pick: "Red Tail Catifish" by fredy120488 on Sketchfab (CC BY 4.0, credit the author; already painted as a redtail; no rig, so the tail wag needs the tail split into its own part). Backup: gfroad's low-poly catfish on OpenGameArt (CC0, with whiskers; repaint the tail red). Downloading the top pick needs a free Sketchfab account.
 
 ### Split screen changes the design (T14)
 

@@ -42,6 +42,7 @@ Not planned: public release (Thunderstore or Nexus).
 | Two game builds | The folder has `Wobbly Life.exe` + `Wobbly Life_Data` and `Wobbly Life_EOS.exe` + `Wobbly Life_EOS_Data`, plus `SharedAssets`. Steam offers two launch options: **"Play Crossplay"** (`Wobbly Life_EOS.exe`) and **"Play Steam Workshop"** (`Wobbly Life.exe`). The family plays **Crossplay** (confirmed from the Steam launch screen, 2026-11-16; an earlier note said otherwise). The project builds against `Wobbly Life_EOS_Data\Managed`; for the Workshop build, pass `-p:GameDataDir="Wobbly Life_Data"`. BepInEx loads in both. Research notes say the crossplay build uses Unity 2022.3.62f2 (Scout will confirm). Mods are for local split-screen play; avoid using them in online crossplay lobbies with strangers | Screenshot 2026-11-16 |
 | BepInEx | 5.4.23.5 win x64 extracted into the game folder | 2026-11-16 |
 | Family wishes | House menus, fun powers, vehicles and spawning, sandbox build mode | Question answers |
+| Menu button | **Hold Map for 1 second** opens/closes the menu (a tap still opens the map). Config: `ToggleAction`, `ToggleHoldSeconds` | Parent, 2026-11-16 |
 | Controls | Everyone uses a controller. Replaces the mouse-click menu; F1/F2 stay as a keyboard backup | Question answers |
 | Build mode priorities | Snapping blocks, good materials, big builds without lag, save and load | Question answers |
 
@@ -83,12 +84,16 @@ HouseMenu/
   src/GameBindings.cs      the ONLY file that touches Wobbly Life's own code
 ```
 
-## Build and install (at home, Windows)
+## Build and install
 
-1. Install BepInEx 5 (Mono) into the game folder and run the game once.
-2. Open `HouseMenu/HouseMenu.csproj` in a build tool, or run `dotnet build` in `HouseMenu`.
-3. If the game isn't in the default Steam folder, add `-p:GameDir="D:\path\to\Wobbly Life"`.
-4. The DLL is copied to `BepInEx\plugins\WobblyMods\` automatically.
+- HouseMenu, Visuals, and Scout build **without game files**: BepInEx and Unity reference DLLs come from
+  the BepInEx NuGet feed (`nuget.bepinex.dev`). HouseMenu and Visuals target netstandard2.1 with Unity
+  **2022.3.62** references (the game's exact version); Scout stays on Unity 2019.4 references (proven in game).
+- Game classes are reached through reflection (`HouseMenu/src/GameReflection.cs`), using names confirmed by Scout.
+- Build: `dotnet build HouseMenu/HouseMenu.csproj -c Release`. If the game is installed at the default Steam
+  path, the DLLs are copied to `BepInEx\plugins\WobblyMods\` (skip with `-p:DeployToGame=false`).
+- Install by hand: copy `WobblyMods.HouseMenu.dll` and `WobblyMods.Core.dll` into `BepInEx\plugins\WobblyMods\`.
+- BepInEx setting needed: `HideManagerGameObject = true` in `BepInEx\config\BepInEx.cfg` (set 2026-11-15).
 
 ## Key game facts (from research, confirmed in open-source mods)
 

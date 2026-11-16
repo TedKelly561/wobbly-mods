@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.3.0";
+        public const string PluginVersion = "0.4.0";
 
         internal static ManualLogSource Log;
 
@@ -46,18 +46,20 @@ namespace WobblyMods.HouseMenu
             _undoKey = Config.Bind("Controls", "UndoKey", KeyCode.F2,
                 "Keyboard backup: undoes player 1's most recent house change.");
 
-            // Rewired action names. Defaults are Rewired's standard UI names: a GUESS until
-            // Scout's scene report lists the game's real actions (PROJECT_NOTES.md T18).
-            _actions.Vertical = Config.Bind("Controller", "VerticalAction", "UIVertical",
-                "Rewired axis for menu up/down (up = positive).").Value;
-            _actions.Horizontal = Config.Bind("Controller", "HorizontalAction", "UIHorizontal",
-                "Rewired axis for menu left/right (right = positive).").Value;
+            // Rewired action names, CONFIRMED in Scout report 2. Lists fall back to the movement stick
+            // in case the game switches its UI controls off during normal play.
+            _actions.Vertical = Config.Bind("Controller", "VerticalAction", "UIVertical,Vertical",
+                "Rewired axis (or comma list) for menu up/down (up = positive).").Value;
+            _actions.Horizontal = Config.Bind("Controller", "HorizontalAction", "UIHorizontal,Horizontal",
+                "Rewired axis (or comma list) for menu left/right (right = positive).").Value;
             _actions.Select = Config.Bind("Controller", "SelectAction", "UISubmit",
                 "Rewired button that picks the highlighted item (usually A).").Value;
             _actions.Back = Config.Bind("Controller", "BackAction", "UICancel",
                 "Rewired button that goes back or closes (usually B).").Value;
-            _actions.Toggle = Config.Bind("Controller", "ToggleAction", "",
-                "Rewired button that opens and closes the menu. Empty = keyboard only until set.").Value;
+            _actions.Toggle = Config.Bind("Controller", "ToggleAction", "Map",
+                "Rewired button to HOLD to open and close the menu (family's choice: Map). Empty = keyboard only.").Value;
+            _actions.ToggleHoldSeconds = Config.Bind("Controller", "ToggleHoldSeconds", 1f,
+                "How long to hold the toggle button. A quick tap still does its normal job. 0 = a press toggles.").Value;
 
             _sessions = new SessionManager(HousePlayerMenu.BuildRootPage);
 

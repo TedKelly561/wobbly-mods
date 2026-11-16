@@ -7,14 +7,19 @@ using WobblyMods.Core;
 
 namespace WobblyMods.HouseMenu
 {
-    /// <summary>Rewired action names used for the menu. Set from the config file.</summary>
+    /// <summary>
+    /// Rewired action names used for the menu. Set from the config file.
+    /// Each can be a comma-separated list; the first one with input wins (e.g. "UIVertical,Vertical"
+    /// reads the UI stick and falls back to the movement stick if the game has UI controls off).
+    /// </summary>
     internal sealed class RewiredMenuActions
     {
         public string Vertical;    // axis: up is positive
         public string Horizontal;  // axis: right is positive
         public string Select;      // button
         public string Back;        // button
-        public string Toggle;      // button; empty = no controller toggle
+        public string Toggle;      // button held to open/close the menu; empty = no controller toggle
+        public float ToggleHoldSeconds = 1f; // 0 = a normal press toggles
     }
 
     /// <summary>
@@ -40,6 +45,8 @@ namespace WobblyMods.HouseMenu
         private readonly HashSet<MenuAction> _pressed = new HashSet<MenuAction>();
 
         private int _heldDirection = -1; // index into Directions, -1 = none
+        private float _toggleHeldSince = -1f;  // when the toggle button went down, -1 = not held
+        private bool _toggleFired;              // already toggled during this hold
         private float _nextRepeatTime;
 
         private static readonly MenuAction[] Directions = { MenuAction.Up, MenuAction.Down, MenuAction.Left, MenuAction.Right };
@@ -69,10 +76,11 @@ namespace WobblyMods.HouseMenu
 
             if (ButtonDown(player, _names.Select)) _pressed.Add(MenuAction.Select);
             if (ButtonDown(player, _names.Back)) _pressed.Add(MenuAction.Back);
-            if (ButtonDown(player, _names.Toggle)) _pressed.Add(MenuAction.ToggleMenu);
+            UpdateToggle(player);
 
             int direction = CurrentDirection(Axis(player, _names.Vertical), Axis(player, _names.Horizontal));
             float now = Time.unscaledTime;
+
             if (direction < 0)
             {
                 _heldDirection = -1;
@@ -90,6 +98,37 @@ namespace WobblyMods.HouseMenu
             }
         }
 
+        /// <summary>
+        /// Toggle by holding a button (the family chose: hold Map for 1 second). A quick tap still does the
+        /// button's normal game job. Fires once per hold.
+        /// </summary>
+        private void UpdateToggle(object player)
+        {
+            if (_names.ToggleHoldSeconds <= 0f)
+            {
+                if (ButtonDown(player, _names.Toggle)) _pressed.Add(MenuAction.ToggleMenu);
+                return;
+            }
+
+            if (!ButtonHeld(player, _names.Toggle))
+            {
+                _toggleHeldSince = -1f;
+                _toggleFired = false;
+                return;
+            }
+
+            float now = Time.unscaledTime;
+            if (_toggleHeldSince < 0f)
+            {
+                _toggleHeldSince = now;
+            }
+            if (!_toggleFired && now - _toggleHeldSince >= _names.ToggleHoldSeconds)
+            {
+                _toggleFired = true;
+                _pressed.Add(MenuAction.ToggleMenu);
+            }
+        }
+
         /// <summary>The strongest stick/D-pad direction past the threshold, or -1.</summary>
         private static int CurrentDirection(float vertical, float horizontal)
         {
@@ -98,18 +137,45 @@ namespace WobblyMods.HouseMenu
             return horizontal < 0 ? 2 : 3;
         }
 
-        private static bool ButtonDown(object player, string action)
+        private static bool ButtonDown(object player, string actions)
         {
-            if (!Usable(action)) return false;
-            object result = Invoke(player, "GetButtonDown", action);
-            return result is bool && (bool)result;
+            return AnyButton(player, actions, "GetButtonDown");
         }
 
-        private static float Axis(object player, string action)
+        private static bool ButtonHeld(object player, string actions)
         {
-            if (!Usable(action)) return 0f;
-            object result = Invoke(player, "GetAxis", action);
-            return result is float ? (float)result : 0f;
+            return AnyButton(player, actions, "GetButton");
+        }
+
+        private static bool AnyButton(object player, string actions, string method)
+        {
+            foreach (string action in Split(actions))
+            {
+                if (!Usable(action)) continue;
+                object result = Invoke(player, method, action);
+                if (result is bool && (bool)result) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The first listed axis that's past the dead zone, or 0.</summary>
+        private static float Axis(object player, string actions)
+        {
+            foreach (string action in Split(actions))
+            {
+                if (!Usable(action)) continue;
+                object result = Invoke(player, "GetAxis", action);
+                if (result is float && Mathf.Abs((float)result) >= 0.2f) return (float)result;
+            }
+            return 0f;
+        }
+
+        private static string[] Split(string actions)
+        {
+            if (string.IsNullOrEmpty(actions)) return new string[0];
+            string[] parts = actions.Split(',');
+            for (int i = 0; i < parts.Length; i++) parts[i] = parts[i].Trim();
+            return parts;
         }
 
         private static object Invoke(object player, string method, string action)

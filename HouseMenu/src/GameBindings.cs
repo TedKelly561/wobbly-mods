@@ -14,6 +14,22 @@ namespace WobblyMods.HouseMenu
     {
         private static readonly List<GameObject> Spawned = new List<GameObject>();
 
+        /// <summary>The most recently placed item that still exists, or null.</summary>
+        public static GameObject LastSpawned
+        {
+            get
+            {
+                for (int i = Spawned.Count - 1; i >= 0; i--)
+                {
+                    if (Spawned[i] != null)
+                    {
+                        return Spawned[i];
+                    }
+                }
+                return null;
+            }
+        }
+
         /// <summary>True once Spawn is connected to the game's own spawning code.</summary>
         public static bool SpawnReady
         {
@@ -38,8 +54,13 @@ namespace WobblyMods.HouseMenu
             return placed;
         }
 
-        /// <summary>Returns the object at the center of the screen, or null.</summary>
-        public static GameObject FindTargetInView()
+        /// <summary>
+        /// Returns the nearest editable object along the line from the screen center, or null.
+        /// The camera is third-person, so the first thing hit is usually her own character.
+        /// That's why this checks every hit instead of just the first one, and walks up from
+        /// the part that was hit (a cushion, a leg) to the whole object that can be edited.
+        /// </summary>
+        public static GameObject FindEditableInView()
         {
             Camera cam = Camera.main;
             if (cam == null)
@@ -47,11 +68,19 @@ namespace WobblyMods.HouseMenu
                 return null;
             }
 
-            RaycastHit hit;
             Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (Physics.Raycast(ray, out hit, 30f))
+            RaycastHit[] hits = Physics.RaycastAll(ray, 30f);
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+            foreach (RaycastHit hit in hits)
             {
-                return hit.transform.gameObject;
+                for (Transform t = hit.transform; t != null; t = t.parent)
+                {
+                    if (IsEditable(t.gameObject))
+                    {
+                        return t.gameObject;
+                    }
+                }
             }
             return null;
         }

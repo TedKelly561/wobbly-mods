@@ -27,9 +27,23 @@ namespace WobblyMods.HouseMenu
         private GUIStyle _bigButton;
         private GUIStyle _text;
 
+        // The game hides and locks the mouse during play. Save its state on open, put it back on close.
+        private bool _savedCursorVisible;
+        private CursorLockMode _savedCursorLock;
+
         public void Toggle()
         {
             _open = !_open;
+            if (_open)
+            {
+                _savedCursorVisible = Cursor.visible;
+                _savedCursorLock = Cursor.lockState;
+            }
+            else
+            {
+                Cursor.visible = _savedCursorVisible;
+                Cursor.lockState = _savedCursorLock;
+            }
         }
 
         public void UndoLast()
@@ -44,6 +58,10 @@ namespace WobblyMods.HouseMenu
             {
                 return;
             }
+
+            // Every frame, because the game may re-lock the mouse on its own.
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
 
             EnsureStyles();
             GUI.Box(_panel, "House Menu");
@@ -100,7 +118,7 @@ namespace WobblyMods.HouseMenu
 
         private void DrawChangeButtons()
         {
-            GUILayout.Label("Change the thing you're looking at:", _text);
+            GUILayout.Label("Change the thing you look at (or the last thing you placed):", _text);
 
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Left", _bigButton)) Nudge(CameraRelative(Vector3.left));
@@ -175,22 +193,17 @@ namespace WobblyMods.HouseMenu
             _status = undone > 0 ? "Reset the house (" + undone + " changes undone)." : "The house is already normal.";
         }
 
-        /// <summary>Returns the object the player is looking at, or null with a status message.</summary>
+        /// <summary>
+        /// The thing she's looking at if it can be changed, otherwise the last thing she placed.
+        /// Aiming a third-person camera is hard at 5, so "the last thing I placed" is the easy default.
+        /// </summary>
         private GameObject CurrentTarget()
         {
-            GameObject target = GameBindings.FindTargetInView();
+            GameObject target = GameBindings.FindEditableInView() ?? GameBindings.LastSpawned;
             if (target == null)
             {
-                _status = "Look at something in your house first.";
-                return null;
+                _status = "Place something first, then you can move it or color it.";
             }
-
-            if (!GameBindings.IsEditable(target))
-            {
-                _status = "That can't be changed yet.";
-                return null;
-            }
-
             return target;
         }
 

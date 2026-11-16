@@ -124,6 +124,10 @@ Each task says who checks it. Mark it done here when finished.
 | T15 | Sandbox build mode: study the game's current building system and design snapping blocks and materials | Decompiled building code, family's wish list | Design written here |
 | T16 | Fun powers mod (flying, super jump, physics gun) | T14 | Each power works per player and can be turned off |
 | T17 | Vehicles and spawning mod | T3, T14 | Family can spawn vehicles and giant objects |
+| T19 | Redtail catfish prop: spawnable giant catfish in the sandbox | Catfish model, T3 | Spawns, can be moved and undone |
+| T20 | Redtail catfish boat: reskin a game boat | Catfish model, vehicle spawn names from Scout | Skylar can ride it on water |
+| T21 | Redtail catfish car: reskin a game car | Catfish model, vehicle spawn names from Scout | Skylar can drive it |
+| T22 | Shared "reskin" helper: hide a game object's body and attach a visual model (used by cat, catfish boat, catfish car) | Scout reports | Works on one vehicle and on the player |
 | T18 | Controller menu: replace mouse clicks with controller navigation, one menu per player | T5, T14 | Each player opens and drives their own menu with their controller |
 
 ## Family mods
@@ -137,6 +141,15 @@ They play **split screen together** on one computer, and **everyone uses a contr
 | Fun powers (flying, super jump, physics gun) | Family | New mod |
 | Vehicles and spawning (cars, boats, giant objects) | Family | New mod. The original sandbox-spawner goal |
 | **Sandbox build mode** with real building blocks and materials | Family | The game's current building isn't good enough for anything substantial. All four matter: snapping walls, floors, roofs, and stairs; good materials (wood, brick, glass, stone, paint); big builds without lag; save and load. Large: its own stage |
+
+### Skylar's giant redtail catfish (T19-T21)
+
+Skylar asked for a giant redtail catfish (dark back, white belly band, whiskers, bright red tail) that she can ride. Three forms:
+1. **Prop:** a giant redtail catfish she can spawn in the sandbox.
+2. **Boat:** a rideable catfish that floats and steers like a boat.
+3. **Car:** a drivable catfish on wheels.
+
+Approach: reskin real game vehicles. Spawn a game boat or car, hide its body, and attach the catfish model as a visual-only child, scaled big. The game's own driving, floating, and seats keep working. Colliders stay on the game vehicle. The same "hide the body, attach a model" technique powers the cat costume, so the work is shared. Model search: `docs/research/redtail-catfish.md`.
 
 ### Split screen changes the design (T14)
 

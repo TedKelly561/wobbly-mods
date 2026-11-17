@@ -53,6 +53,30 @@ namespace WobblyMods.HouseMenu
             Item("desklamp",   "Desk lamp",      "Furniture", Sandbox + "Props/DeskLamp.prefab"),
             Item("shelf",      "Shelf",          "Furniture", Sandbox + "Props/Shelf_4.prefab"),
             Item("curtains",   "Red curtains",   "Furniture", Sandbox + "Props/Curtains_Red.prefab"),
+            Item("wardrobe2",  "Wardrobe 2",     "Furniture", Sandbox + "Props/Wardrobe_2.prefab"),
+            Item("drawers",    "Drawers",        "Furniture", Sandbox + "Props/Draw_2.prefab"),
+            Item("books",      "Books",          "Furniture", Sandbox + "Props/Books_1.prefab"),
+            Item("computer",   "Computer",       "Furniture", Sandbox + "Props/Computer.prefab"),
+            Item("stereo",     "Stereo",         "Furniture", Sandbox + "Props/Stereo.prefab"),
+            Item("tvstand",    "TV stand",       "Furniture", Sandbox + "Stadium/TvStand.prefab"),
+            Item("toilet",     "Toilet",         "Furniture", Sandbox + "Props/Toilet.prefab"),
+
+            // Lights in Skylar's colors (built by us, they really light up the room).
+            new CatalogItem { Id = "lamporange", DisplayName = "Orange lamp", Category = "Furniture", Build = Decor.OrangeLamp, Distance = 2.5f },
+            new CatalogItem { Id = "lampgreen", DisplayName = "Green lamp", Category = "Furniture", Build = Decor.GreenLamp, Distance = 2.5f },
+            new CatalogItem { Id = "nightlight", DisplayName = "Night light", Category = "Furniture", Build = Decor.NightLight, Distance = 2f },
+            new CatalogItem { Id = "partylights", DisplayName = "Party lights", Category = "Furniture", Build = Decor.PartyLights, Distance = 3.5f },
+
+            // House plants: the game's own plants and trees, shrunk to indoor size (placed as local copies,
+            // since scenery isn't a network object). Sizes are a first guess; Bigger/Smaller adjust them.
+            Plant("cactus",     "Cactus",         Plants + "Cactus.prefab", 0.5f),
+            Plant("palm",       "Palm tree",      Plants + "Resort_PalmTree.prefab", 0.25f),
+            Plant("banana",     "Banana tree",    Plants + "BananaTree.prefab", 0.3f),
+            Plant("bush",       "Jungle bush",    Plants + "JungleBush.prefab", 0.5f),
+            Plant("flower",     "Flowers",        Plants + "Details/Flower.prefab", 1f),
+            Plant("flowery",    "Yellow flowers", Plants + "Details/Flower Yellow.prefab", 1f),
+            Plant("redplant",   "Red plant",      Plants + "Details/RedPlant.prefab", 1f),
+            Plant("hedge",      "Hedge",          Plants + "Hedge.prefab", 0.5f),
 
             Item("softtoy",    "Soft toy",       "Toys",      Sandbox + "Props/SoftToy_2.prefab"),
             Item("softtoy2",   "Soft toy 2",     "Toys",      Sandbox + "Props/SoftToy_6.prefab"),
@@ -65,6 +89,10 @@ namespace WobblyMods.HouseMenu
 
             Item("castle",     "Foam castle",    "Toys",       Sandbox + "FoamBlock/FoamCastle_1.prefab"),
             Item("ramp",       "Ramp",           "Toys",       Sandbox + "Stadium/Ramp_1.prefab"),
+            new CatalogItem { Id = "goldcoins", DisplayName = "Gold treasure", Category = "Toys",
+                              Address = Treasure + "Treasure_Gold_Coin_Static.prefab", Scale = 3f, Local = true, Distance = 2.5f },
+            new CatalogItem { Id = "goldbar", DisplayName = "Gold bar", Category = "Toys",
+                              Address = Treasure + "Treasure_Gold_Ingot_Static.prefab", Scale = 3f, Local = true, Distance = 2.5f },
             // Skylar's animal tanks (task T24). Built from simple shapes and the game's own models.
             new CatalogItem
             {
@@ -104,9 +132,28 @@ namespace WobblyMods.HouseMenu
             },
         };
 
+        private const string Plants = "Assets/Content/Game/Prefabs/Environment/Vegitation/";
+        private const string Treasure = "Assets/Content/Game/Prefabs/Props/Treasure/Money/";
+
+        private static CatalogItem Plant(string id, string name, string address, float scale)
+        {
+            return new CatalogItem { Id = id, DisplayName = name, Category = "Furniture", Address = address,
+                                     Scale = scale, Local = true, Distance = 2.5f };
+        }
+
         private static CatalogItem Item(string id, string name, string category, string address)
         {
             return new CatalogItem { Id = id, DisplayName = name, Category = category, Address = address };
+        }
+
+        /// <summary>The catalog item with that id, or null (used when loading a saved house).</summary>
+        public static CatalogItem Find(string id)
+        {
+            foreach (CatalogItem item in Items)
+            {
+                if (item.Id == id) return item;
+            }
+            return null;
         }
 
         public static List<CatalogItem> InCategory(string category)

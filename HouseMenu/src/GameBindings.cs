@@ -17,6 +17,10 @@ namespace WobblyMods.HouseMenu
         {
             public GameObject Item;
             public int Owner;
+            public string CatalogId;     // for saving the house
+            public float ScaleFactor = 1f; // Bigger/Smaller on top of the item's own size
+            public bool HasColor;        // painted with "New color"
+            public Color Color;
         }
 
         private static readonly List<Placed> Spawned = new List<Placed>();
@@ -54,6 +58,13 @@ namespace WobblyMods.HouseMenu
                 done(null, "couldn't find where player " + (playerIndex + 1) + " is");
                 return;
             }
+            SpawnAt(item, playerIndex, position, rotation, done);
+        }
+
+        /// <summary>Like Spawn, but at an exact spot (used when loading a saved house).</summary>
+        public static void SpawnAt(CatalogItem item, int playerIndex, Vector3 position, Quaternion rotation,
+                                   System.Action<GameObject, string> done)
+        {
 
             System.Action<GameObject> finish = placed =>
             {
@@ -66,7 +77,7 @@ namespace WobblyMods.HouseMenu
                 {
                     placed.transform.localScale = placed.transform.localScale * item.Scale;
                 }
-                Spawned.Add(new Placed { Item = placed, Owner = playerIndex });
+                Spawned.Add(new Placed { Item = placed, Owner = playerIndex, CatalogId = item.Id });
                 done(placed, null);
             };
 
@@ -254,6 +265,75 @@ namespace WobblyMods.HouseMenu
                 }
             }
             return false;
+        }
+
+        /// <summary>Remembers a size change on a placed item (for saving the house).</summary>
+        public static void NoteScale(GameObject target, float factor)
+        {
+            Placed p = Find(target);
+            if (p != null) p.ScaleFactor = factor;
+        }
+
+        public static float ScaleOf(GameObject target)
+        {
+            Placed p = Find(target);
+            return p != null ? p.ScaleFactor : 1f;
+        }
+
+        /// <summary>Remembers a paint color on a placed item (hasColor false = back to its own colors).</summary>
+        public static void NoteColor(GameObject target, bool hasColor, Color color)
+        {
+            Placed p = Find(target);
+            if (p == null) return;
+            p.HasColor = hasColor;
+            p.Color = color;
+        }
+
+        public static bool ColorOf(GameObject target, out Color color)
+        {
+            Placed p = Find(target);
+            color = p != null ? p.Color : Color.white;
+            return p != null && p.HasColor;
+        }
+
+        /// <summary>Everything placed with the menu that still exists, for "Save house".</summary>
+        public static Core.HouseLayout Snapshot()
+        {
+            var layout = new Core.HouseLayout();
+            foreach (Placed p in Spawned)
+            {
+                if (p.Item == null || string.IsNullOrEmpty(p.CatalogId)) continue;
+                Transform t = p.Item.transform;
+                layout.Items.Add(new Core.HouseItem
+                {
+                    Id = p.CatalogId,
+                    X = t.position.x, Y = t.position.y, Z = t.position.z,
+                    Yaw = t.eulerAngles.y,
+                    Scale = p.ScaleFactor,
+                    HasColor = p.HasColor, R = p.Color.r, G = p.Color.g, B = p.Color.b
+                });
+            }
+            return layout;
+        }
+
+        /// <summary>Every placed item that still exists (for clearing before a load).</summary>
+        public static List<GameObject> AllPlaced()
+        {
+            var list = new List<GameObject>();
+            foreach (Placed p in Spawned)
+            {
+                if (p.Item != null) list.Add(p.Item);
+            }
+            return list;
+        }
+
+        private static Placed Find(GameObject target)
+        {
+            foreach (Placed p in Spawned)
+            {
+                if (p.Item == target) return p;
+            }
+            return null;
         }
 
         public static void Forget(GameObject target)

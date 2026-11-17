@@ -78,6 +78,35 @@ namespace WobblyMods.HouseMenu
             change.Add("Up", () => Nudge(Vector3.up));
             change.Add("Down", () => Nudge(Vector3.down));
             change.Add("New color", Recolor);
+            change.Add("Turn", () => WithTarget(t => { ObjectEdits.Turn(t.transform, 45f, _session.Undo); return "Turned " + t.name + "."; }));
+            change.Add("Bigger", () => WithTarget(t => ObjectEdits.Resize(t, 1.25f, _session.Undo) ? "Bigger!" : "That's as big as it goes."));
+            change.Add("Smaller", () => WithTarget(t => ObjectEdits.Resize(t, 0.8f, _session.Undo) ? "Smaller!" : "That's as small as it goes."));
+
+            // Save and put back everything placed with the menu (it would vanish when the game closes).
+            var savePage = new MenuPage("Save house");
+            var loadPage = new MenuPage("Load house");
+            for (int i = 1; i <= HouseSave.Slots; i++)
+            {
+                int slot = i;
+                savePage.MainTab().Add("House " + slot + (HouseSave.SlotExists(slot) ? " (replace)" : " (empty)"), () =>
+                {
+                    _session.Status = HouseSave.Save(slot);
+                    _session.Menu.Back();
+                });
+
+                // Loading replaces what's placed now, so it asks first.
+                var confirmLoad = new MenuPage("Load house " + slot + "?");
+                confirmLoad.MainTab().Add("No, keep what's here", () => _session.Menu.Back());
+                confirmLoad.MainTab().Add("Yes, load house " + slot, () =>
+                {
+                    _session.Status = HouseSave.Load(slot, Player, _session.Undo);
+                    _session.Menu.Back();
+                    _session.Menu.Back();
+                });
+                loadPage.MainTab().AddSubPage("House " + slot + (HouseSave.SlotExists(slot) ? "" : " (empty)"), confirmLoad);
+            }
+            change.AddSubPage("Save house", savePage);
+            change.AddSubPage("Load house", loadPage);
 
             // Reset asks first, so a stray A press can't wipe everything.
             var confirmReset = new MenuPage("Reset house?");
@@ -125,6 +154,14 @@ namespace WobblyMods.HouseMenu
 
             ObjectEdits.Move(target.transform, direction * MoveStep, _session.Undo);
             _session.Status = "Moved " + target.name + ".";
+        }
+
+        /// <summary>Runs an edit on the thing the player is looking at (or the last thing they placed).</summary>
+        private void WithTarget(System.Func<GameObject, string> edit)
+        {
+            GameObject target = CurrentTarget();
+            if (target == null) return;
+            _session.Status = edit(target);
         }
 
         private void Recolor()

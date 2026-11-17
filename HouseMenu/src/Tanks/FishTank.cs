@@ -142,6 +142,12 @@ namespace WobblyMods.HouseMenu.Tanks
             Place(root, FishPath + "Starfish_Static.prefab", 0.4f, new Vector3(Width * 0.38f, floorY + 0.02f, Depth * 0.35f), rng);
             Place(root, FishPath + "Giant Crab_Static.prefab", 0.6f, new Vector3(-Width * 0.38f, floorY, -Depth * 0.3f), rng);
 
+            // Treasure by the castle (Skylar asked for a treasure chest; the game has gold coins and bars).
+            const string Gold = "Assets/Content/Game/Prefabs/Props/Treasure/Money/";
+            Place(root, Gold + "Treasure_Gold_Coin_Static.prefab", 0.35f, new Vector3(0.9f, floorY, -0.6f), rng);
+            Place(root, Gold + "Treasure_Gold_Coin_Static.prefab", 0.3f, new Vector3(1.1f, floorY, -0.3f), rng);
+            Place(root, Gold + "Treasure_Gold_Ingot_Static.prefab", 0.4f, new Vector3(0.7f, floorY, -0.25f), rng);
+
             // The castle: the centerpiece the fish swim around.
             GameObject castle = Place(root, "Arcade/ArcadeLobby/Prefabs/Props/PlayZone/CastleTurret.prefab", 1.8f,
                                       new Vector3(0, floorY, 0), rng);

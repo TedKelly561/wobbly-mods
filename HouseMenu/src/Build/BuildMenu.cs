@@ -26,6 +26,7 @@ namespace WobblyMods.HouseMenu.Build
         private MenuItem _rotateItem;
         private MenuItem _levelItem;
         private MenuItem _modeItem;
+        private MenuItem _sizeItem;
 
         private BuildMenu(PlayerSession session)
         {
@@ -57,6 +58,7 @@ namespace WobblyMods.HouseMenu.Build
             _rotateItem = _tab.Add("", () => { State.RotateClockwise(); Say("Turned to " + State.Rotation.Degrees + " degrees."); });
             // Shows the level; picking it goes back to the floor.
             _levelItem = _tab.Add("", () => Say(_world.ChangeLevel(_player, -_player.Level)));
+            _sizeItem = _tab.Add("", () => Say(_world.CyclePieceSize()));
             _tab.Add("Raise", () => Say(_world.ChangeLevel(_player, 1)));
             _tab.Add("Lower", () => Say(_world.ChangeLevel(_player, -1)));
             _tab.Add("Remove block here", () => Say(_world.RemoveHere(_player)));
@@ -150,6 +152,7 @@ namespace WobblyMods.HouseMenu.Build
             _rotateItem.Label = "Rotate (" + State.Rotation.Degrees + ")";
             _levelItem.Label = _player.Level == 0 ? "Level: floor" : "Level: " + (_player.Level > 0 ? "+" : "") + _player.Level;
             _modeItem.Label = _player.KeepGhost ? "Build mode: on" : "Build mode: off";
+            _sizeItem.Label = "Piece size: " + _world.PieceSize + " m";
             for (int i = 0; i < BuildWorld.SaveSlots; i++)
             {
                 bool used = BuildWorld.SlotExists(i + 1);

@@ -58,7 +58,14 @@ namespace WobblyMods.HouseMenu.Build
     internal sealed class BuildWorld
     {
         /// <summary>How far in front of the character the ghost sits, in metres.</summary>
-        private const float GhostDistance = 2.5f;
+        // How far ahead the ghost sits: farther for bigger pieces, so a 2 m wall isn't on top of the player.
+        private float GhostDistance
+        {
+            get { return Mathf.Max(2.5f, _grid.CellSize * 1.75f); }
+        }
+
+        /// <summary>Piece sizes the Build tab cycles through (metres). Parent: 2 m is good (1 m was too small).</summary>
+        public static readonly float[] PieceSizes = { 2f, 3f, 1f };
         private const int MaxLevel = 12;
         private const int MaxStack = 16;
         public const int SaveSlots = 3;
@@ -72,7 +79,7 @@ namespace WobblyMods.HouseMenu.Build
         private readonly List<int> _gone = new List<int>();
         private BuildModel _model;
         private BuildEditor _editor;
-        private GridSettings _grid = new GridSettings();
+        private GridSettings _grid = new GridSettings(PieceSizes[0]);
 
         // Until the first block goes down, the grid's height follows the ground in front of the player,
         // so blocks sit on the floor instead of up to a metre above or below it.
@@ -339,6 +346,29 @@ namespace WobblyMods.HouseMenu.Build
         /// Takes away every block, as one step in this player's undo (so "Undo build" brings it all back).
         /// Other players' undo for those blocks then says "Someone else changed that".
         /// </summary>
+        /// <summary>The current piece size in metres.</summary>
+        public float PieceSize
+        {
+            get { return _grid.CellSize; }
+        }
+
+        /// <summary>
+        /// Switches to the next piece size. Only while nothing is built, so a build never mixes sizes
+        /// (saved builds remember their own size).
+        /// </summary>
+        public string CyclePieceSize()
+        {
+            if (_model.Count > 0)
+            {
+                return "Clear the build first to change the piece size.";
+            }
+            int i = System.Array.IndexOf(PieceSizes, _grid.CellSize);
+            float next = PieceSizes[(i + 1) % PieceSizes.Length];
+            _grid = new GridSettings(next, _grid.Origin);
+            _gridLocked = false;
+            return "Pieces are now " + next + " m.";
+        }
+
         public string ClearAll(BuildPlayer p)
         {
             EditResult r = _editor.RemoveAll(p.Index, "Clear build");
@@ -427,7 +457,7 @@ namespace WobblyMods.HouseMenu.Build
             _renderer.DestroyAll();
             _model = result.Model;
             _editor = new BuildEditor(_model);
-            _grid = result.Grid ?? new GridSettings();
+            _grid = result.Grid ?? new GridSettings(PieceSizes[0]);
             _gridLocked = _model.Count > 0;
             _model.MarkAllDirty();
 

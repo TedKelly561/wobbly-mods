@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -172,7 +171,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 swim.Bob = 0.08f + (float)rng.NextDouble() * 0.12f;
                 swim.Model = fish.transform.GetChild(0);
                 // Models that face the other way from the rest (seen in game: the pufferfish swam backwards).
-                swim.Flip = Array.IndexOf(BackwardFish, f.Key) >= 0;
+                swim.Flip = System.Array.IndexOf(BackwardFish, f.Key) >= 0;
             }
         }
 

@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.8.0";
+        public const string PluginVersion = "0.9.0";
 
         internal static ManualLogSource Log;
 
@@ -45,6 +45,7 @@ namespace WobblyMods.HouseMenu
         private void Awake()
         {
             Log = Logger;
+            CustomModels.Init();
             _menuKey = Config.Bind("Controls", "MenuKey", KeyCode.F1,
                 "Keyboard backup: opens and closes player 1's house menu.");
             _undoKey = Config.Bind("Controls", "UndoKey", KeyCode.F2,

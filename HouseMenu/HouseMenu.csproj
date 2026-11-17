@@ -27,13 +27,14 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Core\WobblyMods.Core.csproj" />
+    <ProjectReference Include="..\Visuals\WobblyMods.Visuals.csproj" />
     <!-- Sandbox build mode logic (pure C#, netstandard2.0). Deployed next to the plugin. -->
     <ProjectReference Include="..\BuildMode.Core\BuildMode.Core.csproj" />
   </ItemGroup>
 
   <Target Name="DeployToGame" AfterTargets="Build"
           Condition="'$(DeployToGame)' == 'true' And Exists('$(GameDir)\BepInEx\core')">
-    <Copy SourceFiles="$(TargetPath);$(TargetDir)WobblyMods.Core.dll;$(TargetDir)WobblyMods.BuildMode.Core.dll" DestinationFolder="$(GameDir)\BepInEx\plugins\WobblyMods" />
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)WobblyMods.Core.dll;$(TargetDir)WobblyMods.BuildMode.Core.dll;$(TargetDir)WobblyMods.Visuals.dll" DestinationFolder="$(GameDir)\BepInEx\plugins\WobblyMods" />
   </Target>
 
 </Project>

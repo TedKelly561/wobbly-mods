@@ -93,6 +93,12 @@ namespace WobblyMods.HouseMenu
             },
             new CatalogItem
             {
+                // Our own model from the Unity kit; says "couldn't place" until the bundle is installed.
+                Id = "redtail", DisplayName = "Redtail catfish", Category = "Animals",
+                Build = CustomModels.Redtail, Distance = 5f
+            },
+            new CatalogItem
+            {
                 Id = "giantcatfish", DisplayName = "Giant catfish", Category = "Animals",
                 Address = Fish + "CatFish_Static.prefab", Scale = 8f, Local = true
             },

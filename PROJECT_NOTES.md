@@ -154,8 +154,8 @@ Each task says who checks it. Mark it done here when finished.
 | T16 | Fun powers mod (flying, super jump, physics gun) | T14 | Each power works per player and can be turned off |
 | T17 | Vehicles and spawning mod | T3, T14 | Family can spawn vehicles and giant objects |
 | T19 | Redtail catfish prop: spawnable giant catfish in the sandbox | Catfish model, T3 | Spawns, can be moved and undone |
-| T20 | Redtail catfish boat: reskin a game boat | Catfish model, vehicle spawn names from Scout | Skylar can ride it on water |
-| T21 | Redtail catfish car: reskin a game car | Catfish model, vehicle spawn names from Scout | Skylar can drive it |
+| T20 | Redtail catfish vehicles: "Make it a catfish!" reskin for the **speed boat** and the **large helicopter** | Catfish bundle, Scout 0.4 vehicle names | Skylar can ride a catfish on water and fly one |
+| T21 | Redtail catfish car: same reskin for the **muscle car** | Catfish bundle, Scout 0.4 vehicle names | Skylar can drive it |
 | T22 | Shared "reskin" helper: hide a game object's body and attach a visual model (used by cat, catfish boat, catfish car) | Scout reports | Works on one vehicle and on the player |
 | T23 | Install Unity Hub and the game's exact Unity version on the home PC, and make a small "asset project" that packs our models (cat, catfish, blocks) into AssetBundles | Unity version from Scout | One test bundle loads in game via `ModelLibrary` |
 | T24 | Animal tanks for the house: fish tank built from a glass box, sand and the game's fishing fish (gently swimming); then frog, lizard and turtle tanks (need free models) | Spawning working (T3) | Skylar can place tanks and they look alive |
@@ -184,7 +184,9 @@ Skylar asked for a giant redtail catfish (dark back, white belly band, whiskers,
 
 Skylar's choices: **boat-sized** (a couple of players can ride), **tail wags**, **bubbles and splashes**, **fish sounds**, and the car should drive on **land and water** (amphibious, only possible if the game has a vehicle that does both; otherwise the boat and car stay separate).
 
-Vehicles to reskin (Scout report 2): **boat** = `PlayerBoat`; **land and water** = `PlayerHoverCraft` (it already drives on land and water, so this is Skylar's amphibious catfish); **car** = a land car such as `Vehicle_Convertable`.
+**Vehicles chosen by Skylar and her parent (in game, 2026-11-17): the muscle car, the large helicopter and the speed boat.** These replace the earlier hovercraft idea. The helicopter makes a flying catfish.
+
+Planned approach: a **"Make it a catfish!"** menu button that reskins the vehicle the player is sitting in (or looking at), if it's one of those three. The game's driving, flying and floating stay as they are; Undo puts the original look back (`Visuals/Reskin.Restore`). Needs from Scout 0.4 (test 8): the three vehicles' exact names, and how to find the vehicle a player is in. Also needs the RedtailCatfish bundle (Unity kit).
 
 Approach: reskin real game vehicles. Spawn a game boat or car, hide its body, and attach the catfish model as a visual-only child, scaled big. The game's own driving, floating, and seats keep working. Colliders stay on the game vehicle. The same "hide the body, attach a model" technique powers the cat costume, so the work is shared. Model search: `docs/research/redtail-catfish.md`. **Chosen (parent, 2026-11-16): "Free Low Poly Cartoon Koi Fish" by MarkoJantti on Sketchfab (CC BY 4.0, credit the author), recolored as a redtail** for the boat, car and prop. Why: flat material colors stay crisp at boat size (no stretched texture), it already has whiskers and 6 animations including swim (a real tail wag), and it matches Wobbly Life's cartoon look. Recolor: body dark grey/black, belly band cream-white, tail bright orange-red, whiskers dark grey. The realistic "Red Tail Catifish" (fredy120488) was set aside because its painted texture may blur when scaled up.
 

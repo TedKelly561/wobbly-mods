@@ -103,6 +103,26 @@ namespace WobblyMods.HouseMenu.Build
             if (view.Root != null) Object.Destroy(view.Root);
         }
 
+        /// <summary>True if a collider's position and size are sane numbers (no NaN/infinity, not huge or flat).</summary>
+        private static bool SafeCollider(Vector3 position, Vector3 size)
+        {
+            bool ok = Finite(position) && Finite(size) &&
+                      size.x > 0.001f && size.y > 0.001f && size.z > 0.001f &&
+                      size.x < 100f && size.y < 100f && size.z < 100f &&
+                      position.sqrMagnitude < 1e10f;
+            if (!ok)
+            {
+                Plugin.Log.LogWarning("Build: skipped a collider with position " + position + " size " + size + ".");
+            }
+            return ok;
+        }
+
+        private static bool Finite(Vector3 v)
+        {
+            return !(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsNaN(v.z) ||
+                     float.IsInfinity(v.x) || float.IsInfinity(v.y) || float.IsInfinity(v.z));
+        }
+
         private void RebuildChunk(BuildModel model, GridSettings grid, ChunkPos chunk)
         {
             ChunkView old;
@@ -125,6 +145,7 @@ namespace WobblyMods.HouseMenu.Build
 
             float cell = grid.CellSize;
             Vector3 cellScale = Vector3.one * cell;
+            int colliders = 0;
             foreach (LookGroup g in _groups.Values)
             {
                 g.Parts.Clear();
@@ -163,20 +184,33 @@ namespace WobblyMods.HouseMenu.Build
                     if (part.Shape == PartShape.Box && part.Collider)
                     {
                         // Quarter turns keep boxes axis-aligned, so one BoxCollider on the chunk works.
-                        BoxCollider box = view.Root.AddComponent<BoxCollider>();
-                        box.center = blockM.MultiplyPoint3x4(part.Center);
+                        Vector3 center = blockM.MultiplyPoint3x4(part.Center);
                         Vector3 s = yaw * Vector3.Scale(part.Size, cellScale);
-                        box.size = new Vector3(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z));
+                        Vector3 size = new Vector3(Mathf.Abs(s.x), Mathf.Abs(s.y), Mathf.Abs(s.z));
+                        // A collider with a bad size or position can crash the physics engine, so skip it.
+                        if (SafeCollider(center, size))
+                        {
+                            BoxCollider box = view.Root.AddComponent<BoxCollider>();
+                            box.center = center;
+                            box.size = size;
+                            colliders++;
+                        }
                     }
                     else if (part.Shape == PartShape.Ramp)
                     {
-                        // A tilted collider needs its own transform.
-                        var ramp = new GameObject("Ramp");
-                        ramp.transform.SetParent(view.Root.transform, false);
-                        ramp.transform.position = blockM.MultiplyPoint3x4(part.Center);
-                        ramp.transform.rotation = yaw * Quaternion.Euler(part.TiltX, 0f, 0f);
-                        BoxCollider box = ramp.AddComponent<BoxCollider>();
-                        box.size = Vector3.Scale(part.Size, cellScale);
+                        Vector3 position = blockM.MultiplyPoint3x4(part.Center);
+                        Vector3 size = Vector3.Scale(part.Size, cellScale);
+                        if (SafeCollider(position, size))
+                        {
+                            // A tilted collider needs its own transform.
+                            var ramp = new GameObject("Ramp");
+                            ramp.transform.SetParent(view.Root.transform, false);
+                            ramp.transform.position = position;
+                            ramp.transform.rotation = yaw * Quaternion.Euler(part.TiltX, 0f, 0f);
+                            BoxCollider box = ramp.AddComponent<BoxCollider>();
+                            box.size = size;
+                            colliders++;
+                        }
                     }
                 }
             }
@@ -205,6 +239,7 @@ namespace WobblyMods.HouseMenu.Build
                 }
                 g.Parts.Clear();
             }
+            Plugin.Log.LogInfo("Build: drew " + chunk + ": " + _blocks.Count + " blocks, " + colliders + " colliders.");
         }
 
         /// <summary>

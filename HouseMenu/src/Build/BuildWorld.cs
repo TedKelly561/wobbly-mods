@@ -291,6 +291,9 @@ namespace WobblyMods.HouseMenu.Build
             {
                 return "Can't find where you are.";
             }
+            // Logged before placing, so if the game ever crashes the last line shows exactly what was being placed.
+            Plugin.Log.LogInfo("Build: player " + (p.Index + 1) + " placing " + p.State.Block.Id + " at " + p.State.Cursor +
+                               " (rotation " + p.State.Rotation.Degrees + ", " + BlockCount + " blocks so far).");
             EditResult r = _editor.Place(p.Index, p.State.CurrentSpec());
             if (r.Ok)
             {

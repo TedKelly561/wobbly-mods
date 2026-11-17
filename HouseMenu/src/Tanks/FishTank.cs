@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -36,6 +37,9 @@ namespace WobblyMods.HouseMenu.Tanks
             Pair("Parrot Fish", 0.9f), Pair("LionFish", 0.8f), Pair("Blue Dragon", 0.7f), Pair("Wobbly Fish", 0.9f),
             Pair("SeaHorse_Green", 0.6f), Pair("SeaHorse_Yellow", 0.6f), Pair("JellyFish", 0.7f), Pair("StingRay", 1.2f)
         };
+
+        // Fish whose model faces backwards compared with the others. Add names here if more swim backwards.
+        private static readonly string[] BackwardFish = { "Pufferfish" };
 
         private static KeyValuePair<string, float> Pair(string name, float size)
         {
@@ -167,6 +171,8 @@ namespace WobblyMods.HouseMenu.Tanks
                 swim.Angle = (float)rng.NextDouble() * 6.28f;
                 swim.Bob = 0.08f + (float)rng.NextDouble() * 0.12f;
                 swim.Model = fish.transform.GetChild(0);
+                // Models that face the other way from the rest (seen in game: the pufferfish swam backwards).
+                swim.Flip = Array.IndexOf(BackwardFish, f.Key) >= 0;
             }
         }
 

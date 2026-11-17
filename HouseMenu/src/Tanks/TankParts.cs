@@ -17,6 +17,7 @@ namespace WobblyMods.HouseMenu.Tanks
         public float Angle;
         public float Bob = 0.1f;
         public Transform Model;
+        public bool Flip;   // turn the model 180 degrees (for models that face backwards)
 
         private bool _aligned;
 
@@ -48,6 +49,10 @@ namespace WobblyMods.HouseMenu.Tanks
         private void AlignModel()
         {
             if (Model == null) return;
+            if (Flip)
+            {
+                Model.localRotation = Quaternion.Euler(0, 180f, 0) * Model.localRotation;
+            }
             Mesh mesh = null;
             MeshFilter mf = Model.GetComponentInChildren<MeshFilter>();
             if (mf != null) mesh = mf.sharedMesh;

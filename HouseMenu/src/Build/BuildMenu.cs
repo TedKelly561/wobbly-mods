@@ -27,6 +27,7 @@ namespace WobblyMods.HouseMenu.Build
         private MenuItem _levelItem;
         private MenuItem _modeItem;
         private MenuItem _sizeItem;
+        private MenuItem _autoTurnItem;
 
         private BuildMenu(PlayerSession session)
         {
@@ -55,7 +56,17 @@ namespace WobblyMods.HouseMenu.Build
             _blockItem = _tab.Add("", () => { State.CycleBlock(1); Say("Block: " + State.Block.DisplayName + "."); });
             _materialItem = _tab.Add("", () => { State.CycleMaterial(1); Say("Material: " + State.Material.DisplayName + "."); });
             _paintItem = _tab.Add("", () => { State.CyclePaint(1); Say("Paint: " + PaintName() + "."); });
-            _rotateItem = _tab.Add("", () => { State.RotateClockwise(); Say("Turned to " + State.Rotation.Degrees + " degrees."); });
+            _rotateItem = _tab.Add("", () =>
+            {
+                _player.AutoTurn = false; // turning by hand switches auto-turn off
+                State.RotateClockwise();
+                Say("Turned to " + State.Rotation.Degrees + " degrees (auto-turn off).");
+            });
+            _autoTurnItem = _tab.Add("", () =>
+            {
+                _player.AutoTurn = !_player.AutoTurn;
+                Say(_player.AutoTurn ? "Auto-turn on: pieces follow the way you face." : "Auto-turn off: use Rotate.");
+            });
             // Shows the level; picking it goes back to the floor.
             _levelItem = _tab.Add("", () => Say(_world.ChangeLevel(_player, -_player.Level)));
             _sizeItem = _tab.Add("", () => Say(_world.CyclePieceSize()));
@@ -153,6 +164,7 @@ namespace WobblyMods.HouseMenu.Build
             _levelItem.Label = _player.Level == 0 ? "Level: floor" : "Level: " + (_player.Level > 0 ? "+" : "") + _player.Level;
             _modeItem.Label = _player.KeepGhost ? "Build mode: on" : "Build mode: off";
             _sizeItem.Label = "Piece size: " + _world.PieceSize + " m";
+            _autoTurnItem.Label = _player.AutoTurn ? "Auto-turn: on" : "Auto-turn: off";
             for (int i = 0; i < BuildWorld.SaveSlots; i++)
             {
                 bool used = BuildWorld.SlotExists(i + 1);

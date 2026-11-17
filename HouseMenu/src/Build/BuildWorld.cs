@@ -26,6 +26,12 @@ namespace WobblyMods.HouseMenu.Build
         /// <summary>"Build mode: on": keep showing the ghost while the menu is closed or on another tab.</summary>
         public bool KeepGhost;
 
+        /// <summary>
+        /// Turns each piece to follow the way the player faces, so walking and tapping RB builds one
+        /// continuous wall (parent saw separate parallel slabs with gaps). Pressing Rotate turns it off.
+        /// </summary>
+        public bool AutoTurn = true;
+
         /// <summary>True while this player's menu shows the Build tab or one of its pages (set by BuildMenu).</summary>
         public Func<bool> MenuOnBuild;
 
@@ -203,6 +209,10 @@ namespace WobblyMods.HouseMenu.Build
                 _grid = new GridSettings(_grid.CellSize, new Vec3(0f, Mathf.Round(surfaceY * 100f) / 100f, 0f));
             }
 
+            if (p.AutoTurn)
+            {
+                p.State.Rotation = AutoRotation(p.State.Block, cam.transform.eulerAngles.y);
+            }
             float cell = _grid.CellSize;
             GridPos c = _grid.WorldToCell(new Vec3(spot.x, surfaceY + cell * 0.5f, spot.z));
             // Sit on top of whatever is already built there, so pressing Place again stacks
@@ -219,6 +229,18 @@ namespace WobblyMods.HouseMenu.Build
             p.State.Cursor = new GridPos(c.X, c.Y + p.Level, c.Z);
             p.HasCursor = true;
             return true;
+        }
+
+        /// <summary>
+        /// Wall-like pieces (walls, half walls, doors, windows, beams) are built across their cell at rotation 0,
+        /// so they're turned a quarter so they run along the way the player faces. Others (stairs, roofs,
+        /// floors) face the way the player faces.
+        /// </summary>
+        private static Rotation AutoRotation(BlockType type, float cameraYaw)
+        {
+            bool wallLike = type.Kind == BlockKind.Wall || type.Kind == BlockKind.HalfWall || type.Kind == BlockKind.Door ||
+                            type.Kind == BlockKind.Window || type.Kind == BlockKind.Beam;
+            return Rotation.FromDegrees(cameraYaw + (wallLike ? 90f : 0f));
         }
 
         private void UpdateGhost(BuildPlayer p)

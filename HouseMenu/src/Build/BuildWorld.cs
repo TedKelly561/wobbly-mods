@@ -268,6 +268,21 @@ namespace WobblyMods.HouseMenu.Build
             p.GhostTypeId = null;
         }
 
+        /// <summary>
+        /// Quick build without the menu (parent's request: "repeat last piece"). Only while that player's
+        /// Build mode is on and their menu is closed: tap RB = place the current piece at the ghost,
+        /// tap LB = undo their last piece. Returns a message for the log, or null if it didn't apply.
+        /// </summary>
+        public string QuickAction(int playerIndex, bool place)
+        {
+            BuildPlayer p;
+            if (!_players.TryGetValue(playerIndex, out p) || !p.KeepGhost || p.Session.IsOpen)
+            {
+                return null;
+            }
+            return place ? Place(p) : Undo(p);
+        }
+
         // ---------- Edits (each in that player's own undo history) ----------
 
         public string Place(BuildPlayer p)

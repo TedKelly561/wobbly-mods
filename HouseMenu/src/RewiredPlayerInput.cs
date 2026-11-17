@@ -20,6 +20,8 @@ namespace WobblyMods.HouseMenu
         public string Back;        // button
         public string Toggle;      // button or "A+B" combo (comma list of choices); empty = no controller toggle
         public float ToggleHoldSeconds = 0f; // 0 = toggles as soon as the button or combo is pressed
+        public string QuickPlace = "UIRB";    // build mode: quick tap places a piece at the ghost
+        public string QuickUndo = "UILB";     // build mode: quick tap undoes the last piece
     }
 
     /// <summary>
@@ -46,6 +48,14 @@ namespace WobblyMods.HouseMenu
 
         private int _heldDirection = -1; // index into Directions, -1 = none
         private float _toggleHeldSince = -1f;  // when the toggle button went down, -1 = not held
+        private readonly TapWatcher _placeTap = new TapWatcher();
+        private readonly TapWatcher _undoTap = new TapWatcher();
+
+        /// <summary>True on the frame a quick tap of the build "place" button (RB) finished.</summary>
+        public bool QuickPlaceTapped { get; private set; }
+
+        /// <summary>True on the frame a quick tap of the build "undo" button (LB) finished.</summary>
+        public bool QuickUndoTapped { get; private set; }
         private bool _toggleFired;              // already toggled during this hold
         private float _nextRepeatTime;
 
@@ -78,6 +88,13 @@ namespace WobblyMods.HouseMenu
             if (ButtonDown(player, _names.Select)) _pressed.Add(MenuAction.Select);
             if (ButtonDown(player, _names.Back)) _pressed.Add(MenuAction.Back);
             UpdateToggle(player);
+
+            // Quick taps for build mode. Holding both bumpers (the menu combo) cancels both taps.
+            bool place = ButtonHeld(player, _names.QuickPlace);
+            bool undo = ButtonHeld(player, _names.QuickUndo);
+            float t = Time.unscaledTime;
+            QuickPlaceTapped = _placeTap.Update(place, undo, t);
+            QuickUndoTapped = _undoTap.Update(undo, place, t);
 
             int direction = CurrentDirection(Axis(player, _names.Vertical), Axis(player, _names.Horizontal));
             float now = Time.unscaledTime;

@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.9.0";
+        public const string PluginVersion = "0.9.1";
 
         internal static ManualLogSource Log;
 
@@ -64,6 +64,10 @@ namespace WobblyMods.HouseMenu
             _actions.Toggle = Config.Bind("Controller", "ToggleAction", "UILB+UIRB,Map",
                 "Button or combo that opens and closes the menu. Combos use +, choices use commas. " +
                 "Family's choice: LB and RB together, or Map (UILB+UIRB,Map). Empty = keyboard only.").Value;
+            _actions.QuickPlace = Config.Bind("Controller", "BuildQuickPlaceAction", "UIRB",
+                "Build mode (on, menu closed): quick tap places the current piece at the ghost.").Value;
+            _actions.QuickUndo = Config.Bind("Controller", "BuildQuickUndoAction", "UILB",
+                "Build mode (on, menu closed): quick tap undoes your last piece.").Value;
             _actions.ToggleHoldSeconds = Config.Bind("Controller", "ToggleHoldSeconds", 1f,
                 "Seconds the button or combo must be held. 1 second keeps a quick tap of Map opening the map.").Value;
 
@@ -85,9 +89,14 @@ namespace WobblyMods.HouseMenu
                 SyncPlayers();
             }
 
-            foreach (RewiredPlayerInput controller in _controllers.Values)
+            foreach (KeyValuePair<int, RewiredPlayerInput> pair in _controllers)
             {
-                controller.Tick();
+                pair.Value.Tick();
+                if ((pair.Value.QuickPlaceTapped || pair.Value.QuickUndoTapped) && Build.BuildWorld.Instance != null)
+                {
+                    string said = Build.BuildWorld.Instance.QuickAction(pair.Key, pair.Value.QuickPlaceTapped);
+                    if (said != null) Log.LogInfo("Player " + (pair.Key + 1) + " quick build: " + said);
+                }
             }
 
             _sessions.Update();

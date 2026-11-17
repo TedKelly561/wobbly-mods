@@ -78,6 +78,7 @@ namespace WobblyMods.HouseMenu
             change.Add("Up", () => Nudge(Vector3.up));
             change.Add("Down", () => Nudge(Vector3.down));
             change.Add("New color", Recolor);
+            change.Add("Copy", CopyTarget);
             change.Add("Turn", () => WithTarget(t => { ObjectEdits.Turn(t.transform, 45f, _session.Undo); return "Turned " + t.name + "."; }));
             change.Add("Bigger", () => WithTarget(t => ObjectEdits.Resize(t, 1.25f, _session.Undo) ? "Bigger!" : "That's as big as it goes."));
             change.Add("Smaller", () => WithTarget(t => ObjectEdits.Resize(t, 0.8f, _session.Undo) ? "Smaller!" : "That's as small as it goes."));
@@ -154,6 +155,52 @@ namespace WobblyMods.HouseMenu
 
             ObjectEdits.Move(target.transform, direction * MoveStep, _session.Undo);
             _session.Status = "Moved " + target.name + ".";
+        }
+
+        /// <summary>
+        /// Makes another of the thing the player is looking at (or the last thing they placed), right beside it,
+        /// at the same size, facing and color. Handy for rows of plants or lamps.
+        /// </summary>
+        private void CopyTarget()
+        {
+            GameObject target = CurrentTarget();
+            if (target == null) return;
+            CatalogItem item = FurnitureCatalog.Find(GameBindings.CatalogIdOf(target));
+            if (item == null)
+            {
+                _session.Status = "That can't be copied.";
+                return;
+            }
+
+            float scale = GameBindings.ScaleOf(target);
+            Color color;
+            bool hasColor = GameBindings.ColorOf(target, out color);
+
+            // Beside it: one object-width to the player's right.
+            Bounds b;
+            float width = Tanks.FishTank.TryGetBounds(target, out b) ? Mathf.Max(b.size.x, b.size.z) : 1.5f;
+            Camera cam = GameBindings.CameraFor(Player);
+            Vector3 right = cam != null ? new Vector3(cam.transform.right.x, 0f, cam.transform.right.z).normalized : Vector3.right;
+            Vector3 position = target.transform.position + right * (width + 0.2f);
+
+            PlayerSession session = _session;
+            _session.Status = "Copying " + item.DisplayName + "...";
+            GameBindings.SpawnAt(item, Player, position, target.transform.rotation, (placed, problem) =>
+            {
+                if (placed == null)
+                {
+                    session.Status = "Couldn't copy " + item.DisplayName + ".";
+                    return;
+                }
+                if (!Mathf.Approximately(scale, 1f))
+                {
+                    placed.transform.localScale *= scale;
+                    GameBindings.NoteScale(placed, scale);
+                }
+                if (hasColor) ObjectEdits.ApplyColor(placed, color);
+                session.Undo.Push("copied " + item.DisplayName, () => ObjectEdits.Remove(placed));
+                session.Status = "Copied " + item.DisplayName + ".";
+            });
         }
 
         /// <summary>Runs an edit on the thing the player is looking at (or the last thing they placed).</summary>

@@ -267,6 +267,13 @@ namespace WobblyMods.HouseMenu
             return false;
         }
 
+        /// <summary>The catalog id a placed item was made from, or null.</summary>
+        public static string CatalogIdOf(GameObject target)
+        {
+            Placed p = Find(target);
+            return p != null ? p.CatalogId : null;
+        }
+
         /// <summary>Remembers a size change on a placed item (for saving the house).</summary>
         public static void NoteScale(GameObject target, float factor)
         {

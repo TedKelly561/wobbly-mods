@@ -19,6 +19,7 @@ colliders, a ghost preview per player and the menu's Build tab.
 | `BuildModel`, `BlockSpec`, `PlacedBlock` | `src/BuildModel.cs` | The build. Place, remove, repaint, query; overlaps are rejected. Chunk index and dirty-chunk tracking. |
 | `BuildEditor`, `BuildHistory` | `src/BuildHistory.cs` | The front door for edits. Records every change in the acting **player's own** undo/redo history. Fill a box as one undo step. |
 | `PlayerBuildState` | `src/PlayerBuildState.cs` | One player's selection (block, material, paint, rotation, cursor) with controller-friendly "cycle"/"rotate"/"move" calls. Takes an optional paint palette (favourite colours first). |
+| `RoomKits`, `RoomKit`, `KitPiece` | `src/RoomKits.cs` | Ready-made kits (small room, big room with windows, floors 3x3 and 5x5, wall lines of 3 and 5, stairs up with a landing) as block lists from an anchor cell and a facing. Rooms are centred on the anchor and run forward from it, door in the middle of the front wall, L-shaped `corner_wall` pieces in the corners, walls as tall as the door, optional flat roof. Place with `PlaceMany` (one undo step, blocked cells skipped). |
 | `BuildSerializer`, `LoadResult` | `src/BuildSerializer.cs` | Versioned, human-readable text save format. Exact round trip. Unknown ids are skipped with warnings. |
 
 ### Cells, layers and footprints
@@ -30,6 +31,7 @@ colliders, a ghost preview per player and the menu's Build tab.
   roofs) and `Body` (everything else). A wall can stand on a floor tile in the same cell; two
   bodies or two floors in one cell are an overlap.
 - Default footprints: door 1x2x1, stairs 1x1x2 (one up over two deep), beam 3x1x1, the rest 1x1x1.
+  `corner_wall` (added with room kits) is an L whose arms run from the cell centre to the local +X and +Z edges.
   Footprints count cells, so at 0.5 m cells everything is half size; the Unity layer scales meshes
   by `CellSize`.
 

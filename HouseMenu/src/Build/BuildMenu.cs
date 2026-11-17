@@ -28,6 +28,10 @@ namespace WobblyMods.HouseMenu.Build
         private MenuItem _modeItem;
         private MenuItem _sizeItem;
         private MenuItem _autoTurnItem;
+        private MenuItem _roofItem;
+        private MenuPage _kitPage;
+        private readonly Dictionary<MenuItem, RoomKit> _kitItems = new Dictionary<MenuItem, RoomKit>();
+        private RoomKit _lastKit = RoomKit.SmallRoom;
 
         private BuildMenu(PlayerSession session)
         {
@@ -35,6 +39,7 @@ namespace WobblyMods.HouseMenu.Build
             _world = BuildWorld.Instance;
             _player = _world.Register(session);
             _player.MenuOnBuild = IsShowing;
+            _player.KitPreview = KitToPreview;
         }
 
         /// <summary>Adds the Build tab to a player's root page.</summary>
@@ -53,6 +58,7 @@ namespace WobblyMods.HouseMenu.Build
             _root = root;
             _tab = root.AddTab("Build");
             _tab.Add("Place block", () => Say(_world.Place(_player)));
+            BuildKitPage();
             _blockItem = _tab.Add("", () => { State.CycleBlock(1); Say("Block: " + State.Block.DisplayName + "."); });
             _materialItem = _tab.Add("", () => { State.CycleMaterial(1); Say("Material: " + State.Material.DisplayName + "."); });
             _paintItem = _tab.Add("", () => { State.CyclePaint(1); Say("Paint: " + PaintName() + "."); });
@@ -127,6 +133,52 @@ namespace WobblyMods.HouseMenu.Build
             RefreshLabels();
         }
 
+        /// <summary>
+        /// "Room kits...": whole rooms, floors, wall lines and stairs in one press, in front of the player
+        /// and facing their way, in the chosen material and paint. The ghost shows the focused kit.
+        /// </summary>
+        private void BuildKitPage()
+        {
+            _kitPage = Page("Room kits");
+            MenuTab kits = _kitPage.MainTab();
+            foreach (RoomKit kit in RoomKits.All)
+            {
+                RoomKit k = kit;
+                MenuItem item = kits.Add(RoomKits.DisplayName(k), () =>
+                {
+                    _lastKit = k;
+                    Say(_world.PlaceKit(_player, k));
+                });
+                _kitItems[item] = k;
+            }
+            _roofItem = kits.Add("", () =>
+            {
+                _player.KitRoof = !_player.KitRoof;
+                Say(_player.KitRoof ? "Rooms get a flat roof." : "Rooms have no roof (open top).");
+            });
+            kits.Add("Undo build", () => Say(_world.Undo(_player)));
+            kits.Add("Back", () => _session.Menu.Back());
+            _tab.AddSubPage("Room kits...", _kitPage);
+        }
+
+        /// <summary>The kit under the cursor on the Room kits page (or the last one, on its other buttons).</summary>
+        private RoomKit? KitToPreview()
+        {
+            MenuModel menu = _session.Menu;
+            if (menu == null || !menu.IsOpen || menu.CurrentPage != _kitPage)
+            {
+                return null;
+            }
+            MenuItem focused = menu.FocusedItem;
+            RoomKit kit;
+            if (focused != null && _kitItems.TryGetValue(focused, out kit))
+            {
+                _lastKit = kit;
+                return kit;
+            }
+            return _lastKit;
+        }
+
         private MenuPage Page(string title)
         {
             var page = new MenuPage(title);
@@ -165,6 +217,7 @@ namespace WobblyMods.HouseMenu.Build
             _modeItem.Label = _player.KeepGhost ? "Build mode: on" : "Build mode: off";
             _sizeItem.Label = "Piece size: " + _world.PieceSize + " m";
             _autoTurnItem.Label = _player.AutoTurn ? "Auto-turn: on" : "Auto-turn: off";
+            _roofItem.Label = _player.KitRoof ? "Roof on rooms: yes" : "Roof on rooms: no";
             for (int i = 0; i < BuildWorld.SaveSlots; i++)
             {
                 bool used = BuildWorld.SlotExists(i + 1);

@@ -95,6 +95,18 @@ namespace WobblyMods.HouseMenu.Build
                     p.Add(Box(cx, h * 0.5f, cz, 0.3f, h, 0.3f));
                     break;
 
+                case BuildCatalog.Ids.CornerWall:
+                {
+                    // An L through the cell centre: one arm to the +X edge, one to the +Z edge, so a wall
+                    // in the next cell along X and one in the next cell along Z meet it with no gap.
+                    const float half = WallThickness * 0.5f;
+                    float armX = 0.5f + half;          // from x = -half to the +X edge
+                    float armZ = 0.5f - half;          // from z = +half to the +Z edge
+                    p.Add(Box(0.5f - armX * 0.5f, h * 0.5f, 0f, armX, h, WallThickness));
+                    p.Add(Box(0f, h * 0.5f, 0.5f - armZ * 0.5f, WallThickness, h, armZ));
+                    break;
+                }
+
                 case BuildCatalog.Ids.Beam:
                     p.Add(Box(cx, h - 0.1f, cz, w, 0.2f, 0.25f));
                     break;

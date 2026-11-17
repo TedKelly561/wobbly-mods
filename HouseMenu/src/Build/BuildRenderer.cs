@@ -266,6 +266,45 @@ namespace WobblyMods.HouseMenu.Build
             return combined;
         }
 
+        /// <summary>
+        /// One see-through mesh for a whole room kit, in kit-local space (pivot = bottom centre of the
+        /// kit's anchor cell, facing +Z). Place it at the anchor's pivot and turn it by the kit's facing.
+        /// </summary>
+        public static Mesh BuildKitGhostMesh(IList<KitPiece> pieces, BuildCatalog catalog, float cellSize, string name)
+        {
+            var list = new List<CombineInstance>();
+            Matrix4x4 scale = Matrix4x4.Scale(Vector3.one * cellSize);
+            int vertices = 0;
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                BlockType type = catalog.GetBlock(pieces[i].TypeId);
+                if (type == null) continue;
+                Matrix4x4 place = Matrix4x4.TRS(
+                    new Vector3(pieces[i].Cell.X, pieces[i].Cell.Y, pieces[i].Cell.Z),
+                    Quaternion.Euler(0f, pieces[i].LocalRotation.Degrees, 0f),
+                    Vector3.one);
+                BlockPart[] parts = BuildShapes.PartsFor(type);
+                for (int j = 0; j < parts.Length; j++)
+                {
+                    Mesh mesh = BuildShapes.MeshFor(parts[j].Shape);
+                    if (mesh == null) continue;
+                    vertices += mesh.vertexCount;
+                    list.Add(new CombineInstance
+                    {
+                        mesh = mesh,
+                        transform = scale * place * Matrix4x4.TRS(parts[j].Center, Quaternion.identity, parts[j].Size),
+                    });
+                }
+            }
+            var combined = new Mesh { name = name };
+            if (vertices > 65000)
+            {
+                combined.indexFormat = IndexFormat.UInt32;
+            }
+            combined.CombineMeshes(list.ToArray(), true, true);
+            return combined;
+        }
+
         public static Vector3 ToUnity(Vec3 v)
         {
             return new Vector3(v.X, v.Y, v.Z);

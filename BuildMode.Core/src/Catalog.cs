@@ -16,6 +16,8 @@ namespace WobblyMods.BuildMode
         Window,
         Pillar,
         Beam,
+        /// <summary>An L-shaped wall piece that joins two walls at a room corner without a gap.</summary>
+        Corner,
     }
 
     /// <summary>
@@ -282,6 +284,7 @@ namespace WobblyMods.BuildMode
             public const string Window = "window";
             public const string Pillar = "pillar";
             public const string Beam = "beam";
+            public const string CornerWall = "corner_wall";
 
             public const string Wood = "wood";
             public const string Brick = "brick";
@@ -307,6 +310,8 @@ namespace WobblyMods.BuildMode
             c.Add(new BlockType(Ids.Door,      "Door",       BlockKind.Door,     OccupancyLayer.Body,  1, 2, 1));
             c.Add(new BlockType(Ids.Window,    "Window",     BlockKind.Window,   OccupancyLayer.Body,  1, 1, 1));
             c.Add(new BlockType(Ids.Pillar,    "Pillar",     BlockKind.Pillar,   OccupancyLayer.Body,  1, 1, 1));
+            // Added for room kits: at rotation 0 its two arms run from the cell centre toward local +X and +Z.
+            c.Add(new BlockType(Ids.CornerWall, "Corner wall", BlockKind.Corner,  OccupancyLayer.Body,  1, 1, 1));
             c.Add(new BlockType(Ids.Beam,      "Beam",       BlockKind.Beam,     OccupancyLayer.Body,  3, 1, 1));
 
             c.Add(new BuildMaterial(Ids.Wood,     "Wood",       new PaintColor(255, 255, 255), false));

@@ -68,6 +68,8 @@ namespace WobblyMods.HouseMenu
             // The tab row only fits about five tabs at the menu's font size (MaxPanelWidth 560, fontSize 26),
             // so Undo and Reset house moved from their own tab into Change, making room for Build.
             MenuTab change = root.AddTab("Change");
+            // Skylar's request: no-clip in her own world, like the sandbox has.
+            change.Add("No-clip (fly through walls)", () => { _session.Status = Powers.ToggleNoClip(Player); });
             change.Add("Undo", () => UndoLast(_session));
             change.Add("Left", () => Nudge(CameraRelative(Vector3.left)));
             change.Add("Right", () => Nudge(CameraRelative(Vector3.right)));

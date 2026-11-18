@@ -1,6 +1,7 @@
 using UnityEngine;
 using WobblyMods.Core;
 using WobblyMods.HouseMenu.Build;
+using WobblyMods.HouseMenu.Icons;
 
 namespace WobblyMods.HouseMenu
 {
@@ -26,6 +27,7 @@ namespace WobblyMods.HouseMenu
 
         private readonly PlayerSession _session;
         private int _colorIndex;
+        private MenuItem _colorItem;
 
         private HousePlayerMenu(PlayerSession session)
         {
@@ -55,9 +57,12 @@ namespace WobblyMods.HouseMenu
         {
             var root = new MenuPage("House Menu");
 
+            // Every tab is a picture grid, 3 across (the parent's choice). Items show a photo of the real thing
+            // (Icons/IconCache, keyed by catalog id); actions show a symbol ("sym:..." keys, Icons/SymbolDrawings).
             foreach (string category in FurnitureCatalog.Categories)
             {
-                MenuTab tab = root.AddTab(category);
+                MenuTab tab = root.AddTab(category).AsGrid();
+                tab.Icon = TabTheme.IconFor(category);
                 foreach (CatalogItem item in FurnitureCatalog.InCategory(category))
                 {
                     CatalogItem captured = item;
@@ -67,59 +72,67 @@ namespace WobblyMods.HouseMenu
 
             // The tab row only fits about five tabs at the menu's font size (MaxPanelWidth 560, fontSize 26),
             // so Undo and Reset house moved from their own tab into Change, making room for Build.
-            MenuTab change = root.AddTab("Change");
+            MenuTab change = root.AddTab("Change").AsGrid();
+            change.Icon = TabTheme.IconFor("Change");
             // Skylar's request: no-clip in her own world, like the sandbox has.
-            change.Add("No-clip (fly through walls)", () => { _session.Status = Powers.ToggleNoClip(Player); });
-            change.Add("Undo", () => UndoLast(_session));
-            change.Add("Left", () => Nudge(CameraRelative(Vector3.left)));
-            change.Add("Right", () => Nudge(CameraRelative(Vector3.right)));
-            change.Add("Closer", () => Nudge(CameraRelative(Vector3.forward)));
-            change.Add("Farther", () => Nudge(CameraRelative(Vector3.back)));
-            change.Add("Up", () => Nudge(Vector3.up));
-            change.Add("Down", () => Nudge(Vector3.down));
-            change.Add("New color", Recolor);
-            change.Add("Copy", CopyTarget);
-            change.Add("Turn", () => WithTarget(t => { ObjectEdits.Turn(t.transform, 45f, _session.Undo); return "Turned " + t.name + "."; }));
-            change.Add("Bigger", () => WithTarget(t => ObjectEdits.Resize(t, 1.25f, _session.Undo) ? "Bigger!" : "That's as big as it goes."));
-            change.Add("Smaller", () => WithTarget(t => ObjectEdits.Resize(t, 0.8f, _session.Undo) ? "Smaller!" : "That's as small as it goes."));
+            change.Add("No-clip (fly through walls)", () => { _session.Status = Powers.ToggleNoClip(Player); }).Icon = SymbolIcons.Key("ghost");
+            change.Add("Undo", () => UndoLast(_session)).Icon = SymbolIcons.Key("undo");
+            change.Add("Left", () => Nudge(CameraRelative(Vector3.left))).Icon = SymbolIcons.Key("left");
+            change.Add("Right", () => Nudge(CameraRelative(Vector3.right))).Icon = SymbolIcons.Key("right");
+            // Closer = toward the camera (the camera's back direction); Farther = away from it.
+            change.Add("Closer", () => Nudge(CameraRelative(Vector3.back))).Icon = SymbolIcons.Key("closer");
+            change.Add("Farther", () => Nudge(CameraRelative(Vector3.forward))).Icon = SymbolIcons.Key("farther");
+            change.Add("Up", () => Nudge(Vector3.up)).Icon = SymbolIcons.Key("up");
+            change.Add("Down", () => Nudge(Vector3.down)).Icon = SymbolIcons.Key("down");
+            // The paint drop shows the color the next press will use.
+            _colorItem = change.Add("New color", Recolor);
+            _colorItem.Icon = SymbolIcons.Key("paint", Palette[_colorIndex]);
+            change.Add("Copy", CopyTarget).Icon = SymbolIcons.Key("copy");
+            change.Add("Turn", () => WithTarget(t => { ObjectEdits.Turn(t.transform, 45f, _session.Undo); return "Turned " + t.name + "."; })).Icon = SymbolIcons.Key("turn");
+            change.Add("Bigger", () => WithTarget(t => ObjectEdits.Resize(t, 1.25f, _session.Undo) ? "Bigger!" : "That's as big as it goes.")).Icon = SymbolIcons.Key("plus");
+            change.Add("Smaller", () => WithTarget(t => ObjectEdits.Resize(t, 0.8f, _session.Undo) ? "Smaller!" : "That's as small as it goes.")).Icon = SymbolIcons.Key("minus");
 
             // Save and put back everything placed with the menu (it would vanish when the game closes).
             var savePage = new MenuPage("Save house");
             var loadPage = new MenuPage("Load house");
+            savePage.MainTab().AsGrid();
+            loadPage.MainTab().AsGrid();
             for (int i = 1; i <= HouseSave.Slots; i++)
             {
                 int slot = i;
+                string digit = SymbolIcons.Key(slot.ToString());
                 savePage.MainTab().Add("House " + slot + (HouseSave.SlotExists(slot) ? " (replace)" : " (empty)"), () =>
                 {
                     _session.Status = HouseSave.Save(slot);
                     _session.Menu.Back();
-                });
+                }).Icon = digit;
 
                 // Loading replaces what's placed now, so it asks first.
                 var confirmLoad = new MenuPage("Load house " + slot + "?");
-                confirmLoad.MainTab().Add("No, keep what's here", () => _session.Menu.Back());
+                confirmLoad.MainTab().AsGrid(2);
+                confirmLoad.MainTab().Add("No, keep what's here", () => _session.Menu.Back()).Icon = SymbolIcons.Key("no");
                 confirmLoad.MainTab().Add("Yes, load house " + slot, () =>
                 {
                     _session.Status = HouseSave.Load(slot, Player, _session.Undo);
                     _session.Menu.Back();
                     _session.Menu.Back();
-                });
-                loadPage.MainTab().AddSubPage("House " + slot + (HouseSave.SlotExists(slot) ? "" : " (empty)"), confirmLoad);
+                }).Icon = SymbolIcons.Key("yes");
+                loadPage.MainTab().AddSubPage("House " + slot + (HouseSave.SlotExists(slot) ? "" : " (empty)"), confirmLoad).Icon = digit;
             }
-            change.AddSubPage("Save house", savePage);
-            change.AddSubPage("Load house", loadPage);
+            change.AddSubPage("Save house", savePage).Icon = SymbolIcons.Key("save");
+            change.AddSubPage("Load house", loadPage).Icon = SymbolIcons.Key("load");
 
             // Reset asks first, so a stray A press can't wipe everything.
             var confirmReset = new MenuPage("Reset house?");
-            MenuTab confirm = confirmReset.MainTab();
-            confirm.Add("No, keep it", () => _session.Menu.Back());
+            MenuTab confirm = confirmReset.MainTab().AsGrid(2);
+            confirm.Add("No, keep it", () => _session.Menu.Back()).Icon = SymbolIcons.Key("no");
             confirm.Add("Yes, reset", () =>
             {
                 ResetHouse();
                 _session.Menu.Back();
-            });
+            }).Icon = SymbolIcons.Key("yes");
 
-            change.AddSubPage("Reset house", confirmReset);
+            change.AddSubPage("Reset house", confirmReset).Icon = SymbolIcons.Key("broom");
 
             // Sandbox build mode: blocks on a grid, with its own per-player undo (BuildMode.Core).
             BuildMenu.AddTo(root, _session);
@@ -221,6 +234,7 @@ namespace WobblyMods.HouseMenu
 
             Color color = Palette[_colorIndex];
             _colorIndex = (_colorIndex + 1) % Palette.Length;
+            _colorItem.Icon = SymbolIcons.Key("paint", Palette[_colorIndex]);
             ObjectEdits.SetColor(target, color, _session.Undo);
             _session.Status = "Changed the color of " + target.name + ".";
         }

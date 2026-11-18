@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.13.0";
+        public const string PluginVersion = "0.14.0";
 
         internal static ManualLogSource Log;
 
@@ -68,10 +68,21 @@ namespace WobblyMods.HouseMenu
                 "Build mode (on, menu closed): quick tap places the current piece at the ghost.").Value;
             _actions.QuickUndo = Config.Bind("Controller", "BuildQuickUndoAction", "UILB",
                 "Build mode (on, menu closed): quick tap undoes your last piece.").Value;
+            _actions.TabNext = Config.Bind("Controller", "TabNextAction", "UIRB",
+                "Menu open: quick tap shows the next tab (holding LB+RB to close never switches tabs).").Value;
+            _actions.TabPrev = Config.Bind("Controller", "TabPrevAction", "UILB",
+                "Menu open: quick tap shows the previous tab.").Value;
             _actions.ToggleHoldSeconds = Config.Bind("Controller", "ToggleHoldSeconds", 1f,
                 "Seconds the button or combo must be held. 1 second keeps a quick tap of Map opening the map.").Value;
 
+            MenuSounds.Init(
+                Config.Bind("Sounds", "MenuSounds", true,
+                    "Fun little sounds when moving, picking and switching tabs in the menu. " +
+                    "May be silent if the game has Unity audio switched off (it uses FMOD); the log says which.").Value,
+                Config.Bind("Sounds", "MenuSoundVolume", 0.6f, "Menu sound volume, 0 to 1.").Value);
+
             _sessions = new SessionManager(HousePlayerMenu.BuildRootPage);
+            _sessions.PlayerJoined += MenuSounds.Attach;
 
             // Player 1 always exists, driven by the keyboard backup; controllers are added by SyncPlayers.
             _keyboard = new KeyboardPlayerInput(() => _menuKey.Value);
@@ -83,6 +94,7 @@ namespace WobblyMods.HouseMenu
 
         private void Update()
         {
+            MenuSounds.Tick();
             if (Time.unscaledTime >= _nextPlayerSync)
             {
                 _nextPlayerSync = Time.unscaledTime + 1f;
@@ -95,12 +107,20 @@ namespace WobblyMods.HouseMenu
                 if ((pair.Value.QuickPlaceTapped || pair.Value.QuickUndoTapped) && Build.BuildWorld.Instance != null)
                 {
                     string said = Build.BuildWorld.Instance.QuickAction(pair.Key, pair.Value.QuickPlaceTapped);
-                    if (said != null) Log.LogInfo("Player " + (pair.Key + 1) + " quick build: " + said);
+                    if (said != null)
+                    {
+                        Log.LogInfo("Player " + (pair.Key + 1) + " quick build: " + said);
+                        MenuSounds.Play(pair.Value.QuickPlaceTapped ? MenuSound.Pop : MenuSound.Swish);
+                    }
                 }
             }
 
             _sessions.Update();
             UpdateGamePause();
+
+            // Item pictures are made in the background, a little each frame, from the first time a menu opens.
+            if (_sessions.AnyOpen) Icons.IconCache.Start();
+            Icons.IconCache.Tick();
 
             try
             {

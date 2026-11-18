@@ -8,7 +8,7 @@ namespace WobblyMods.HouseMenu
     /// PLACEHOLDER until the controller adapter is written (PROJECT_NOTES.md tasks T5 and T18).
     ///
     /// Drives one player's menu from the keyboard: arrow keys move, Enter picks, Backspace goes
-    /// back, the menu key (F1 by default) opens and closes. It's a backup for a grown-up at the
+    /// back, Q/E switch tabs, the menu key (F1 by default) opens and closes. It's a backup for a grown-up at the
     /// keyboard and lets the menu be tried before we know how the game reads controllers.
     ///
     /// The real adapter will be one IPlayerInput per controller (legacy Input, the new Input
@@ -35,6 +35,8 @@ namespace WobblyMods.HouseMenu
                 case MenuAction.Select: return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
                 case MenuAction.Back: return Input.GetKeyDown(KeyCode.Backspace);
                 case MenuAction.ToggleMenu: return Input.GetKeyDown(_toggleKey());
+                case MenuAction.TabPrev: return Input.GetKeyDown(KeyCode.Q);
+                case MenuAction.TabNext: return Input.GetKeyDown(KeyCode.E);
                 default: return false;
             }
         }

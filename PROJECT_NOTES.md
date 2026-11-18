@@ -102,6 +102,14 @@ Not planned: public release (Thunderstore or Nexus).
   - **Change tab:** Copy (another beside it, same size, facing and color), Turn (45 degrees), Bigger, Smaller (0.25x-4x); all undoable.
   - **New items:** wardrobe 2, drawers, books, computer, stereo, TV stand, toilet; orange and green floor lamps, a night light and party lights (real lights, `HouseMenu/src/Decor.cs`); house plants from the game's own trees and flowers (shrunk; sizes are guesses); gold treasure and gold bars in Toys and in the giant fish tank.
   - **Room kits** (Build tab, "Room kits...", `BuildMode.Core/src/RoomKits.cs`, 90 new tests): small room 3x3 with a door (+ roof), big room 5x4 with windows (+ roof), floors 3x3 and 5x5, walls 3 and 5 long, stairs up with a landing. Each kit is one undo step, uses the current material and paint, and faces the player. It places what fits and reports what was skipped, and shows a ghost preview. A new `corner_wall` piece closes the room corners. Rooms are 2 levels tall (4 m at 2 m pieces).
+- **Picture menu (house menu 0.14.0, untested in game):**
+  - **Big tile grid**, 3 across. The stick moves a pulsing yellow glow (Left/Right go in reading order, Up/Down by row); A picks, B goes back; **tap LB/RB to change tab** (Q/E on keyboard). Holding LB+RB still toggles the menu and never changes tab.
+  - **Tab colors and icons:** Furniture orange (sofa), Toys yellow (ball), Animals green (paw), Change blue (wand), Build brown (hammer).
+  - **Real pictures:** `HouseMenu/src/Icons/IconCache.cs` photographs each catalog item a few per frame on layer 31 (assumed unused by the game). Game props are copied mesh-only (no game scripts run); our builds are built 5000 m below the world, photographed and deleted. A letter shows until the photo is ready.
+  - **55 drawn symbols** for actions and build pieces; small words under every tile.
+  - **Sounds** made in code (`MenuSounds.cs`): tick, pop, swish, chime. These may be silent if the game disabled Unity audio for FMOD; the log says once. Config: `[Sounds] MenuSounds`.
+  - Core grid and tab navigation: 13 new tests (50 total).
+  - **Fixed:** "Closer" used to move things away from the camera; Closer and Farther are now the right way round.
 - **Known issue (fix built, untested):** while a menu is open, the game still sees the same button presses (A may also jump). Fix later by blocking game input while a menu is open.
 - **Visuals (started, builds):** `Visuals/` is shared Unity-side code. `ModelLibrary` loads our models from AssetBundles, `Reskin` hides a game object's body and attaches our model as visual-only (with Restore for undo), and `TailWag` swishes a tail faster when moving. Used by the cat and catfish (T22). Not tested in game.
 - **Research (done):** `docs/research/game-internals.md` lists confirmed game names from open-source mods. `docs/research/assets.md` lists CC0 cat models, sounds, materials, and building kits.

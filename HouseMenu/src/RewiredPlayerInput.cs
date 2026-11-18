@@ -22,6 +22,8 @@ namespace WobblyMods.HouseMenu
         public float ToggleHoldSeconds = 0f; // 0 = toggles as soon as the button or combo is pressed
         public string QuickPlace = "UIRB";    // build mode: quick tap places a piece at the ghost
         public string QuickUndo = "UILB";     // build mode: quick tap undoes the last piece
+        public string TabNext = "UIRB";       // menu open: quick tap shows the next tab
+        public string TabPrev = "UILB";       // menu open: quick tap shows the previous tab
     }
 
     /// <summary>
@@ -50,6 +52,8 @@ namespace WobblyMods.HouseMenu
         private float _toggleHeldSince = -1f;  // when the toggle button went down, -1 = not held
         private readonly TapWatcher _placeTap = new TapWatcher();
         private readonly TapWatcher _undoTap = new TapWatcher();
+        private readonly TapWatcher _tabNextTap = new TapWatcher();
+        private readonly TapWatcher _tabPrevTap = new TapWatcher();
 
         /// <summary>True on the frame a quick tap of the build "place" button (RB) finished.</summary>
         public bool QuickPlaceTapped { get; private set; }
@@ -95,6 +99,15 @@ namespace WobblyMods.HouseMenu
             float t = Time.unscaledTime;
             QuickPlaceTapped = _placeTap.Update(place, undo, t);
             QuickUndoTapped = _undoTap.Update(undo, place, t);
+
+            // Tab switching uses the same kind of quick tap (LB/RB by default). They're reported every frame, but
+            // the menu only uses them while it's open, and build mode only uses its taps while the menu is closed
+            // (BuildWorld.QuickAction), so the same bumper does one thing at a time. Holding LB+RB to open or close
+            // spoils both taps, so the menu combo never switches tabs.
+            bool next = ButtonHeld(player, _names.TabNext);
+            bool prev = ButtonHeld(player, _names.TabPrev);
+            if (_tabNextTap.Update(next, prev, t)) _pressed.Add(MenuAction.TabNext);
+            if (_tabPrevTap.Update(prev, next, t)) _pressed.Add(MenuAction.TabPrev);
 
             int direction = CurrentDirection(Axis(player, _names.Vertical), Axis(player, _names.Horizontal));
             float now = Time.unscaledTime;

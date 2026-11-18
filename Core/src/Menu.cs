@@ -37,12 +37,65 @@ namespace WobblyMods.Core
         }
     }
 
-    /// <summary>A category inside a page. Left/Right moves between a page's tabs.</summary>
+    /// <summary>What just happened in a menu, so a renderer can give feedback (for example a sound).</summary>
+    public enum MenuFeedback
+    {
+        /// <summary>Focus moved to another item.</summary>
+        Moved,
+        /// <summary>Another tab is showing.</summary>
+        TabChanged,
+        /// <summary>An action item was picked (raised just before its action runs).</summary>
+        Selected,
+        /// <summary>A sub-page opened.</summary>
+        PageOpened,
+        /// <summary>Went back from a sub-page to the page before.</summary>
+        PageBack,
+        /// <summary>The menu opened.</summary>
+        Opened,
+        /// <summary>The menu closed.</summary>
+        Closed
+    }
+
+    /// <summary>
+    /// A category inside a page. Shown either as a plain list (<see cref="Columns"/> = 1, the default)
+    /// or as a grid of picture tiles (<see cref="Columns"/> above 1, see <see cref="AsGrid"/>).
+    /// TabPrev/TabNext (LB/RB taps) switch tabs; on a plain list Left/Right also switch tabs.
+    /// </summary>
     public sealed class MenuTab
     {
+        /// <summary>Columns used by <see cref="AsGrid"/> when none are given.</summary>
+        public const int DefaultGridColumns = 3;
+
         private readonly List<MenuItem> _items = new List<MenuItem>();
+        private int _columns = 1;
 
         public string Title;
+
+        /// <summary>Optional picture key for the tab button (like <see cref="MenuItem.Icon"/>). May be null.</summary>
+        public string Icon;
+
+        /// <summary>
+        /// 1 = plain list (Up/Down move, Left/Right switch tabs). More than 1 = grid with that many
+        /// columns (Up/Down move a row, Left/Right move along the row). Values below 1 count as 1.
+        /// </summary>
+        public int Columns
+        {
+            get { return _columns; }
+            set { _columns = value < 1 ? 1 : value; }
+        }
+
+        /// <summary>True when the tab is shown as a grid (more than one column).</summary>
+        public bool IsGrid
+        {
+            get { return _columns > 1; }
+        }
+
+        /// <summary>Shows this tab as a grid. Returns the tab so calls can be chained.</summary>
+        public MenuTab AsGrid(int columns = DefaultGridColumns)
+        {
+            Columns = columns;
+            return this;
+        }
 
         public MenuTab(string title)
         {
@@ -109,9 +162,19 @@ namespace WobblyMods.Core
     /// The controller-navigable state of one player's menu: open/closed, which page,
     /// which tab and which item has focus. No drawing here.
     ///
-    /// Up/Down move focus (wrapping), Left/Right switch tabs (wrapping), Select runs the
-    /// focused item or opens its sub-page, Back returns to the previous page or closes
-    /// the menu on the first page, ToggleMenu opens/closes.
+    /// TabPrev/TabNext switch tabs (wrapping), Select runs the focused item or opens its sub-page,
+    /// Back returns to the previous page or closes the menu on the first page, ToggleMenu opens/closes.
+    ///
+    /// On a plain list tab (Columns = 1): Up/Down move focus (wrapping), Left/Right switch tabs (wrapping),
+    /// exactly as before grids existed.
+    ///
+    /// On a grid tab (Columns &gt; 1), items fill rows left to right:
+    /// - Left/Right step to the previous/next item in reading order: past the end of a row they continue on
+    ///   the next row, and the last item wraps to the first (so pushing one way visits everything).
+    ///   They never switch tabs on a grid.
+    /// - Up/Down move to the item above/below in the same column, wrapping from the bottom of that column
+    ///   to its top. A column that's shorter (the last row is partial) wraps sooner. A grid with a single
+    ///   row ignores Up/Down.
     /// </summary>
     public sealed class MenuModel
     {
@@ -136,6 +199,13 @@ namespace WobblyMods.Core
 
         /// <summary>Raised after the menu opens or closes. The argument is the new IsOpen.</summary>
         public event Action<bool> OpenChanged;
+
+        /// <summary>
+        /// Raised when something visible happens (focus moved, tab changed, item picked, page opened...).
+        /// The item is the one involved (the newly focused or picked item), or null. Only raised when something
+        /// actually changed, so a press that does nothing gives no feedback.
+        /// </summary>
+        public event Action<MenuFeedback, MenuItem> Feedback;
 
         public bool IsOpen
         {
@@ -170,6 +240,27 @@ namespace WobblyMods.Core
             {
                 IList<MenuTab> tabs = Top.Page.Tabs;
                 return tabs.Count == 0 ? null : tabs[Clamp(Top.Tab, tabs.Count)];
+            }
+        }
+
+        /// <summary>The first page's current tab (the tab a sub-page was opened from), or null.</summary>
+        public MenuTab RootTab
+        {
+            get
+            {
+                Frame root = _stack[0];
+                IList<MenuTab> tabs = root.Page.Tabs;
+                return tabs.Count == 0 ? null : tabs[Clamp(root.Tab, tabs.Count)];
+            }
+        }
+
+        /// <summary>Columns of the current tab: 1 for a plain list (or no tab).</summary>
+        public int Columns
+        {
+            get
+            {
+                MenuTab tab = CurrentTab;
+                return tab == null ? 1 : tab.Columns;
             }
         }
 
@@ -257,18 +348,25 @@ namespace WobblyMods.Core
                 return false;
             }
 
+            bool grid = Columns > 1;
             switch (action)
             {
                 case MenuAction.Up:
-                    MoveFocus(-1);
+                    if (grid) MoveRow(-1); else MoveFocus(-1);
                     break;
                 case MenuAction.Down:
-                    MoveFocus(1);
+                    if (grid) MoveRow(1); else MoveFocus(1);
                     break;
                 case MenuAction.Left:
-                    MoveTab(-1);
+                    if (grid) MoveFocus(-1); else MoveTab(-1);
                     break;
                 case MenuAction.Right:
+                    if (grid) MoveFocus(1); else MoveTab(1);
+                    break;
+                case MenuAction.TabPrev:
+                    MoveTab(-1);
+                    break;
+                case MenuAction.TabNext:
                     MoveTab(1);
                     break;
                 case MenuAction.Select:
@@ -281,7 +379,7 @@ namespace WobblyMods.Core
             return true;
         }
 
-        /// <summary>Moves focus by delta items, wrapping around the ends.</summary>
+        /// <summary>Moves focus by delta items (reading order on a grid), wrapping around the ends.</summary>
         public void MoveFocus(int delta)
         {
             int count = Items.Count;
@@ -289,7 +387,37 @@ namespace WobblyMods.Core
             {
                 return;
             }
-            Top.Focus = Wrap(FocusedIndex + delta, count);
+            SetFocus(Wrap(FocusedIndex + delta, count));
+        }
+
+        /// <summary>
+        /// Grid move: delta rows up (negative) or down (positive), staying in the same column and wrapping
+        /// within that column. On a plain list this is the same as <see cref="MoveFocus"/>.
+        /// </summary>
+        public void MoveRow(int delta)
+        {
+            int count = Items.Count;
+            if (count == 0)
+            {
+                return;
+            }
+            int columns = Columns;
+            if (columns <= 1)
+            {
+                MoveFocus(delta);
+                return;
+            }
+
+            int focus = FocusedIndex;
+            int column = focus % columns;
+            int row = focus / columns;
+            // Rows that have an item in this column (the last row may be partial).
+            int rowsInColumn = (count - 1 - column) / columns + 1;
+            if (rowsInColumn <= 1)
+            {
+                return;
+            }
+            SetFocus(Wrap(row + delta, rowsInColumn) * columns + column);
         }
 
         /// <summary>Switches tab by delta, wrapping. Focus goes to the new tab's first item.</summary>
@@ -302,6 +430,7 @@ namespace WobblyMods.Core
             }
             Top.Tab = Wrap(Clamp(Top.Tab, count) + delta, count);
             Top.Focus = 0;
+            Raise(MenuFeedback.TabChanged, FocusedItem);
         }
 
         /// <summary>Jumps to a tab (for mouse clicks on the tab row).</summary>
@@ -314,6 +443,7 @@ namespace WobblyMods.Core
             }
             Top.Tab = index;
             Top.Focus = 0;
+            Raise(MenuFeedback.TabChanged, FocusedItem);
         }
 
         /// <summary>Focuses an item and selects it (for mouse clicks on a button).</summary>
@@ -325,6 +455,16 @@ namespace WobblyMods.Core
             }
             Top.Focus = index;
             SelectFocused();
+        }
+
+        private void SetFocus(int index)
+        {
+            if (index == FocusedIndex)
+            {
+                return;
+            }
+            Top.Focus = index;
+            Raise(MenuFeedback.Moved, FocusedItem);
         }
 
         /// <summary>Runs the focused item, or opens its sub-page.</summary>
@@ -339,9 +479,11 @@ namespace WobblyMods.Core
             if (item.SubPage != null)
             {
                 _stack.Add(new Frame { Page = item.SubPage });
+                Raise(MenuFeedback.PageOpened, item);
                 return;
             }
 
+            Raise(MenuFeedback.Selected, item);
             if (item.OnSelect != null)
             {
                 item.OnSelect();
@@ -359,6 +501,7 @@ namespace WobblyMods.Core
             if (_stack.Count > 1)
             {
                 _stack.RemoveAt(_stack.Count - 1);
+                Raise(MenuFeedback.PageBack, FocusedItem);
             }
             else
             {
@@ -381,6 +524,16 @@ namespace WobblyMods.Core
             if (handler != null)
             {
                 handler(open);
+            }
+            Raise(open ? MenuFeedback.Opened : MenuFeedback.Closed, null);
+        }
+
+        private void Raise(MenuFeedback feedback, MenuItem item)
+        {
+            Action<MenuFeedback, MenuItem> handler = Feedback;
+            if (handler != null)
+            {
+                handler(feedback, item);
             }
         }
 

@@ -4,7 +4,7 @@ namespace WobblyMods.Core
     /// Everything a player can do to a menu. A game-specific adapter maps controller buttons
     /// (or keys) to these, so the menu logic never knows how the game reads controllers.
     /// Suggested controller mapping: D-pad / left stick = Up/Down/Left/Right, A = Select,
-    /// B = Back, Start or Select/Back button = ToggleMenu.
+    /// B = Back, Start or Select/Back button = ToggleMenu, quick tap of LB/RB = TabPrev/TabNext.
     /// </summary>
     public enum MenuAction
     {
@@ -14,7 +14,13 @@ namespace WobblyMods.Core
         Right,
         Select,
         Back,
-        ToggleMenu
+        ToggleMenu,
+
+        /// <summary>Previous tab (LB tap). Works on grid and list tabs alike.</summary>
+        TabPrev,
+
+        /// <summary>Next tab (RB tap). Works on grid and list tabs alike.</summary>
+        TabNext
     }
 
     /// <summary>

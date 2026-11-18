@@ -96,6 +96,30 @@ namespace WobblyMods.Core.Tests
         }
 
         [Fact]
+        public void TabPrevAndNext_ArePolled_OnlyWhileOpen()
+        {
+            var p1 = new FakeInput();
+            var s = new PlayerSession(0, p1, x =>
+            {
+                var page = new MenuPage("p");
+                page.AddTab("One").AsGrid().Add("a", () => { });
+                page.AddTab("Two").AsGrid().Add("b", () => { });
+                return page;
+            });
+            p1.Press(MenuAction.TabNext);
+            Assert.False(s.Update()); // closed: a tap is left for build mode
+            p1.EndFrame();
+            s.Menu.Open();
+            p1.Press(MenuAction.TabNext);
+            Assert.True(s.Update());
+            Assert.Equal("Two", s.Menu.CurrentTab.Title);
+            p1.EndFrame();
+            p1.Press(MenuAction.TabPrev);
+            s.Update();
+            Assert.Equal("One", s.Menu.CurrentTab.Title);
+        }
+
+        [Fact]
         public void Manager_HoldsUpToFourPlayers_AndReusesFreedSlots()
         {
             var world = new int[4];

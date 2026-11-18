@@ -13,7 +13,8 @@ namespace WobblyMods.Core
         private static readonly MenuAction[] PolledActions =
         {
             MenuAction.ToggleMenu, MenuAction.Back, MenuAction.Select,
-            MenuAction.Up, MenuAction.Down, MenuAction.Left, MenuAction.Right
+            MenuAction.Up, MenuAction.Down, MenuAction.Left, MenuAction.Right,
+            MenuAction.TabPrev, MenuAction.TabNext
         };
 
         private readonly UndoStack _undo = new UndoStack();

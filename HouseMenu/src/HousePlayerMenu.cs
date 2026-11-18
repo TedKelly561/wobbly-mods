@@ -63,6 +63,12 @@ namespace WobblyMods.HouseMenu
             {
                 MenuTab tab = root.AddTab(category).AsGrid();
                 tab.Icon = TabTheme.IconFor(category);
+                if (category == "Animals")
+                {
+                    // Skylar's catfish rides: turn the car, boat or helicopter she's in into a giant catfish.
+                    tab.Add("Catfish ride!", () => { _session.Status = CatfishRide.Toggle(Player); }).Icon = SymbolIcons.Key("fish");
+                    tab.Add("Flip catfish", () => { _session.Status = CatfishRide.Flip(Player); }).Icon = SymbolIcons.Key("turn");
+                }
                 foreach (CatalogItem item in FurnitureCatalog.InCategory(category))
                 {
                     CatalogItem captured = item;

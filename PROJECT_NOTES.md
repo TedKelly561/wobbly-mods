@@ -22,6 +22,8 @@ Not planned: public release (Thunderstore or Nexus).
 - Wants to decorate her house with **fish tanks, lizard tanks, frog tanks and turtle tanks**.
 - Already asked for: playing as a black cat with yellow eyes, and a giant redtail catfish to ride.
 
+- Not reading yet (2026-11-18): menus must work with pictures, colors and symbols. Words stay small under pictures.
+
 ## Decisions so far
 
 | Topic | Decision | Source |
@@ -49,6 +51,7 @@ Not planned: public release (Thunderstore or Nexus).
 | Two game builds | The folder has `Wobbly Life.exe` + `Wobbly Life_Data` and `Wobbly Life_EOS.exe` + `Wobbly Life_EOS_Data`, plus `SharedAssets`. Steam offers two launch options: **"Play Crossplay"** (`Wobbly Life_EOS.exe`) and **"Play Steam Workshop"** (`Wobbly Life.exe`). The family plays **Crossplay** (confirmed from the Steam launch screen, 2026-11-16; an earlier note said otherwise). The project builds against `Wobbly Life_EOS_Data\Managed`; for the Workshop build, pass `-p:GameDataDir="Wobbly Life_Data"`. BepInEx loads in both. Research notes say the crossplay build uses Unity 2022.3.62f2 (Scout will confirm). Mods are for local split-screen play; avoid using them in online crossplay lobbies with strangers | Screenshot 2026-11-16 |
 | BepInEx | 5.4.23.5 win x64 extracted into the game folder | 2026-11-16 |
 | Family wishes | House menus, fun powers, vehicles and spawning, sandbox build mode | Question answers |
+| Picture menu | All chosen by the parent (2026-11-18): **real item pictures** (the mod snapshots each item: shape and colors only, no game code), **a color per tab** (Furniture orange, Toys yellow, Animals green, Change blue, Build brown), **symbols for actions**, a **big picture grid** (3 across; stick moves, A picks, B back, **tap LB/RB to switch tabs**), **small words under pictures**, and **fun little sounds** (may be silent if the game turned off Unity audio for FMOD; logged) | Parent, 2026-11-18 |
 | Menu button | **Hold LB + RB together, or hold Map, for 1 second** opens/closes the menu (`ToggleAction = UILB+UIRB,Map`, `ToggleHoldSeconds = 1`). Hold Map is confirmed working in game; LB + RB is untested. BepInEx keeps the first-run settings in `BepInEx\config\wobblymods.housemenu.cfg`, so new defaults only apply to fresh installs | Parent, 2026-11-16 |
 | Controls | Everyone uses a controller. Replaces the mouse-click menu; F1/F2 stay as a keyboard backup | Question answers |
 | Build mode priorities | Snapping blocks, good materials, big builds without lag, save and load | Question answers |

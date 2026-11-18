@@ -8,6 +8,47 @@ namespace WobblyMods.HouseMenu
     /// party lights. Built from simple shapes plus real Unity lights, so they light up the room. Visual-only,
     /// except the lamp pole, which players bump into.
     /// </summary>
+    /// <summary>
+    /// Makes party lights blink (parent's request): the bulbs take turns, every other bulb on, swapping about twice a
+    /// second, so orange and green chase along the string.
+    /// </summary>
+    internal sealed class Twinkle : MonoBehaviour
+    {
+        public float Interval = 0.45f;
+
+        private readonly System.Collections.Generic.List<Material> _bulbs = new System.Collections.Generic.List<Material>();
+        private readonly System.Collections.Generic.List<Color> _colors = new System.Collections.Generic.List<Color>();
+        private readonly System.Collections.Generic.List<Light> _lights = new System.Collections.Generic.List<Light>();
+        private readonly System.Collections.Generic.List<float> _intensity = new System.Collections.Generic.List<float>();
+        private float _next;
+        private int _phase;
+
+        public void Add(Material bulb, Color color, Light light)
+        {
+            _bulbs.Add(bulb);
+            _colors.Add(color);
+            _lights.Add(light);
+            _intensity.Add(light != null ? light.intensity : 0f);
+        }
+
+        private void Update()
+        {
+            if (Time.time < _next) return;
+            _next = Time.time + Interval;
+            _phase = 1 - _phase;
+            for (int i = 0; i < _bulbs.Count; i++)
+            {
+                bool on = (i + _phase) % 2 == 0;
+                Material m = _bulbs[i];
+                if (m == null) continue;
+                Color c = on ? _colors[i] : _colors[i] * 0.25f;
+                TankMaterials.SetColor(m, c);
+                if (m.HasProperty("_EmissionColor")) m.SetColor("_EmissionColor", on ? _colors[i] * 1.5f : Color.black);
+                if (_lights[i] != null) _lights[i].intensity = on ? _intensity[i] : _intensity[i] * 0.2f;
+            }
+        }
+    }
+
     internal static class Decor
     {
         private static readonly Color Orange = new Color(1f, 0.5f, 0f);
@@ -45,6 +86,7 @@ namespace WobblyMods.HouseMenu
             Part(root.transform, PrimitiveType.Cylinder, Pole, new Vector3(width / 2, height / 2, 0), new Vector3(0.08f, height / 2, 0.08f), true);
 
             const int bulbs = 9;
+            Twinkle twinkle = root.AddComponent<Twinkle>();
             for (int i = 0; i < bulbs; i++)
             {
                 float t = i / (float)(bulbs - 1);
@@ -53,7 +95,9 @@ namespace WobblyMods.HouseMenu
                 Color c = i % 2 == 0 ? Orange : Green;
                 // Only two real lights (lights are costly); the rest just glow.
                 bool realLight = i == 2 || i == 6;
-                Glow(root.transform, c, new Vector3(x, height - sag, 0), 0.16f, realLight ? 4f : 0f, 0.8f);
+                Light light;
+                Material bulb = Glow(root.transform, c, new Vector3(x, height - sag, 0), 0.16f, realLight ? 4f : 0f, 0.8f, out light);
+                twinkle.Add(bulb, c, light);
             }
             return root;
         }
@@ -71,6 +115,13 @@ namespace WobblyMods.HouseMenu
         /// <summary>A glowing ball, with a real point light if range &gt; 0.</summary>
         private static void Glow(Transform root, Color color, Vector3 pos, float size, float range, float intensity)
         {
+            Light unused;
+            Glow(root, color, pos, size, range, intensity, out unused);
+        }
+
+        private static Material Glow(Transform root, Color color, Vector3 pos, float size, float range, float intensity, out Light made)
+        {
+            made = null;
             Transform ball = Part(root, PrimitiveType.Sphere, color, pos, Vector3.one * size, false);
             Material m = ball.GetComponent<Renderer>().material;
             if (m.HasProperty("_EmissionColor"))
@@ -88,7 +139,9 @@ namespace WobblyMods.HouseMenu
                 light.range = range;
                 light.intensity = intensity;
                 light.shadows = LightShadows.None;
+                made = light;
             }
+            return m;
         }
 
         private static Transform Part(Transform parent, PrimitiveType type, Color color, Vector3 pos, Vector3 scale, bool keepCollider)

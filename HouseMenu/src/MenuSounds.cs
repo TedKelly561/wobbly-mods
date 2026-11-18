@@ -86,10 +86,14 @@ namespace WobblyMods.HouseMenu
 
         public static void Play(MenuSound sound)
         {
-            if (!_enabled || _broken) return;
+            if (!_enabled) return;
             float now = Time.unscaledTime;
             if (now - _lastPlayed < MinGapSeconds) return;
             _lastPlayed = now;
+
+            // The game's own sounds through FMOD first (Unity audio is off in Wobbly Life: test 14).
+            if (FmodSounds.TryPlay(sound)) return;
+            if (_broken) return;
 
             try
             {

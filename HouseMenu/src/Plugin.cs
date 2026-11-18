@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.14.0";
+        public const string PluginVersion = "0.15.0";
 
         internal static ManualLogSource Log;
 
@@ -75,6 +75,11 @@ namespace WobblyMods.HouseMenu
             _actions.ToggleHoldSeconds = Config.Bind("Controller", "ToggleHoldSeconds", 1f,
                 "Seconds the button or combo must be held. 1 second keeps a quick tap of Map opening the map.").Value;
 
+            FmodSounds.SetOverrides(
+                Config.Bind("Sounds", "FmodTick", "", "Game sound (FMOD event path) when moving in the menu. Empty = choose automatically; the log lists the menu sounds found.").Value,
+                Config.Bind("Sounds", "FmodPick", "", "Game sound when picking something. Empty = automatic.").Value,
+                Config.Bind("Sounds", "FmodBack", "", "Game sound when going back or closing. Empty = automatic.").Value,
+                Config.Bind("Sounds", "FmodTab", "", "Game sound when changing tab or opening the menu. Empty = automatic.").Value);
             MenuSounds.Init(
                 Config.Bind("Sounds", "MenuSounds", true,
                     "Fun little sounds when moving, picking and switching tabs in the menu. " +

@@ -251,6 +251,8 @@ The current menu assumes one player: one mouse, one camera (`Camera.main`), one 
 
 ## How the agent team works
 
+**Machine names (parent, 2026-11-19):** **ROADWS2 = the Legion laptop** (RTX 5080 Laptop, 16 GB VRAM; runs the local worker and Ollama). **REMOTEWS2 = the living-room box** (RTX 3060, 12 GB; where the family plays, with the auto-updater and Google Drive saves). Earlier notes that call ROADWS2 "the home PC" or say the jobs "didn't run on the Legion" mean the Legion.
+
 - **Switchyard Hub project: "🐟 Wobbly Life mods (Skylar & family)"** (created 2026-11-16). Every session logs its handoff there with its own agent name, and test or setup jobs for the home PC go there as tasks.
 
 - The project manager session owns this file and the task board. It writes the decisions and marks tasks done.

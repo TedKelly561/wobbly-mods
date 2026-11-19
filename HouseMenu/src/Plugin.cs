@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.19.0";
+        public const string PluginVersion = "0.20.0";
 
         internal static ManualLogSource Log;
 
@@ -46,6 +46,7 @@ namespace WobblyMods.HouseMenu
         {
             Log = Logger;
             CustomModels.Init();
+            Outfits.Init(Config);
             SavePaths.Init(Config.Bind("Saves", "SaveFolder", "",
                 "Folder for saved houses and builds. Empty = BepInEx\\config. Point both PCs at the same cloud-synced " +
                 "folder (e.g. %OneDrive%\\WobblyLifeSaves) so Skylar's saves follow her.").Value);

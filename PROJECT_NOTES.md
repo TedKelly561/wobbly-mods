@@ -207,7 +207,7 @@ Parent's choices (2026-11-19): outfits are **a Wobbly in a costume** (ears, tail
 | B | Local worker, heavy model | #507 tubes and fins: Bezier, Tube, Extrude + tests (after A) |
 | C | Local worker, fast model | #508 PropRooms: sort prop addresses into rooms + nice names + tests |
 | D | Home PC | #509 post the furniture prop list from Scout's 02_props.txt |
-| E | Cloud PM | "Dress up" tab: outfits built from A/B shapes, attached to `Player/Wobbly/Hip/Chest/Head` and the hip, recolored; T-Rex through `ClothingManager` / `CharacterCustomize.SetClothingPiece` (found by name at runtime, logged) |
+| E (built 0.20.0, untested) | Cloud PM | "Dress up" page (Animals tab): cat, bunny, puppy, redtail, T-Rex from simple shapes in `HouseMenu/src/Outfits.cs`, with Fur color, Turn costume, Bigger, Smaller, Take off. T-Rex is a costume too (the game's dinosaur clothes need names from Scout 0.4). Original plan: "Dress up" tab: outfits built from A/B shapes, attached to `Player/Wobbly/Hip/Chest/Head` and the hip, recolored; T-Rex through `ClothingManager` / `CharacterCustomize.SetClothingPiece` (found by name at runtime, logged) |
 | F | Cloud PM | Furniture from the game's own Addressables list at runtime, sorted with PropRooms into room tabs, with snapshot pictures |
 | H | Cloud PM | Skylar's request: a catfish **train** is ONE long redtail over the whole train. Plan: a bendy fish, head on the engine, a body piece on each carriage and the tail fin on the last one, so it curves around bends instead of cutting corners. Built from the A/B shapes. The next test build logs the train's structure (engine, carriages, links) to confirm how to find every carriage |
 | G | Home PC | Test 20 (outfits + furniture) |

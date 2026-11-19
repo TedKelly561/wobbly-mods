@@ -28,6 +28,8 @@ namespace WobblyMods.HouseMenu
         private readonly PlayerSession _session;
         private int _colorIndex;
         private MenuItem _colorItem;
+        private MenuItem _furItem;
+        private int _furIndex;
 
         private HousePlayerMenu(PlayerSession session)
         {
@@ -66,6 +68,7 @@ namespace WobblyMods.HouseMenu
                 if (category == "Animals")
                 {
                     // Skylar's catfish rides: turn the car, boat or helicopter she's in into a giant catfish.
+                    tab.AddSubPage("Dress up", DressUpPage()).Icon = SymbolIcons.Key("shirt");
                     tab.Add("Catfish ride!", () => { _session.Status = CatfishRide.Toggle(Player); }).Icon = SymbolIcons.Key("fish");
                     tab.Add("Flip catfish", () => { _session.Status = CatfishRide.Flip(Player); }).Icon = SymbolIcons.Key("turn");
                 }
@@ -230,6 +233,31 @@ namespace WobblyMods.HouseMenu
             GameObject target = CurrentTarget();
             if (target == null) return;
             _session.Status = edit(target);
+        }
+
+        /// <summary>Skylar's costumes: she stays a Wobbly, with ears, tails, whiskers and fur color added (Outfits).</summary>
+        private MenuPage DressUpPage()
+        {
+            var page = new MenuPage("Dress up");
+            MenuTab grid = page.MainTab().AsGrid();
+            foreach (string id in Outfits.Ids)
+            {
+                string captured = id;
+                grid.Add(Outfits.NiceName(id), () => { _session.Status = Outfits.Wear(Player, captured); }).Icon = SymbolIcons.Key(id);
+            }
+            _furItem = grid.Add("Fur color", () =>
+            {
+                Color color = Palette[_furIndex];
+                _furIndex = (_furIndex + 1) % Palette.Length;
+                _furItem.Icon = SymbolIcons.Key("paint", Palette[_furIndex]);
+                _session.Status = Outfits.SetFur(Player, color);
+            });
+            _furItem.Icon = SymbolIcons.Key("paint", Palette[_furIndex]);
+            grid.Add("Turn costume", () => { _session.Status = Outfits.Turn(Player); }).Icon = SymbolIcons.Key("turn");
+            grid.Add("Bigger costume", () => { _session.Status = Outfits.Resize(Player, 1.15f); }).Icon = SymbolIcons.Key("plus");
+            grid.Add("Smaller costume", () => { _session.Status = Outfits.Resize(Player, 1f / 1.15f); }).Icon = SymbolIcons.Key("minus");
+            grid.Add("Take off", () => { _session.Status = Outfits.TakeOff(Player); }).Icon = SymbolIcons.Key("no");
+            return page;
         }
 
         private void Recolor()

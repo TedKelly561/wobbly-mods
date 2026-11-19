@@ -42,6 +42,14 @@ namespace WobblyMods.HouseMenu.Icons
                 case "no": c.Line(30, 30, 98, 98, 20); c.Line(98, 30, 30, 98, 20); return true;
                 case "star": c.Star(64, 66, 52, 22); return true;
                 case "fish": Fish(c); return true;
+                case "redtail": Fish(c); c.Line(20, 70, 4, 92, 5); c.Line(26, 76, 16, 100, 5); return true;
+                case "shirt": c.Poly(40, 18, 88, 18, 120, 44, 104, 64, 90, 54, 90, 112, 38, 112, 38, 54, 24, 64, 8, 44); c.Circle(64, 18, 14, true); return true;
+                case "cat": c.Circle(64, 74, 44); c.Poly(22, 62, 26, 12, 62, 40); c.Poly(106, 62, 102, 12, 66, 40); Face(c, 74); return true;
+                case "bunny": c.Circle(64, 84, 38); c.Ellipse(44, 34, 13, 34); c.Ellipse(84, 34, 13, 34); Face(c, 82); return true;
+                case "puppy": c.Circle(64, 66, 42); c.Ellipse(20, 70, 15, 38); c.Ellipse(108, 70, 15, 38); Face(c, 62); c.Ellipse(64, 104, 9, 12); return true;
+                case "trex": c.Rect(14, 30, 100, 50, 22); c.Rect(60, 70, 54, 34, 12); c.Circle(44, 50, 9, true);
+                             for (int i = 0; i < 4; i++) c.ErasePoly(22 + i * 10, 80, 34 + i * 10, 80, 28 + i * 10, 96);
+                             c.Poly(50, 32, 62, 8, 74, 32); c.Poly(76, 32, 88, 8, 100, 32); return true;
                 case "1": One(c); return true;
                 case "2": Two(c); return true;
                 case "3": Three(c); return true;
@@ -198,6 +206,15 @@ namespace WobblyMods.HouseMenu.Icons
             }
             c.Ellipse(50, 60, 7, 10);
             c.Ellipse(78, 60, 7, 10);
+        }
+
+        /// <summary>Two eyes and a nose cut out of an animal's head.</summary>
+        private static void Face(SymbolCanvas c, float y)
+        {
+            c.Ellipse(48, y - 6, 7, 10, true);
+            c.Ellipse(80, y - 6, 7, 10, true);
+            c.Poly(56, y + 12, 72, y + 12, 64, y + 22);
+            c.ErasePoly(56, y + 12, 72, y + 12, 64, y + 22);
         }
 
         private static void Fish(SymbolCanvas c)

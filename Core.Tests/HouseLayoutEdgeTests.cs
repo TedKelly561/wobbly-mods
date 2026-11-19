@@ -287,7 +287,7 @@ public class HouseLayoutEdgeTests
         Assert.True(h.Items[0].HasColor);
     }
 
-    [Fact(Skip = "BUG: Save() writes numbers with 3 decimals, so a valid scale below 0.0005 is saved as 0 and Load() drops that item")]
+    [Fact]
     public void TinyScaleSurvivesSaveAndLoad()
     {
         var h = new HouseLayout();

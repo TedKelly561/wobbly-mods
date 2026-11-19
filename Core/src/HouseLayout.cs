@@ -51,7 +51,7 @@ namespace WobblyMods.Core
                 }
                 sb.Append("item ").Append(it.Id)
                   .Append(' ').Append(F(it.X)).Append(' ').Append(F(it.Y)).Append(' ').Append(F(it.Z))
-                  .Append(' ').Append(F(it.Yaw)).Append(' ').Append(F(it.Scale));
+                  .Append(' ').Append(F(it.Yaw)).Append(' ').Append(it.Scale.ToString("R", CultureInfo.InvariantCulture)); // full precision: tiny scales must not save as 0
                 if (it.HasColor)
                 {
                     sb.Append(' ').Append(F(it.R)).Append(' ').Append(F(it.G)).Append(' ').Append(F(it.B));

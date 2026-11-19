@@ -15,7 +15,9 @@ namespace WobblyMods.HouseMenu
     /// catfish is attached, sized to the vehicle's length. Driving, flying, floating, seats and collisions stay the game's.
     /// Model: Skylar's redtail from the Unity kit bundle if installed (wobbly_animals/RedtailCatfish), otherwise the
     /// game's own fishing catfish (CatFish_Static), so it works before the Unity kit is set up.
-    /// Picking it again on the same vehicle puts the normal look back. Local look only (other PCs see the vehicle).
+    /// Catfish rides are also INVINCIBLE (Skylar's request) via the game's own PlayerVehicle.SetIndestructable.
+    /// Picking it again on the same vehicle puts the normal look back (and makes it breakable again).
+    /// The look is local only (other PCs see the vehicle).
     /// </summary>
     internal static class CatfishRide
     {
@@ -25,6 +27,8 @@ namespace WobblyMods.HouseMenu
         private sealed class Ride
         {
             public GameObject Vehicle;
+            public Component PlayerVehicle; // for invincibility (game's own SetIndestructable)
+            public bool Invincible;
             public GameObject Fish;
             public readonly List<Renderer> Hidden = new List<Renderer>();
         }
@@ -62,8 +66,10 @@ namespace WobblyMods.HouseMenu
                 return "The catfish couldn't swim in.";
             }
             Rides[vehicle] = ride;
-            Plugin.Log.LogInfo("Catfish ride: " + vehicle.name + " is now a catfish (" + ride.Fish.name + ").");
-            return "Your " + Nice(vehicle.name) + " is a CATFISH!";
+            ride.Invincible = SetInvincible(ride, true);
+            Plugin.Log.LogInfo("Catfish ride: " + vehicle.name + " is now a catfish (" + ride.Fish.name + ")" +
+                               (ride.Invincible ? ", invincible." : ", but invincibility didn't switch on."));
+            return "Your " + Nice(vehicle.name) + " is an INVINCIBLE CATFISH!";
         }
 
         /// <summary>Turns the catfish on the nearest vehicle around (for models that face backwards).</summary>
@@ -141,8 +147,31 @@ namespace WobblyMods.HouseMenu
             return ride;
         }
 
+        /// <summary>
+        /// Skylar's request: catfish rides can't be wrecked. Uses the game's own switch,
+        /// PlayerVehicle.SetIndestructable(object handle, bool) (races use it). The ride itself is the handle, so
+        /// turning the catfish off only removes OUR invincibility, never the game's. Returns IsIndestructable().
+        /// </summary>
+        private static bool SetInvincible(Ride ride, bool on)
+        {
+            if (ride.PlayerVehicle == null)
+            {
+                Type vehicleType = GameReflection.FindType("PlayerVehicle");
+                ride.PlayerVehicle = vehicleType != null ? ride.Vehicle.GetComponent(vehicleType) : null;
+            }
+            if (ride.PlayerVehicle == null) return false;
+
+            GameReflection.CallWith(ride.PlayerVehicle, "SetIndestructable", ride, on);
+            object now = GameReflection.Call(ride.PlayerVehicle, "IsIndestructable");
+            return now is bool && (bool)now;
+        }
+
         private static void Restore(Ride ride)
         {
+            if (ride.Invincible && ride.Vehicle != null)
+            {
+                SetInvincible(ride, false);
+            }
             foreach (Renderer r in ride.Hidden)
             {
                 if (r != null) r.enabled = true;

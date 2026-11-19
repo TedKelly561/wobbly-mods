@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace WobblyMods.Core.Shapes
 {
-    public static class Shapes
+    public static partial class Shapes
     {
         public static ShapeMesh Ellipsoid(V3 radii, int segments = 16, int rings = 10)
         {

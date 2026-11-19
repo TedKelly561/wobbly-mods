@@ -81,6 +81,8 @@ namespace WobblyMods.HouseMenu
             MenuTab change = root.AddTab("Change").AsGrid();
             change.Icon = TabTheme.IconFor("Change");
             // Skylar's request: no-clip in her own world, like the sandbox has.
+            // Parent's request: give every player a million.
+            change.Add("Million!", () => { _session.Status = Powers.GiveMoney(1000000); }).Icon = SymbolIcons.Key("star");
             change.Add("No-clip (fly through walls)", () => { _session.Status = Powers.ToggleNoClip(Player); }).Icon = SymbolIcons.Key("ghost");
             change.Add("Undo", () => UndoLast(_session)).Icon = SymbolIcons.Key("undo");
             change.Add("Left", () => Nudge(CameraRelative(Vector3.left))).Icon = SymbolIcons.Key("left");

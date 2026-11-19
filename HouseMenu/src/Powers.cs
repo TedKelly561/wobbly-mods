@@ -56,6 +56,53 @@ namespace WobblyMods.HouseMenu
             return nowOn ? "No-clip ON: fly through walls! Pick it again to land." : "No-clip OFF.";
         }
 
+        /// <summary>
+        /// Gives every player the game knows about (all split-screen players, and anyone in the game) the amount, using
+        /// the game's own money call: PlayerControllerEmployment.UpdateMoney(int) (Scout report 2), the call jobs use
+        /// to pay players. It syncs and saves. Logs each player's money before and after, to confirm it adds.
+        /// </summary>
+        public static string GiveMoney(int amount)
+        {
+            object gameInstance = GameReflection.GetStatic("GameInstance", "Instance");
+            var players = new System.Collections.Generic.List<object>();
+            System.Collections.IEnumerable all = GameReflection.Call(gameInstance, "GetPlayerControllers") as System.Collections.IEnumerable;
+            if (all != null)
+            {
+                foreach (object c in all) if (c != null) players.Add(c);
+            }
+            if (players.Count == 0) players.AddRange(GameReflection.LocalPlayerControllers());
+
+            Type employmentType = GameReflection.FindType("PlayerControllerEmployment");
+            int given = 0;
+            foreach (object controller in players)
+            {
+                object employment = GameReflection.Call(controller, "GetPlayerControllerEmployment")
+                                    ?? GameReflection.Get(controller, "playerControllerEmployment");
+                UnityEngine.Component comp = controller as UnityEngine.Component;
+                if (employment == null && comp != null && employmentType != null)
+                {
+                    employment = comp.GetComponentInChildren(employmentType, true) ?? comp.GetComponentInParent(employmentType);
+                }
+                if (employment == null) continue;
+
+                object before = GameReflection.Call(employment, "GetLocalMoney");
+                if (GameReflection.CallWith(employment, "UpdateMoney", amount))
+                {
+                    given++;
+                    object after = GameReflection.Call(employment, "GetLocalMoney");
+                    Plugin.Log.LogInfo("Money: " + (comp != null ? comp.name : "player") + " " + before + " -> " + after +
+                                       " (UpdateMoney(" + amount + ")).");
+                }
+            }
+
+            if (given == 0)
+            {
+                Plugin.Log.LogWarning("Money: no player's PlayerControllerEmployment found (" + players.Count + " players).");
+                return "Couldn't find anyone's wallet.";
+            }
+            return "Everyone got " + amount.ToString("N0") + "!";
+        }
+
         /// <summary>That player's PlayerCharacterMovement: controller → character → movement.</summary>
         private static object MovementOf(int playerIndex)
         {

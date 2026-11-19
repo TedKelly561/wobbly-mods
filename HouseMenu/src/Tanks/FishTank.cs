@@ -126,7 +126,7 @@ namespace WobblyMods.HouseMenu.Tanks
             {
                 string name = i % 2 == 0 ? "Seaweed 1" : "Seaweed 2";
                 GameObject weed = Place(root, PlantPath + name + ".prefab", 1.2f + (float)rng.NextDouble() * 1.2f,
-                                        RandomFloorPoint(rng, 0.4f) + Vector3.up * floorY, rng);
+                                        RandomFloorPoint(rng, 0.4f), rng); // already at sand level (the floor height was added twice before)
                 if (weed != null)
                 {
                     Sway sway = weed.AddComponent<Sway>();

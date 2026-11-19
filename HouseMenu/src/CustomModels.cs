@@ -35,15 +35,24 @@ namespace WobblyMods.HouseMenu
         {
             string problem;
             GameObject prefab = ModelLibrary.Load(AnimalsBundle, asset, out problem);
-            if (prefab == null)
+            GameObject go;
+            if (prefab != null)
+            {
+                go = Object.Instantiate(prefab, position, rotation);
+                Reskin.MakeVisualOnly(go);
+            }
+            else if (asset == "RedtailCatfish")
+            {
+                // No Unity-kit bundle: use the redtail made in code (Core RedtailModel).
+                go = ShapeModels.Redtail();
+                go.transform.SetPositionAndRotation(position, rotation);
+            }
+            else
             {
                 Plugin.Log.LogWarning(asset + ": " + problem + " Build it with the Unity kit (UnityAssets/README.md).");
                 return null;
             }
-
-            GameObject go = Object.Instantiate(prefab, position, rotation);
             go.name = asset;
-            Reskin.MakeVisualOnly(go);
 
             // Size by its longest side, then lift it a little off the floor so it "floats".
             Bounds b = new Bounds(go.transform.position, Vector3.zero);

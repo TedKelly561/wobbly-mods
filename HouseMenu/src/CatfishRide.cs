@@ -14,7 +14,8 @@ namespace WobblyMods.HouseMenu
     /// Only the LOOK changes: the vehicle's own renderers are hidden (never the players riding it) and a visual-only
     /// catfish is attached, sized to the vehicle's length. Driving, flying, floating, seats and collisions stay the game's.
     /// Model: Skylar's redtail from the Unity kit bundle if installed (wobbly_animals/RedtailCatfish), otherwise the
-    /// game's own fishing catfish (CatFish_Static), so it works before the Unity kit is set up.
+    /// redtail made in code (ShapeModels.Redtail, from Core's RedtailModel), with the game's own fishing catfish
+    /// (CatFish_Static) as the last resort.
     /// Catfish rides are also INVINCIBLE (Skylar's request) via the game's own PlayerVehicle.SetIndestructable.
     /// Picking it again on the same vehicle puts the normal look back (and makes it breakable again).
     /// The look is local only (other PCs see the vehicle).
@@ -189,6 +190,18 @@ namespace WobblyMods.HouseMenu
                 GameObject redtail = UnityEngine.Object.Instantiate(prefab);
                 redtail.name = "Redtail catfish ride";
                 return redtail;
+            }
+
+            // Skylar's redtail made in code (no Unity kit needed). The game's own catfish is the last resort.
+            try
+            {
+                GameObject made = ShapeModels.Redtail();
+                made.name = "Redtail catfish ride";
+                return made;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Catfish ride: the code-built redtail failed (" + e.Message + "); using the game's catfish.");
             }
 
             GameObject gameFish = GameSpawner.SpawnLocal(GameCatfish, Vector3.zero, Quaternion.identity, out problem);

@@ -45,7 +45,7 @@ namespace WobblyMods.Core.Shapes
             parts.Add(Fin(Body, 0.016f,
                 -0.12f, 0.1f, -0.08f, 0.2f, -0.02f, 0.27f, 0.05f, 0.3f, 0.1f, 0.28f, 0.13f, 0.2f, 0.14f, 0.1f));
             parts.Add(Fin(Tail, 0.014f,
-                0.2f, 0.04f, 0.23f, 0.11f, 0.28f, 0.13f, 0.32f, 0.1f, 0.33f, 0.04f));
+                0.19f, 0.03f, 0.22f, 0.13f, 0.27f, 0.16f, 0.31f, 0.13f, 0.33f, 0.03f));
 
             // Side fins: rounded paddles lying flat, just behind the head. Built separately, never mirrored by scale.
             for (int s = -1; s <= 1; s += 2)

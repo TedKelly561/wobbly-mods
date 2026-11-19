@@ -52,9 +52,9 @@ namespace WobblyMods.HouseMenu
 
         public static void Init(ConfigFile config)
         {
-            _quarterTurns = config.Bind("Outfits", "FacingQuarterTurns", 0,
+            _quarterTurns = config.Bind("Outfits", "FacingQuarterTurns", 2,
                 "Quarter turns added to costumes so the face is at the front. The menu's 'Turn costume' changes this.");
-            _size = config.Bind("Outfits", "Size", 1f, "Costume size multiplier. The menu's Bigger and Smaller change this.");
+            _size = config.Bind("Outfits", "CostumeSize", 1f, "Costume size multiplier. The menu's Bigger and Smaller change this.");
             _headHeight = config.Bind("Outfits", "HeadHeight", 0f,
                 "Moves head pieces up (+) or down (-), in head units, if ears and eyes sit too high or low.");
         }
@@ -176,26 +176,44 @@ namespace WobblyMods.HouseMenu
                 return null;
             }
 
-            // Measure the Wobbly (before adding anything).
-            Bounds body = new Bounds(character.transform.position, Vector3.zero);
-            bool any = false;
+            // Size and place from the BONES only. Test 20 showed renderer bounds are useless here: the skinned
+            // mesh's bounds are far bigger than the body and included our own parts, so the costume grew and
+            // climbed on every press. The head bone's own collider (ragdoll) gives the head's real center and size.
             int layer = character.gameObject.layer;
-            foreach (Renderer r in character.GetComponentsInChildren<Renderer>())
+            Renderer first = character.GetComponentInChildren<Renderer>();
+            if (first != null) layer = first.gameObject.layer;
+
+            float spine = Vector3.Distance(head.position, hip.position);
+            if (spine < 0.05f || spine > 10f) spine = 0.77f;
+            Vector3 headCenter = head.position + Vector3.up * spine * 0.3f;
+            float headRadius = spine * 0.42f;
+            string measured = "guessed from the bones";
+            Collider headCollider = head.GetComponent<Collider>();
+            if (headCollider != null && !headCollider.isTrigger)
             {
-                if (!r.enabled || r is ParticleSystemRenderer) continue;
-                if (!any) { body = r.bounds; any = true; layer = r.gameObject.layer; } else body.Encapsulate(r.bounds);
+                float scale = Mathf.Max(head.lossyScale.x, Mathf.Max(head.lossyScale.y, head.lossyScale.z));
+                SphereCollider sphere = headCollider as SphereCollider;
+                CapsuleCollider capsule = headCollider as CapsuleCollider;
+                BoxCollider box = headCollider as BoxCollider;
+                float r = 0f;
+                Vector3 c = head.position;
+                if (sphere != null) { r = sphere.radius * scale; c = head.TransformPoint(sphere.center); }
+                else if (capsule != null) { r = Mathf.Max(capsule.radius, capsule.height * 0.5f) * scale; c = head.TransformPoint(capsule.center); }
+                else if (box != null) { r = Mathf.Max(box.size.x, Mathf.Max(box.size.y, box.size.z)) * 0.5f * scale; c = head.TransformPoint(box.center); }
+                if (r > spine * 0.15f && r < spine * 1.5f)
+                {
+                    headRadius = r;
+                    headCenter = c;
+                    measured = headCollider.GetType().Name;
+                }
             }
-            float height = any ? body.size.y : 0f;
-            if (height < 0.2f || height > 5f) height = 1.2f;
-            float unit = height * 0.2f * _size.Value;
+            float unit = headRadius * _size.Value;
+            headCenter += Vector3.up * _headHeight.Value * headRadius;
 
             Vector3 forward = head.forward; forward.y = 0f;
             if (forward.sqrMagnitude < 0.01f) { forward = head.up; forward.y = 0f; }
             if (forward.sqrMagnitude < 0.01f) forward = Vector3.forward;
             Quaternion facing = Quaternion.AngleAxis(90f * _quarterTurns.Value, Vector3.up) * Quaternion.LookRotation(forward.normalized, Vector3.up);
-
-            float top = any ? body.max.y : head.position.y + unit;
-            Vector3 headCenter = new Vector3(head.position.x, top - height * 0.2f + _headHeight.Value * unit, head.position.z);
 
             var worn = new Worn { Id = id, Character = character, Fur = fur };
             worn.Customize = GameReflection.Call(character, "GetPlayerCharacterCustomize");
@@ -216,11 +234,11 @@ namespace WobblyMods.HouseMenu
             }
 
             bool colored = SetBodyColor(worn.Customize, _fur);
-            Plugin.Log.LogInfo("Dress up: player " + (player + 1) + " is a " + NiceName(id) + ". Height " + height.ToString("0.00") +
-                               ", unit " + unit.ToString("0.00") + ", head bone y " + head.position.y.ToString("0.00") +
-                               ", top " + top.ToString("0.00") + ", hip y " + hip.position.y.ToString("0.00") +
-                               ", head scale " + head.lossyScale + ", quarter turns " + _quarterTurns.Value +
-                               ", body color " + (colored ? "set" : "NOT set (SetCharacterColor not found)") + ".");
+            Plugin.Log.LogInfo("Dress up: player " + (player + 1) + " is a " + NiceName(id) + ". Head radius " + headRadius.ToString("0.00") +
+                               " (" + measured + "), head center " + (headCenter.y - head.position.y).ToString("0.00") + " above the head bone, spine " +
+                               spine.ToString("0.00") + ", size " + _size.Value.ToString("0.00") + ", unit " + unit.ToString("0.00") +
+                               ", head forward " + head.forward.ToString("0.0") + ", head up " + head.up.ToString("0.0") +
+                               ", quarter turns " + _quarterTurns.Value + ", body color " + (colored ? "set" : "NOT set") + ".");
             return worn;
         }
 

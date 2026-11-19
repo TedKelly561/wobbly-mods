@@ -197,6 +197,22 @@ Each task says who checks it. Mark it done here when finished.
 | T26 | Monster truck: list the game's vehicles (Scout 0.4: `AllVehiclesAssetReferences`), then a big-wheeled orange/green truck reskin | Scout 0.4 | Skylar can drive a monster truck |
 | T18 | Controller menu: replace mouse clicks with controller navigation, one menu per player | T5, T14 | Each player opens and drives their own menu with their controller |
 
+## Tonight's plan (2026-11-19): outfits and all the furniture
+
+Parent's choices (2026-11-19): outfits are **a Wobbly in a costume** (ears, tail, whiskers, eyes and fur color attached to the game's own bones; she still moves like a Wobbly). Full animal models stay a later idea that needs the Unity kit. Outfits: **cat** (black, yellow eyes), **bunny** (big floppy ears, color picked by Skylar with New color), **redtail catfish** (dark body, cream belly, orange-red tail fin, whiskers), **puppy** (floppy ears, tail, nose) and **T-Rex** (the game's own dinosaur clothes). Furniture: **all of it**, kitchen, bathroom, kids' room and garden, as picture tabs by room.
+
+| Step | Who | Task |
+|---|---|---|
+| A | Local worker, heavy model | #506 shape library: V3, ShapeMesh, ellipsoid, cone, cylinder + tests |
+| B | Local worker, heavy model | #507 tubes and fins: Bezier, Tube, Extrude + tests (after A) |
+| C | Local worker, fast model | #508 PropRooms: sort prop addresses into rooms + nice names + tests |
+| D | Home PC | #509 post the furniture prop list from Scout's 02_props.txt |
+| E | Cloud PM | "Dress up" tab: outfits built from A/B shapes, attached to `Player/Wobbly/Hip/Chest/Head` and the hip, recolored; T-Rex through `ClothingManager` / `CharacterCustomize.SetClothingPiece` (found by name at runtime, logged) |
+| F | Cloud PM | Furniture from the game's own Addressables list at runtime, sorted with PropRooms into room tabs, with snapshot pictures |
+| G | Home PC | Test 20 (outfits + furniture) |
+
+If a local job fails twice on the heavy model, the PM does it (skill rule).
+
 ## Family mods
 
 Players: Skylar (5), parent (the project owner), another parent, and cousin LL (age not given).

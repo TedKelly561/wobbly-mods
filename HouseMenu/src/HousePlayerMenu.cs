@@ -65,6 +65,21 @@ namespace WobblyMods.HouseMenu
             {
                 MenuTab tab = root.AddTab(category).AsGrid();
                 tab.Icon = TabTheme.IconFor(category);
+                if (category == "Furniture")
+                {
+                    // All the rest of the game's furniture, one page per room (a photo of one item is the room's picture).
+                    foreach (string[] room in FurnitureCatalog.Rooms)
+                    {
+                        var page = new MenuPage(room[0]);
+                        MenuTab grid = page.MainTab().AsGrid();
+                        foreach (CatalogItem item in FurnitureCatalog.InCategory(room[0]))
+                        {
+                            CatalogItem captured = item;
+                            grid.Add(item.DisplayName, () => Spawn(captured)).Icon = item.Id;
+                        }
+                        tab.AddSubPage(room[0], page).Icon = room[1];
+                    }
+                }
                 if (category == "Animals")
                 {
                     // Skylar's catfish rides: turn the car, boat or helicopter she's in into a giant catfish.

@@ -9,7 +9,7 @@ namespace WobblyMods.HouseMenu
     /// <summary>
     /// Saves everything placed with the house menu (furniture, tanks, lamps, catfish...) with its spot, facing,
     /// size and color, and puts it all back later. Things the menu places otherwise vanish when the game closes.
-    /// Files: BepInEx\config\WobblyHouse\house{slot}.txt (format: Core/src/HouseLayout.cs).
+    /// Files: <saves folder>\WobblyHouse\house{slot}.txt (see SavePaths) (format: Core/src/HouseLayout.cs).
     /// </summary>
     internal static class HouseSave
     {
@@ -17,7 +17,7 @@ namespace WobblyMods.HouseMenu
 
         public static string SlotPath(int slot)
         {
-            return Path.Combine(Path.Combine(BepInEx.Paths.ConfigPath, "WobblyHouse"), "house" + slot + ".txt");
+            return Path.Combine(SavePaths.Folder("WobblyHouse"), "house" + slot + ".txt");
         }
 
         public static bool SlotExists(int slot)

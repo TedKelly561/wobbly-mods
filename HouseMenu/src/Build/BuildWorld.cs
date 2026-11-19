@@ -552,10 +552,10 @@ namespace WobblyMods.HouseMenu.Build
 
         // ---------- Save and load ----------
 
-        /// <summary>BepInEx\config\WobblyBuilds\build{slot}.txt</summary>
+        /// <summary>&lt;saves folder&gt;\WobblyBuilds\build{slot}.txt (see SavePaths)</summary>
         public static string SlotPath(int slot)
         {
-            return Path.Combine(Path.Combine(BepInEx.Paths.ConfigPath, "WobblyBuilds"), "build" + slot + ".txt");
+            return Path.Combine(SavePaths.Folder("WobblyBuilds"), "build" + slot + ".txt");
         }
 
         public static bool SlotExists(int slot)

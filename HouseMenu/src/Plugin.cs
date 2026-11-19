@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.16.0";
+        public const string PluginVersion = "0.17.0";
 
         internal static ManualLogSource Log;
 
@@ -46,6 +46,9 @@ namespace WobblyMods.HouseMenu
         {
             Log = Logger;
             CustomModels.Init();
+            SavePaths.Init(Config.Bind("Saves", "SaveFolder", "",
+                "Folder for saved houses and builds. Empty = BepInEx\\config. Point both PCs at the same cloud-synced " +
+                "folder (e.g. %OneDrive%\\WobblyLifeSaves) so Skylar's saves follow her.").Value);
             _menuKey = Config.Bind("Controls", "MenuKey", KeyCode.F1,
                 "Keyboard backup: opens and closes player 1's house menu.");
             _undoKey = Config.Bind("Controls", "UndoKey", KeyCode.F2,

@@ -52,7 +52,9 @@ namespace WobblyMods.HouseMenu
 
         public static void Init(ConfigFile config)
         {
-            _quarterTurns = config.Bind("Outfits", "FacingQuarterTurns", 2,
+            // Renamed from FacingQuarterTurns (default 2), which put every face on the back of the head in game
+            // (2026-11-19, ROADWS2). A new key so every PC drops the old saved 2.
+            _quarterTurns = config.Bind("Outfits", "CostumeQuarterTurns", 0,
                 "Quarter turns added to costumes so the face is at the front. The menu's 'Turn costume' changes this.");
             _size = config.Bind("Outfits", "CostumeSize", 1f, "Costume size multiplier. The menu's Bigger and Smaller change this.");
             _headHeight = config.Bind("Outfits", "HeadHeight", 0f,

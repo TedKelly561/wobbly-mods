@@ -375,9 +375,9 @@ namespace WobblyMods.HouseMenu
             float whiskerLength = 2f * length + 0.4f;
             for (int k = -1; k <= 1; k++)
             {
-                Vector3 root = new Vector3(0.25f * side, -0.2f + 0.02f * k, 0.95f);
-                float a = 0.32f * k;
-                Vector3 dir = new Vector3(side * Mathf.Cos(a), Mathf.Sin(a), -0.25f).normalized;
+                Vector3 root = new Vector3(0.2f * side, -0.2f + 0.02f * k, 1.04f);
+                float a = 0.38f * k;
+                Vector3 dir = new Vector3(side * Mathf.Cos(a), Mathf.Sin(a), 0.1f).normalized;
                 // A Unity cylinder is 2 tall, so scale.y is half the length; it is centred on its position.
                 Part(PrimitiveType.Cylinder, root + dir * (whiskerLength * 0.5f),
                      new Vector3(0.03f, whiskerLength * 0.5f, 0.03f),

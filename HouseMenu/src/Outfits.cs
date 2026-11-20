@@ -297,7 +297,14 @@ namespace WobblyMods.HouseMenu
                 Ball(new Vector3(0.05f * s, -0.5f, 0f), new Vector3(0.3f, 1.05f, 0.62f), dark);
             }
             _into = head;
-            Ball(new Vector3(0f, -0.25f, 0.82f), new Vector3(0.75f, 0.52f, 0.65f), Cream);
+            // Wide muzzle: it also covers the wobbly's own eyes, which sit at nose height (test 2026-11-19).
+            Ball(new Vector3(0f, -0.25f, 0.8f), new Vector3(1.0f, 0.6f, 0.68f), Cream);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                // Eyes above the nose: dark eye with a white shine.
+                Ball(new Vector3(0.32f * s, 0.3f, 0.9f), new Vector3(0.24f, 0.3f, 0.16f), Black);
+                Ball(new Vector3(0.32f * s + 0.05f, 0.37f, 0.97f), Vector3.one * 0.08f, Color.white);
+            }
             Ball(new Vector3(0f, -0.1f, 1.14f), new Vector3(0.26f, 0.19f, 0.17f), Black);
             Ball(new Vector3(0f, -0.52f, 0.98f), new Vector3(0.2f, 0.06f, 0.3f), Pink);
             Ball(new Vector3(0.45f, 0.35f, 0.7f), new Vector3(0.5f, 0.55f, 0.3f), dark); // eye patch

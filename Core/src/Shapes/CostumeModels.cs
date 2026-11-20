@@ -111,25 +111,17 @@ namespace WobblyMods.Core.Shapes
             var nose = Shapes.Ellipsoid(new V3(0.06f, 0.04f, 0.05f), 12, 8);
             costume.Head.Add(Part(nose, Pink, One, 0f, 0f, new V3(0f, -0.15f, 0.98f)));
 
-            // Whiskers: three thin white whiskers per side fanning out from (+/-0.45, -0.2, 0.85)
+            // Whiskers: three thin white whiskers per side. The roots bunch together on the muzzle beside the
+            // nose, and the tips fan out and away from the face (one up, one level, one down).
             for (int s = -1; s <= 1; s += 2)
             {
-                // Fan angles: roughly -15, 0, +15 degrees in X-Z plane relative to forward
-                float[] whiskerAngles = { -0.26f, 0f, 0.26f }; // approx tan(15 deg)
-                
+                float[] fan = { 0.32f, 0f, -0.32f };
                 for (int i = 0; i < 3; i++)
                 {
-                    float angle = whiskerAngles[i];
-                    // Base is fixed. Tip moves out in X and slightly down/back in Z/Y
-                    V3 p0 = new V3(s * 0.45f, -0.2f, 0.85f);
-                    // Control points to create a slight curve outward
-                    float xOff = s * (0.3f + i * 0.1f);
-                    float yOff = -0.1f - i * 0.05f;
-                    float zOff = 0.15f - i * 0.02f;
-                    
-                    V3 p1 = new V3(p0.X + xOff * 0.5f, p0.Y + yOff * 0.5f, p0.Z + zOff * 0.5f);
-                    V3 p2 = new V3(p0.X + xOff * 0.8f, p0.Y + yOff * 0.8f, p0.Z + zOff * 0.8f);
-                    V3 p3 = new V3(p0.X + xOff, p0.Y + yOff, p0.Z + zOff);
+                    V3 p0 = new V3(s * 0.22f, -0.2f + fan[i] * 0.05f, 0.95f);
+                    V3 p3 = new V3(s * 1.3f, -0.2f + fan[i], 0.55f);
+                    V3 p1 = new V3(s * 0.55f, p0.Y + (p3.Y - p0.Y) * 0.2f + 0.03f, 0.97f);
+                    V3 p2 = new V3(s * 0.95f, p0.Y + (p3.Y - p0.Y) * 0.6f + 0.02f, 0.82f);
 
                     var whiskerMesh = Pipe(p0, p1, p2, p3, 6, 0.02f, 0.01f, 8);
                     costume.Head.Add(new ColoredMesh(whiskerMesh, White));

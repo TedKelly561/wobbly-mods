@@ -30,8 +30,14 @@ namespace WobblyMods.HouseMenu
         private const float MoonMinAirTime = 0.1f;
         private const float MoonCooldown = 1.2f;
 
-        private const string JetSound = "event:/Objects_Space/Objects_Space_FlightSuit_Rocket_Burst_Back";
+        // The game's own jetpack sound (ClothingJetpack's default, decompiled 2026-11-19): a loop that follows the
+        // wobbly while flying, started and stopped like the game does (the game only plays its fail sound when
+        // abilities are switched off, which here just means no push and no sound).
+        private const string JetLoopSound = "event:/Objects/Objects_UFOJetpack";
+        // The moon boots' sound is set in the item's data, not code, so it's unknown; this guess is silent if wrong.
         private const string MoonSound = "event:/Objects_Space/Objects_Space_FlightSuit_Rocket_Burst_Top";
+
+        private object _jetLoop;
 
         private const BindingFlags Any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
@@ -148,8 +154,31 @@ namespace WobblyMods.HouseMenu
             }
         }
 
+        private void SetJetSound(bool on)
+        {
+            if (on)
+            {
+                if (_jetLoop == null) _jetLoop = FmodSounds.StartLoop(JetLoopSound, transform);
+            }
+            else
+            {
+                FmodSounds.StopLoop(_jetLoop);
+                _jetLoop = null;
+            }
+        }
+
+        private void OnDisable()
+        {
+            // Costume off, character gone, or powers stopped: never leave the jetpack sound running.
+            FmodSounds.StopLoop(_jetLoop, immediate: true);
+            _jetLoop = null;
+            _jetOn = false;
+        }
+
         private void OnDestroy()
         {
+            FmodSounds.StopLoop(_jetLoop, immediate: true);
+            _jetLoop = null;
             Unsubscribe(_postField, _postHandler);
             Unsubscribe(_jumpField, _jumpHandler);
         }
@@ -204,6 +233,7 @@ namespace WobblyMods.HouseMenu
                 Plugin.Log.LogWarning("Dress up powers: stopped (" + inner.GetType().Name + ": " + inner.Message + ").");
                 _broken = true;
                 _jetOn = false;
+                SetJetSound(false);
             }
         }
 
@@ -214,7 +244,7 @@ namespace WobblyMods.HouseMenu
 
             // Jetpack fuel, as ClothingJetpack: burn while on, refill while off; after running dry, wait for 1 s.
             bool want = held && _fuel > 0f && !(_refilling && _fuel < JetRestartFuel);
-            if (want && !_jetOn) FmodSounds.TryPlayAt(JetSound, transform.position);
+            if (want != _jetOn) SetJetSound(want);
             _jetOn = want;
             if (_jetOn) { _fuel -= Time.deltaTime; _refilling = false; }
             else { _fuel += Time.deltaTime * JetRefillPerSecond; _refilling = true; }

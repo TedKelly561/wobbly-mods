@@ -58,6 +58,89 @@ namespace WobblyMods.HouseMenu
             }
         }
 
+        private static bool _loopTried;
+        private static MethodInfo _createInstance;
+        private static MethodInfo _attachInstance;
+
+        /// <summary>
+        /// Starts a looping FMOD event that follows a transform, the way the game's ClothingJetpack plays
+        /// "event:/Objects/Objects_UFOJetpack": RuntimeManager.CreateInstance, AttachInstanceToGameObject, start.
+        /// Returns the (boxed) EventInstance to hand back to StopLoop, or null if it couldn't start.
+        /// </summary>
+        public static object StartLoop(string path, Transform follow)
+        {
+            if (string.IsNullOrEmpty(path) || follow == null) return null;
+            try
+            {
+                if (!_loopTried)
+                {
+                    _loopTried = true;
+                    Type runtime = GameReflection.FindType("FMODUnity.RuntimeManager");
+                    if (runtime != null)
+                    {
+                        _createInstance = runtime.GetMethod("CreateInstance", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(string) }, null);
+                        if (_createInstance != null)
+                        {
+                            Type ev = _createInstance.ReturnType;
+                            _attachInstance = runtime.GetMethods(BindingFlags.Public | BindingFlags.Static).FirstOrDefault(m =>
+                                m.Name == "AttachInstanceToGameObject" && m.GetParameters().Length == 3 &&
+                                m.GetParameters()[0].ParameterType == ev &&
+                                m.GetParameters()[1].ParameterType == typeof(Transform) &&
+                                m.GetParameters()[2].ParameterType == typeof(Rigidbody));
+                        }
+                    }
+                    Plugin.Log.LogInfo("Looping sounds (FMOD): CreateInstance " + (_createInstance != null ? "found" : "MISSING") +
+                                       ", attach " + (_attachInstance != null ? "found" : "MISSING") + ".");
+                }
+                if (_createInstance == null) return null;
+
+                object instance = _createInstance.Invoke(null, new object[] { path });
+                if (instance == null || !IsValid(instance)) return null;
+                if (_attachInstance != null) _attachInstance.Invoke(null, new object[] { instance, follow, null });
+                MethodInfo start = instance.GetType().GetMethod("start", Type.EmptyTypes);
+                if (start != null) start.Invoke(instance, null);
+                return instance;
+            }
+            catch (Exception e)
+            {
+                Exception inner = e is TargetInvocationException && e.InnerException != null ? e.InnerException : e;
+                Plugin.Log.LogWarning("Looping sounds (FMOD): couldn't start " + path + ": " + inner.Message);
+                return null;
+            }
+        }
+
+        /// <summary>Stops (with fade-out unless immediate) and releases what StartLoop returned. Null is fine.</summary>
+        public static void StopLoop(object instance, bool immediate = false)
+        {
+            if (instance == null) return;
+            try
+            {
+                if (!IsValid(instance)) return;
+                Type t = instance.GetType();
+                MethodInfo stop = t.GetMethods().FirstOrDefault(m => m.Name == "stop" && m.GetParameters().Length == 1);
+                if (stop != null)
+                {
+                    // FMOD.Studio.STOP_MODE: ALLOWFADEOUT = 0, IMMEDIATE = 1
+                    object mode = Enum.ToObject(stop.GetParameters()[0].ParameterType, immediate ? 1 : 0);
+                    stop.Invoke(instance, new[] { mode });
+                }
+                MethodInfo release = t.GetMethod("release", Type.EmptyTypes);
+                if (release != null) release.Invoke(instance, null);
+            }
+            catch (Exception)
+            {
+                // the sound is going away anyway
+            }
+        }
+
+        private static bool IsValid(object instance)
+        {
+            MethodInfo isValid = instance.GetType().GetMethod("isValid", Type.EmptyTypes);
+            if (isValid == null) return true;
+            object v = isValid.Invoke(instance, null);
+            return !(v is bool) || (bool)v;
+        }
+
         /// <summary>True if the sound was handed to FMOD.</summary>
         public static bool TryPlay(MenuSound sound)
         {

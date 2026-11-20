@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using UnityEngine;
+using WobblyMods.Core.Shapes;
 using WobblyMods.HouseMenu.Tanks;
 
 namespace WobblyMods.HouseMenu
@@ -257,55 +258,22 @@ namespace WobblyMods.HouseMenu
             }
             Ball(new Vector3(0f, -0.12f, 1.0f), new Vector3(0.18f, 0.12f, 0.12f), Pink);
 
-            _into = Holder(hip, "tail", new Vector3(0f, 0f, -0.8f), 14f, 2.2f);
-            for (int i = 0; i <= 8; i++)
-            {
-                float t = i / 8f;
-                Ball(new Vector3(0f, 1.7f * t * t, -0.1f - 0.9f * t + 0.5f * t * t), Vector3.one * (0.36f - 0.12f * t), _fur);
-            }
+            // The curling tube tail from Core CostumeModels (the face above is the one Skylar's dad confirmed).
+            Shapes(hip, "cat tail", CostumeModels.Build("cat", ToRgb(_fur)).Body);
         }
 
         private static void Bunny(Transform head, Transform hip)
         {
-            for (int s = -1; s <= 1; s += 2)
-            {
-                // Big floppy ears: up, then the top half flops over to the side. They sway a little.
-                _into = Holder(head, "ear", new Vector3(0.4f * s, 0.75f, 0f), 6f, 1.3f + 0.2f * s);
-                Part(PrimitiveType.Capsule, new Vector3(0f, 0.6f, 0f), new Vector3(0.36f, 0.7f, 0.2f), new Vector3(0, 0, -6f * s), _fur);
-                Part(PrimitiveType.Capsule, new Vector3(0f, 0.6f, 0.08f), new Vector3(0.2f, 0.55f, 0.12f), new Vector3(0, 0, -6f * s), Pink);
-                Part(PrimitiveType.Capsule, new Vector3(0.42f * s, 1.28f, 0.05f), new Vector3(0.34f, 0.55f, 0.2f), new Vector3(0, 0, -80f * s), _fur);
-                Part(PrimitiveType.Capsule, new Vector3(0.78f * s, 1.0f, 0.1f), new Vector3(0.32f, 0.4f, 0.2f), new Vector3(0, 0, -160f * s), _fur);
-            }
+            // Designed with preview pictures (Core CostumeModels, local job 515): long tube ears, teeth, round tail.
+            Shaped("bunny", head, hip);
             _into = head;
-            Ball(new Vector3(0f, -0.1f, 1.0f), new Vector3(0.18f, 0.13f, 0.12f), Pink);
-            Part(PrimitiveType.Cube, new Vector3(-0.09f, -0.42f, 0.94f), new Vector3(0.16f, 0.22f, 0.06f), Vector3.zero, Color.white);
-            Part(PrimitiveType.Cube, new Vector3(0.09f, -0.42f, 0.94f), new Vector3(0.16f, 0.22f, 0.06f), Vector3.zero, Color.white);
             for (int s = -1; s <= 1; s += 2) Whiskers(s, Color.white, 0.3f);
-
-            _into = hip;
-            Ball(new Vector3(0f, 0.1f, -1.0f), Vector3.one * 0.6f, Color.white);
         }
 
         private static void Puppy(Transform head, Transform hip)
         {
-            Color dark = Color.Lerp(_fur, Color.black, 0.5f);
-            for (int s = -1; s <= 1; s += 2)
-            {
-                _into = Holder(head, "ear", new Vector3(0.95f * s, 0.55f, 0f), 5f, 1.6f + 0.3f * s);
-                Ball(new Vector3(0.05f * s, -0.5f, 0f), new Vector3(0.3f, 1.05f, 0.62f), dark);
-            }
-            _into = head;
-            Ball(new Vector3(0f, -0.25f, 0.82f), new Vector3(0.75f, 0.52f, 0.65f), Cream);
-            Ball(new Vector3(0f, -0.1f, 1.14f), new Vector3(0.26f, 0.19f, 0.17f), Black);
-            Ball(new Vector3(0f, -0.52f, 0.98f), new Vector3(0.2f, 0.06f, 0.3f), Pink);
-            Ball(new Vector3(0.45f, 0.35f, 0.7f), new Vector3(0.5f, 0.55f, 0.3f), dark); // eye patch
-
-            _into = Holder(hip, "tail", new Vector3(0f, 0.2f, -0.8f), 30f, 9f);
-            for (int i = 0; i <= 4; i++)
-            {
-                float t = i / 4f;
-                Ball(new Vector3(0f, 0.9f * t, -0.1f - 0.45f * t), Vector3.one * (0.3f - 0.1f * t), i == 4 ? Cream : _fur);
-            }
+            // Floppy ears, cream muzzle, black nose, tongue and a tail with a cream tip (Core CostumeModels).
+            Shaped("puppy", head, hip);
         }
 
         private static void Redtail(Transform head, Transform hip)
@@ -336,37 +304,30 @@ namespace WobblyMods.HouseMenu
 
         private static void TRex(Transform head, Transform hip)
         {
-            Color spikes = new Color(1f, 0.5f, 0.05f); // orange and green: Skylar's colors
-            _into = head;
-            Ball(new Vector3(0f, -0.1f, 0.95f), new Vector3(1.0f, 0.62f, 1.35f), _fur);     // snout
-            Ball(new Vector3(0f, -0.5f, 0.85f), new Vector3(0.85f, 0.3f, 1.1f), Color.Lerp(_fur, Color.black, 0.25f)); // jaw
-            for (int s = -1; s <= 1; s += 2)
-            {
-                for (int i = 0; i < 4; i++)
-                {
-                    Cone(new Vector3(0.36f * s - 0.03f * s * i, -0.3f, 0.95f + 0.2f * i), new Vector3(0.14f, 0.24f, 0.14f), new Vector3(180f, 0, 0), Color.white);
-                }
-                Ball(new Vector3(0.48f * s, 0.42f, 0.7f), Vector3.one * 0.3f, Yellow);
-                Ball(new Vector3(0.52f * s, 0.42f, 0.83f), new Vector3(0.1f, 0.22f, 0.08f), Black);
-                Ball(new Vector3(0.2f * s, 0.12f, 1.55f), Vector3.one * 0.09f, Black);       // nostrils
-            }
-            for (int i = 0; i < 3; i++)
-            {
-                Cone(new Vector3(0f, 0.9f - 0.12f * i, 0.25f - 0.45f * i), new Vector3(0.32f, 0.5f, 0.32f), new Vector3(-20f - 25f * i, 0, 0), spikes);
-            }
+            // Snout, jaw, teeth, orange spikes and a thick spiky tail (Core CostumeModels).
+            Shaped("trex", head, hip);
+        }
 
-            _into = hip;
-            for (int i = 0; i < 2; i++)
-            {
-                Cone(new Vector3(0f, 0.8f - 0.6f * i, -0.75f), new Vector3(0.34f, 0.5f, 0.34f), new Vector3(-75f, 0, 0), spikes);
-            }
-            _into = Holder(hip, "tail", new Vector3(0f, 0f, -0.7f), 10f, 1.6f);
-            for (int i = 0; i <= 6; i++)
-            {
-                float t = i / 6f;
-                Ball(new Vector3(0f, -0.35f * t, -0.2f - 2.0f * t), Vector3.one * (0.85f - 0.62f * t), _fur);
-                if (i > 0 && i < 6) Cone(new Vector3(0f, -0.35f * t + 0.35f - 0.25f * t, -0.2f - 2.0f * t), Vector3.one * (0.26f - 0.12f * t), Vector3.zero, spikes);
-            }
+        /// <summary>Wears a whole costume designed in Core's CostumeModels (head parts and body parts).</summary>
+        private static void Shaped(string id, Transform head, Transform hip)
+        {
+            Costume costume = CostumeModels.Build(id, ToRgb(_fur));
+            Shapes(head, id + " head", costume.Head);
+            Shapes(hip, id + " body", costume.Body);
+        }
+
+        /// <summary>Attaches shape-library parts (same units: 1 = head radius, +Z = face side) under a costume root.</summary>
+        private static void Shapes(Transform root, string name, IList<ColoredMesh> parts)
+        {
+            GameObject go = ShapeModels.Build("Costume " + name, parts);
+            go.transform.SetParent(root, false);
+            foreach (Transform t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = _layer;
+        }
+
+        private static Rgb ToRgb(Color c)
+        {
+            Color32 b = c;
+            return new Rgb(b.r, b.g, b.b);
         }
 
         private static void Whiskers(int side, Color color, float length)

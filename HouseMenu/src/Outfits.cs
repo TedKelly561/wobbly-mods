@@ -124,6 +124,7 @@ namespace WobblyMods.HouseMenu
             {
                 SetBodyColor(worn.Customize, (Color)worn.OriginalColor);
             }
+            if (worn.Character != null) SetFaceHidden(worn.Customize, false);
             Wearing.Remove(player);
             return "Costume off.";
         }
@@ -236,11 +237,12 @@ namespace WobblyMods.HouseMenu
             }
 
             bool colored = SetBodyColor(worn.Customize, _fur);
+            bool faceHidden = SetFaceHidden(worn.Customize, true);
             Plugin.Log.LogInfo("Dress up: player " + (player + 1) + " is a " + NiceName(id) + ". Head radius " + headRadius.ToString("0.00") +
                                " (" + measured + "), head center " + (headCenter.y - head.position.y).ToString("0.00") + " above the head bone, spine " +
                                spine.ToString("0.00") + ", size " + _size.Value.ToString("0.00") + ", unit " + unit.ToString("0.00") +
                                ", head forward " + head.forward.ToString("0.0") + ", head up " + head.up.ToString("0.0") +
-                               ", quarter turns " + _quarterTurns.Value + ", body color " + (colored ? "set" : "NOT set") + ".");
+                               ", quarter turns " + _quarterTurns.Value + ", body color " + (colored ? "set" : "NOT set") + ", face " + (faceHidden ? "hidden" : "NOT hidden") + ".");
             return worn;
         }
 
@@ -517,6 +519,39 @@ namespace WobblyMods.HouseMenu
             // CharacterCustomize.SetCharacterColor(color, bool, float) (from research; the bool and float aren't named there).
             return GameReflection.CallWith(customize, "SetCharacterColor", color, false, 0f)
                 || GameReflection.CallWith(customize, "SetCharacterColor", color);
+        }
+
+        private static readonly int MainTextureId = Shader.PropertyToID("_MainTexture");
+
+        /// <summary>
+        /// Hides or shows the wobbly's own face. The game draws the eyes as a tile of the body's _MainTexture
+        /// (CharacterFace sets _TileIndex in CharacterCustomize's MaterialPropertyBlock), so under a costume the
+        /// texture is swapped for plain white and the body shows only its _Tint color. Showing puts the
+        /// material's own texture back.
+        /// </summary>
+        private static bool SetFaceHidden(object customize, bool hidden)
+        {
+            try
+            {
+                var block = GameReflection.Call(customize, "GetMaterialPropertyBlock") as MaterialPropertyBlock;
+                if (block == null) return false;
+                Texture texture = Texture2D.whiteTexture;
+                if (!hidden)
+                {
+                    var body = GameReflection.Get(customize, "skinnedMesh") as Renderer;
+                    Material material = body != null ? body.sharedMaterial : null;
+                    texture = material != null && material.HasProperty(MainTextureId) ? material.GetTexture(MainTextureId) : null;
+                    if (texture == null) return false;
+                }
+                block.SetTexture(MainTextureId, texture);
+                GameReflection.Call(customize, "ApplyPropertyBlock");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Dress up: couldn't " + (hidden ? "hide" : "show") + " the face: " + e.Message);
+                return false;
+            }
         }
 
         private static void RemoveParts(Worn worn)

@@ -59,7 +59,7 @@ namespace WobblyMods.HouseMenu
             Item("computer",   "Computer",       "Furniture", Sandbox + "Props/Computer.prefab"),
             Item("stereo",     "Stereo",         "Furniture", Sandbox + "Props/Stereo.prefab"),
             Item("tvstand",    "TV stand",       "Furniture", Sandbox + "Stadium/TvStand.prefab"),
-            Item("toilet",     "Toilet",         "Kitchen",   Sandbox + "Props/Toilet.prefab"),
+            Item("toilet",     "Toilet",         "Furniture",   Sandbox + "Props/Toilet.prefab"),
 
             // Lights in Skylar's colors (built by us, they really light up the room).
             new CatalogItem { Id = "lamporange", DisplayName = "Orange lamp", Category = "Furniture", Build = Decor.OrangeLamp, Distance = 2.5f },
@@ -97,42 +97,15 @@ namespace WobblyMods.HouseMenu
             // (Switchyard doc "Wobbly Life furniture prop list", 606 props). Shown as room pages inside the
             // Furniture tab (Rooms below). These come from other game modes, so most aren't network objects:
             // the spawner tries the network way first, then places a local copy. Sizes are untested.
-            Item("fridge",     "Fridge",         "Kitchen", Trash + "Trash_Fridge.prefab"),
-            Item("ovengas",    "Gas oven",       "Kitchen", Trash + "Trash_Oven_Gas.prefab"),
-            Item("ovengrey",   "Grey oven",      "Kitchen", Trash + "Trash_Oven_Gray.prefab"),
-            Item("washer",     "Washing machine", "Kitchen", Trash + "Trash_Washing_Machine.prefab"),
-            Item("cupboard1",  "Cupboard",       "Kitchen", Trash + "Trash_Cupboard_1.prefab"),
-            Item("cupboard2",  "Cupboard 2",     "Kitchen", Trash + "Trash_Cupboard_2.prefab"),
-            Item("cupboard3",  "Cupboard 3",     "Kitchen", Trash + "Trash_Cupboard_3.prefab"),
-            Item("table1",     "Table",          "Kitchen", Trash + "Trash_Table_1.prefab"),
-            Item("table2",     "Table 2",        "Kitchen", Trash + "Trash_Table_2.prefab"),
-            Item("plate",      "Plate",          "Kitchen", Sandbox + "Props/Plate_2.prefab"),
-            Item("papercup",   "Paper cup",      "Kitchen", Sandbox + "Props/Food_PaperCup.prefab"),
+            // Test 2026-11-20: the Trash Man props (fridge, ovens, sofa, TVs, chairs...) are the BROKEN versions,
+            // so they were removed. The game has no intact kitchen or living-room props to load by address.
+            Item("plate",      "Plate",          "Furniture", Sandbox + "Props/Plate_2.prefab"),
+            Item("papercup",   "Paper cup",      "Furniture", Sandbox + "Props/Food_PaperCup.prefab"),
 
-            Item("sofa",       "Sofa",           "Living room", Trash + "Trash_Sofa_Old.prefab"),
-            Item("armchair1",  "Chair",          "Living room", Trash + "Trash_Chair_1.prefab"),
-            Item("armchair2",  "Chair 2",        "Living room", Trash + "Trash_Chair_2.prefab"),
-            Item("armchair3",  "Chair 3",        "Living room", Trash + "Trash_Chair_3.prefab"),
-            Item("armchair4",  "Chair 4",        "Living room", Trash + "Trash_Chair_4.prefab"),
-            Item("footstool",  "Foot stool",     "Living room", Trash + "Trash_FootStool.prefab"),
-            Item("tv1",        "TV",             "Living room", Trash + "Trash_Tv_1.prefab"),
-            Item("tv2",        "TV 2",           "Living room", Trash + "Trash_Tv_2.prefab"),
-            Item("tv3",        "TV 3",           "Living room", Trash + "Trash_Tv_3.prefab"),
-            Item("tv4",        "TV 4",           "Living room", Trash + "Trash_Tv_4.prefab"),
-            Item("tvtable",    "TV table",       "Living room", Trash + "Trash_Tv_Stand.prefab"),
-            Item("coffeetable", "Coffee table",  "Living room", Trash + "Trash_Table_3.prefab"),
-            Item("sidetable",  "Side table",     "Living room", Trash + "Trash_Table_4.prefab"),
-            Item("clock",      "Grandfather clock", "Living room", Trash + "Trash_GrandfatherClock.prefab"),
-            Item("piano",      "Piano",          "Living room", Trash + "Broken Grand Piano.prefab"),
-            Item("dresser",    "Dresser",        "Living room", Trash + "Trash_Dresser.prefab"),
-            Item("shelf1",     "Shelf 1",        "Living room", Trash + "Trash_Shelf_1.prefab"),
-            Item("shelf2",     "Shelf 2",        "Living room", Trash + "Trash_Shelf_2.prefab"),
-            Item("shelf3",     "Shelf 3",        "Living room", Trash + "Trash_Shelf_3.prefab"),
-            Item("drawers1",   "Small drawers",  "Living room", Trash + "Trash_Draw_1.prefab"),
-            Item("potplant",   "Pot plant",      "Living room", Lobby + "Arcade/Arcade_Plant.prefab"),
-            Item("trophies",   "Trophy cabinet", "Living room", Lobby + "Arcade/LobbyTrophyCabinet.prefab"),
-            Item("neonstar",   "Neon star",      "Living room", Lobby + "Arcade/NeonStar.prefab"),
-            Item("speaker",    "Big speaker",    "Living room", Lobby + "Arcade/Animated Large Speaker.prefab"),
+            Item("potplant",   "Pot plant",      "Furniture", Lobby + "Arcade/Arcade_Plant.prefab"),
+            Item("trophies",   "Trophy cabinet", "Furniture", Lobby + "Arcade/LobbyTrophyCabinet.prefab"),
+            Item("neonstar",   "Neon star",      "Furniture", Lobby + "Arcade/NeonStar.prefab"),
+            Item("speaker",    "Big speaker",    "Furniture", Lobby + "Arcade/Animated Large Speaker.prefab"),
 
             Item("cabinbed",   "Cabin bed",      "Kids' room", Hide + "Village/Bed_LogCabbin.prefab"),
             Item("racetrack",  "Toy race track", "Kids' room", Sandbox + "Props/Track.prefab"),
@@ -214,7 +187,6 @@ namespace WobblyMods.HouseMenu
             },
         };
 
-        private const string Trash = "Assets/Content/Arcade/Trash Man/Prefabs/Props/Dynamic Objects/";
         private const string Hide = "Assets/Content/Arcade/Hide And Seek/Prefabs/Props/";
         private const string Run = "Assets/Content/Arcade/Wobble Run/Prefabs/Props/";
         private const string Lobby = "Arcade/ArcadeLobby/Prefabs/Props/";
@@ -225,8 +197,6 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         public static readonly string[][] Rooms =
         {
-            new[] { "Kitchen", "fridge" },
-            new[] { "Living room", "sofa" },
             new[] { "Kids' room", "crayons" },
             new[] { "Garden", "doghouse" },
             new[] { "Playground", "slidelong" },

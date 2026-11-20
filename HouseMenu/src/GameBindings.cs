@@ -58,7 +58,46 @@ namespace WobblyMods.HouseMenu
                 done(null, "couldn't find where player " + (playerIndex + 1) + " is");
                 return;
             }
-            SpawnAt(item, playerIndex, position, rotation, done);
+            Vector3 floor = position;
+            SpawnAt(item, playerIndex, position, rotation, (placed, problem) =>
+            {
+                // Things we build ourselves already sit on their floor point; game props often have their
+                // pivot in the middle, so they appeared half in the ground and fell through (test 2026-11-20).
+                if (placed != null && item.Build == null) RestOnFloor(placed, floor.y);
+                done(placed, problem);
+            });
+        }
+
+        /// <summary>Lifts a new object so its lowest point is just above the floor it was placed on.</summary>
+        private static void RestOnFloor(GameObject placed, float floorY)
+        {
+            try
+            {
+                Bounds b = new Bounds();
+                bool any = false;
+                foreach (Collider c in placed.GetComponentsInChildren<Collider>())
+                {
+                    if (c.isTrigger || !c.enabled) continue;
+                    if (!any) { b = c.bounds; any = true; } else b.Encapsulate(c.bounds);
+                }
+                if (!any && !Tanks.FishTank.TryGetBounds(placed, out b)) return;
+
+                float lift = floorY + 0.08f - b.min.y;
+                if (lift <= 0.001f || lift > 30f) return;
+                placed.transform.position += Vector3.up * lift;
+                foreach (Rigidbody rb in placed.GetComponentsInChildren<Rigidbody>())
+                {
+                    rb.position += Vector3.up * lift;
+                    rb.velocity = Vector3.zero;
+                    rb.angularVelocity = Vector3.zero;
+                }
+                Physics.SyncTransforms();
+                Plugin.Log.LogInfo("Placed " + placed.name + ": lifted " + lift.ToString("0.00") + " m to sit on the floor.");
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning("Couldn't rest " + placed.name + " on the floor: " + e.Message);
+            }
         }
 
         /// <summary>Like Spawn, but at an exact spot (used when loading a saved house).</summary>
@@ -104,7 +143,21 @@ namespace WobblyMods.HouseMenu
                 return;
             }
 
-            if (!GameSpawner.TrySpawnNetworked(item.Address, position, rotation, finish, out problem))
+            // The game's spawner answers later. If it answers with nothing (the prop isn't a network object),
+            // place a plain local copy instead of giving up (test 2026-11-20: only a few new items appeared).
+            System.Action<GameObject> finishOrLocal = placed =>
+            {
+                if (placed == null)
+                {
+                    string why;
+                    placed = GameSpawner.SpawnLocal(item.Address, position, rotation, out why);
+                    Plugin.Log.LogWarning("Spawn " + item.Id + ": the game's spawner gave nothing; local copy " +
+                                          (placed != null ? "placed." : "failed: " + why));
+                }
+                finish(placed);
+            };
+
+            if (!GameSpawner.TrySpawnNetworked(item.Address, position, rotation, finishOrLocal, out problem))
             {
                 Plugin.Log.LogWarning("Spawn " + item.Id + ": " + problem + ". Trying a local copy instead.");
                 string localProblem;

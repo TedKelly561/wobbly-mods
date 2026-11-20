@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using UnityEngine;
-using WobblyMods.Core.Shapes;
 using WobblyMods.HouseMenu.Tanks;
 
 namespace WobblyMods.HouseMenu
@@ -53,7 +52,9 @@ namespace WobblyMods.HouseMenu
 
         public static void Init(ConfigFile config)
         {
-            _quarterTurns = config.Bind("Outfits", "FacingQuarterTurns", 2,
+            // Renamed from FacingQuarterTurns (default 2), which put every face on the back of the head in game
+            // (2026-11-19, ROADWS2). A new key so every PC drops the old saved 2.
+            _quarterTurns = config.Bind("Outfits", "CostumeQuarterTurns", 0,
                 "Quarter turns added to costumes so the face is at the front. The menu's 'Turn costume' changes this.");
             _size = config.Bind("Outfits", "CostumeSize", 1f, "Costume size multiplier. The menu's Bigger and Smaller change this.");
             _headHeight = config.Bind("Outfits", "HeadHeight", 0f,
@@ -123,6 +124,7 @@ namespace WobblyMods.HouseMenu
             {
                 SetBodyColor(worn.Customize, (Color)worn.OriginalColor);
             }
+            if (worn.Character != null) SetFaceHidden(worn.Customize, false);
             Wearing.Remove(player);
             return "Costume off.";
         }
@@ -235,11 +237,12 @@ namespace WobblyMods.HouseMenu
             }
 
             bool colored = SetBodyColor(worn.Customize, _fur);
+            bool faceHidden = SetFaceHidden(worn.Customize, true);
             Plugin.Log.LogInfo("Dress up: player " + (player + 1) + " is a " + NiceName(id) + ". Head radius " + headRadius.ToString("0.00") +
                                " (" + measured + "), head center " + (headCenter.y - head.position.y).ToString("0.00") + " above the head bone, spine " +
                                spine.ToString("0.00") + ", size " + _size.Value.ToString("0.00") + ", unit " + unit.ToString("0.00") +
                                ", head forward " + head.forward.ToString("0.0") + ", head up " + head.up.ToString("0.0") +
-                               ", quarter turns " + _quarterTurns.Value + ", body color " + (colored ? "set" : "NOT set") + ".");
+                               ", quarter turns " + _quarterTurns.Value + ", body color " + (colored ? "set" : "NOT set") + ", face " + (faceHidden ? "hidden" : "NOT hidden") + ".");
             return worn;
         }
 
@@ -258,22 +261,62 @@ namespace WobblyMods.HouseMenu
             }
             Ball(new Vector3(0f, -0.12f, 1.0f), new Vector3(0.18f, 0.12f, 0.12f), Pink);
 
-            // The curling tube tail from Core CostumeModels (the face above is the one Skylar's dad confirmed).
-            Shapes(hip, "cat tail", CostumeModels.Build("cat", ToRgb(_fur)).Body);
+            _into = Holder(hip, "tail", new Vector3(0f, 0f, -0.8f), 14f, 2.2f);
+            for (int i = 0; i <= 8; i++)
+            {
+                float t = i / 8f;
+                Ball(new Vector3(0f, 1.7f * t * t, -0.1f - 0.9f * t + 0.5f * t * t), Vector3.one * (0.36f - 0.12f * t), _fur);
+            }
         }
 
         private static void Bunny(Transform head, Transform hip)
         {
-            // Designed with preview pictures (Core CostumeModels, local job 515): long tube ears, teeth, round tail.
-            Shaped("bunny", head, hip);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                // Big floppy ears: up, then the top half flops over to the side. They sway a little.
+                _into = Holder(head, "ear", new Vector3(0.4f * s, 0.75f, 0f), 6f, 1.3f + 0.2f * s);
+                Part(PrimitiveType.Capsule, new Vector3(0f, 0.6f, 0f), new Vector3(0.36f, 0.7f, 0.2f), new Vector3(0, 0, -6f * s), _fur);
+                Part(PrimitiveType.Capsule, new Vector3(0f, 0.6f, 0.08f), new Vector3(0.2f, 0.55f, 0.12f), new Vector3(0, 0, -6f * s), Pink);
+                Part(PrimitiveType.Capsule, new Vector3(0.42f * s, 1.28f, 0.05f), new Vector3(0.34f, 0.55f, 0.2f), new Vector3(0, 0, -80f * s), _fur);
+                Part(PrimitiveType.Capsule, new Vector3(0.78f * s, 1.0f, 0.1f), new Vector3(0.32f, 0.4f, 0.2f), new Vector3(0, 0, -160f * s), _fur);
+            }
             _into = head;
+            Ball(new Vector3(0f, -0.1f, 1.0f), new Vector3(0.18f, 0.13f, 0.12f), Pink);
+            Part(PrimitiveType.Cube, new Vector3(-0.09f, -0.42f, 0.94f), new Vector3(0.16f, 0.22f, 0.06f), Vector3.zero, Color.white);
+            Part(PrimitiveType.Cube, new Vector3(0.09f, -0.42f, 0.94f), new Vector3(0.16f, 0.22f, 0.06f), Vector3.zero, Color.white);
             for (int s = -1; s <= 1; s += 2) Whiskers(s, Color.white, 0.3f);
+
+            _into = hip;
+            Ball(new Vector3(0f, 0.1f, -1.0f), Vector3.one * 0.6f, Color.white);
         }
 
         private static void Puppy(Transform head, Transform hip)
         {
-            // Floppy ears, cream muzzle, black nose, tongue and a tail with a cream tip (Core CostumeModels).
-            Shaped("puppy", head, hip);
+            Color dark = Color.Lerp(_fur, Color.black, 0.5f);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                _into = Holder(head, "ear", new Vector3(0.95f * s, 0.55f, 0f), 5f, 1.6f + 0.3f * s);
+                Ball(new Vector3(0.05f * s, -0.5f, 0f), new Vector3(0.3f, 1.05f, 0.62f), dark);
+            }
+            _into = head;
+            // Wide muzzle: it also covers the wobbly's own eyes, which sit at nose height (test 2026-11-19).
+            Ball(new Vector3(0f, -0.25f, 0.8f), new Vector3(1.0f, 0.6f, 0.68f), Cream);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                // Eyes above the nose: dark eye with a white shine.
+                Ball(new Vector3(0.32f * s, 0.3f, 0.9f), new Vector3(0.24f, 0.3f, 0.16f), Black);
+                Ball(new Vector3(0.32f * s + 0.05f, 0.37f, 0.97f), Vector3.one * 0.08f, Color.white);
+            }
+            Ball(new Vector3(0f, -0.1f, 1.14f), new Vector3(0.26f, 0.19f, 0.17f), Black);
+            Ball(new Vector3(0f, -0.52f, 0.98f), new Vector3(0.2f, 0.06f, 0.3f), Pink);
+            Ball(new Vector3(0.45f, 0.35f, 0.7f), new Vector3(0.5f, 0.55f, 0.3f), dark); // eye patch
+
+            _into = Holder(hip, "tail", new Vector3(0f, 0.2f, -0.8f), 30f, 9f);
+            for (int i = 0; i <= 4; i++)
+            {
+                float t = i / 4f;
+                Ball(new Vector3(0f, 0.9f * t, -0.1f - 0.45f * t), Vector3.one * (0.3f - 0.1f * t), i == 4 ? Cream : _fur);
+            }
         }
 
         private static void Redtail(Transform head, Transform hip)
@@ -304,30 +347,37 @@ namespace WobblyMods.HouseMenu
 
         private static void TRex(Transform head, Transform hip)
         {
-            // Snout, jaw, teeth, orange spikes and a thick spiky tail (Core CostumeModels).
-            Shaped("trex", head, hip);
-        }
+            Color spikes = new Color(1f, 0.5f, 0.05f); // orange and green: Skylar's colors
+            _into = head;
+            Ball(new Vector3(0f, -0.1f, 0.95f), new Vector3(1.0f, 0.62f, 1.35f), _fur);     // snout
+            Ball(new Vector3(0f, -0.5f, 0.85f), new Vector3(0.85f, 0.3f, 1.1f), Color.Lerp(_fur, Color.black, 0.25f)); // jaw
+            for (int s = -1; s <= 1; s += 2)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    Cone(new Vector3(0.36f * s - 0.03f * s * i, -0.3f, 0.95f + 0.2f * i), new Vector3(0.14f, 0.24f, 0.14f), new Vector3(180f, 0, 0), Color.white);
+                }
+                Ball(new Vector3(0.48f * s, 0.42f, 0.7f), Vector3.one * 0.3f, Yellow);
+                Ball(new Vector3(0.52f * s, 0.42f, 0.83f), new Vector3(0.1f, 0.22f, 0.08f), Black);
+                Ball(new Vector3(0.2f * s, 0.12f, 1.55f), Vector3.one * 0.09f, Black);       // nostrils
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                Cone(new Vector3(0f, 0.9f - 0.12f * i, 0.25f - 0.45f * i), new Vector3(0.32f, 0.5f, 0.32f), new Vector3(-20f - 25f * i, 0, 0), spikes);
+            }
 
-        /// <summary>Wears a whole costume designed in Core's CostumeModels (head parts and body parts).</summary>
-        private static void Shaped(string id, Transform head, Transform hip)
-        {
-            Costume costume = CostumeModels.Build(id, ToRgb(_fur));
-            Shapes(head, id + " head", costume.Head);
-            Shapes(hip, id + " body", costume.Body);
-        }
-
-        /// <summary>Attaches shape-library parts (same units: 1 = head radius, +Z = face side) under a costume root.</summary>
-        private static void Shapes(Transform root, string name, IList<ColoredMesh> parts)
-        {
-            GameObject go = ShapeModels.Build("Costume " + name, parts);
-            go.transform.SetParent(root, false);
-            foreach (Transform t in go.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = _layer;
-        }
-
-        private static Rgb ToRgb(Color c)
-        {
-            Color32 b = c;
-            return new Rgb(b.r, b.g, b.b);
+            _into = hip;
+            for (int i = 0; i < 2; i++)
+            {
+                Cone(new Vector3(0f, 0.8f - 0.6f * i, -0.75f), new Vector3(0.34f, 0.5f, 0.34f), new Vector3(-75f, 0, 0), spikes);
+            }
+            _into = Holder(hip, "tail", new Vector3(0f, 0f, -0.7f), 10f, 1.6f);
+            for (int i = 0; i <= 6; i++)
+            {
+                float t = i / 6f;
+                Ball(new Vector3(0f, -0.35f * t, -0.2f - 2.0f * t), Vector3.one * (0.85f - 0.62f * t), _fur);
+                if (i > 0 && i < 6) Cone(new Vector3(0f, -0.35f * t + 0.35f - 0.25f * t, -0.2f - 2.0f * t), Vector3.one * (0.26f - 0.12f * t), Vector3.zero, spikes);
+            }
         }
 
         private static void Whiskers(int side, Color color, float length)
@@ -469,6 +519,39 @@ namespace WobblyMods.HouseMenu
             // CharacterCustomize.SetCharacterColor(color, bool, float) (from research; the bool and float aren't named there).
             return GameReflection.CallWith(customize, "SetCharacterColor", color, false, 0f)
                 || GameReflection.CallWith(customize, "SetCharacterColor", color);
+        }
+
+        private static readonly int MainTextureId = Shader.PropertyToID("_MainTexture");
+
+        /// <summary>
+        /// Hides or shows the wobbly's own face. The game draws the eyes as a tile of the body's _MainTexture
+        /// (CharacterFace sets _TileIndex in CharacterCustomize's MaterialPropertyBlock), so under a costume the
+        /// texture is swapped for plain white and the body shows only its _Tint color. Showing puts the
+        /// material's own texture back.
+        /// </summary>
+        private static bool SetFaceHidden(object customize, bool hidden)
+        {
+            try
+            {
+                var block = GameReflection.Call(customize, "GetMaterialPropertyBlock") as MaterialPropertyBlock;
+                if (block == null) return false;
+                Texture texture = Texture2D.whiteTexture;
+                if (!hidden)
+                {
+                    var body = GameReflection.Get(customize, "skinnedMesh") as Renderer;
+                    Material material = body != null ? body.sharedMaterial : null;
+                    texture = material != null && material.HasProperty(MainTextureId) ? material.GetTexture(MainTextureId) : null;
+                    if (texture == null) return false;
+                }
+                block.SetTexture(MainTextureId, texture);
+                GameReflection.Call(customize, "ApplyPropertyBlock");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Dress up: couldn't " + (hidden ? "hide" : "show") + " the face: " + e.Message);
+                return false;
+            }
         }
 
         private static void RemoveParts(Worn worn)

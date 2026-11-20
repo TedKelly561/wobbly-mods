@@ -243,6 +243,7 @@ namespace WobblyMods.HouseMenu
                                spine.ToString("0.00") + ", size " + _size.Value.ToString("0.00") + ", unit " + unit.ToString("0.00") +
                                ", head forward " + head.forward.ToString("0.0") + ", head up " + head.up.ToString("0.0") +
                                ", quarter turns " + _quarterTurns.Value + ", body color " + (colored ? "set" : "NOT set") + ", face " + (faceHidden ? "hidden" : "NOT hidden") + ".");
+            CostumePowers.Give(hipRoot.gameObject, locals[player], character, player);
             return worn;
         }
 

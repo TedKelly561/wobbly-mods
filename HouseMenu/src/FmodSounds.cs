@@ -42,22 +42,26 @@ namespace WobblyMods.HouseMenu
             Overrides[0] = tick; Overrides[1] = pick; Overrides[2] = back; Overrides[3] = tab;
         }
 
+        /// <summary>Plays any FMOD event path at a place (costume powers). True if it was handed to FMOD.</summary>
+        public static bool TryPlayAt(string path, Vector3 at)
+        {
+            EnsureSetup();
+            if (_playOneShot == null || string.IsNullOrEmpty(path)) return false;
+            try
+            {
+                _playOneShot.Invoke(null, new object[] { path, at });
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
         /// <summary>True if the sound was handed to FMOD.</summary>
         public static bool TryPlay(MenuSound sound)
         {
-            if (!_tried)
-            {
-                _tried = true;
-                try
-                {
-                    _ready = Setup();
-                }
-                catch (Exception e)
-                {
-                    Plugin.Log.LogWarning("Menu sounds (FMOD): setup failed: " + e.GetType().Name + ": " + e.Message);
-                    _ready = false;
-                }
-            }
+            EnsureSetup();
             if (!_ready) return false;
 
             string path = Chosen[(int)sound] ?? Chosen[(int)MenuSound.Pop];
@@ -76,6 +80,23 @@ namespace WobblyMods.HouseMenu
                 Plugin.Log.LogWarning("Menu sounds (FMOD): playing " + path + " failed: " + inner.Message + ". FMOD sounds off.");
                 _ready = false;
                 return false;
+            }
+        }
+
+        private static void EnsureSetup()
+        {
+            if (!_tried)
+            {
+                _tried = true;
+                try
+                {
+                    _ready = Setup();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Menu sounds (FMOD): setup failed: " + e.GetType().Name + ": " + e.Message);
+                    _ready = false;
+                }
             }
         }
 

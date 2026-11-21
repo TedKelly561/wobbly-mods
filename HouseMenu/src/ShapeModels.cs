@@ -42,6 +42,18 @@ namespace WobblyMods.HouseMenu
             return root;
         }
 
+        /// <summary>Like Build, but solid: each part gets a mesh collider (our meshes are made here, so they can be).</summary>
+        public static GameObject BuildSolid(string name, IList<ColoredMesh> parts)
+        {
+            GameObject root = Build(name, parts);
+            foreach (Transform child in root.transform)
+            {
+                MeshFilter mf = child.GetComponent<MeshFilter>();
+                if (mf != null && mf.sharedMesh != null) child.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+            }
+            return root;
+        }
+
         private static Mesh ToMesh(ShapeMesh shape, string name)
         {
             var verts = new List<Vector3>(shape.Vertices.Count);

@@ -138,9 +138,16 @@ namespace WobblyMods.HouseMenu
         /// furniture. Each room's tile shows a photo of one of its items: { room, item id for the picture }.
         /// (The game's own props from other game modes were removed on 2026-11-21: broken or unproven.)
         /// </summary>
+        public const string SkylarRoom = "Skylar's things";
+
         public static List<string[]> Rooms
         {
-            get { return ModelPack.Rooms(); }
+            get
+            {
+                var rooms = new List<string[]> { new[] { SkylarRoom, "sky-monstertruck" } };
+                rooms.AddRange(ModelPack.Rooms());
+                return rooms;
+            }
         }
 
         private const string Plants = "Assets/Content/Game/Prefabs/Environment/Vegitation/";
@@ -167,6 +174,26 @@ namespace WobblyMods.HouseMenu
                 if (_items == null)
                 {
                     var all = new List<CatalogItem>(GameItems);
+                    // Skylar's own pieces, made in code (Core SkylarFurniture): orange and green, cats, dinosaurs,
+                    // a monster truck and her redtail. Solid, and they stand where they're put.
+                    foreach (string id in WobblyMods.Core.Shapes.SkylarFurniture.Ids)
+                    {
+                        string made = id;
+                        all.Add(new CatalogItem
+                        {
+                            Id = "sky-" + made,
+                            DisplayName = WobblyMods.Core.Shapes.SkylarFurniture.NiceName(made),
+                            Category = SkylarRoom,
+                            Distance = 2.5f,
+                            Build = (position, rotation) =>
+                            {
+                                UnityEngine.GameObject go = ShapeModels.BuildSolid("Skylar " + made, WobblyMods.Core.Shapes.SkylarFurniture.Build(made));
+                                go.name = WobblyMods.Core.Shapes.SkylarFurniture.NiceName(made);
+                                go.transform.SetPositionAndRotation(position, rotation);
+                                return go;
+                            }
+                        });
+                    }
                     all.AddRange(ModelPack.Items());
                     _items = all.ToArray();
                 }

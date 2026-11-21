@@ -9,4 +9,4 @@ Only add models whose licence allows it, and record the pack, author and licence
 
 | Pack | Author | Licence | Source | Added |
 |---|---|---|---|---|
-| (none yet) | | | | |
+| Furniture Kit 2.0 (140 models, OBJ + MTL only; no textures needed) | Kenney (www.kenney.nl) | CC0 1.0 (Creative Commons Zero) | https://kenney.nl/assets/furniture-kit (kenney_furniture-kit.zip, SHA-256 e67652d0932cee41683f74711c03d3e192a2af9979ef8e6b237711f5482d46b0) | 2026-11-20 |

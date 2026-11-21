@@ -42,7 +42,7 @@ namespace WobblyMods.HouseMenu
 
         public static readonly string[] Categories = { "Furniture", "Toys", "Animals" };
 
-        public static readonly CatalogItem[] Items =
+        private static readonly CatalogItem[] GameItems =
         {
             Item("bed",        "Yellow bed",     "Furniture", Sandbox + "Props/Double Bed Yellow.prefab"),
             Item("bunkbed",    "Pink bunk bed",  "Furniture", Sandbox + "Props/BunkBed_Pink.prefab"),
@@ -93,61 +93,6 @@ namespace WobblyMods.HouseMenu
                               Address = Treasure + "Treasure_Gold_Coin_Static.prefab", Scale = 3f, Local = true, Distance = 2.5f },
             new CatalogItem { Id = "goldbar", DisplayName = "Gold bar", Category = "Toys",
                               Address = Treasure + "Treasure_Gold_Ingot_Static.prefab", Scale = 3f, Local = true, Distance = 2.5f },
-            // ---- All the rest of the game's furniture (parent's request, 2026-11-19), from the real prop list
-            // (Switchyard doc "Wobbly Life furniture prop list", 606 props). Shown as room pages inside the
-            // Furniture tab (Rooms below). These come from other game modes, so most aren't network objects:
-            // the spawner tries the network way first, then places a local copy. Sizes are untested.
-            // Test 2026-11-20: the Trash Man props (fridge, ovens, sofa, TVs, chairs...) are the BROKEN versions,
-            // so they were removed. The game has no intact kitchen or living-room props to load by address.
-            Item("plate",      "Plate",          "Furniture", Sandbox + "Props/Plate_2.prefab"),
-            Item("papercup",   "Paper cup",      "Furniture", Sandbox + "Props/Food_PaperCup.prefab"),
-
-            Item("potplant",   "Pot plant",      "Furniture", Lobby + "Arcade/Arcade_Plant.prefab"),
-            Item("trophies",   "Trophy cabinet", "Furniture", Lobby + "Arcade/LobbyTrophyCabinet.prefab"),
-            Item("neonstar",   "Neon star",      "Furniture", Lobby + "Arcade/NeonStar.prefab"),
-            Item("speaker",    "Big speaker",    "Furniture", Lobby + "Arcade/Animated Large Speaker.prefab"),
-
-            Item("cabinbed",   "Cabin bed",      "Kids' room", Hide + "Village/Bed_LogCabbin.prefab"),
-            Item("racetrack",  "Toy race track", "Kids' room", Sandbox + "Props/Track.prefab"),
-            Item("basketball", "Basketball",     "Kids' room", Hide + "Quarry/Dynamic Props/BasketBall.prefab"),
-            Item("hoop",       "Basketball hoop", "Kids' room", Hide + "Quarry/Static/BasketBallHoop.prefab"),
-            Item("crayons",    "Giant crayons",  "Kids' room", Hide + "ArtStudio/BoxedCrayons.prefab"),
-            Item("easel",      "Giant easel",    "Kids' room", Hide + "ArtStudio/EaselLarge.prefab"),
-            Item("painting",   "Giant painting", "Kids' room", Hide + "ArtStudio/CanvasPainted.prefab"),
-            Item("paintbrush", "Giant paint brush", "Kids' room", Hide + "ArtStudio/PaintBrush_Large.prefab"),
-            Item("paintorange", "Orange paint",  "Kids' room", Hide + "ArtStudio/PaintTin_Orange.prefab"),
-            Item("paintgreen", "Green paint",    "Kids' room", Hide + "ArtStudio/PaintTin_Green.prefab"),
-            Item("statue",     "Wobbly statue",  "Kids' room", Hide + "ArtStudio/WobblyBust_Large.prefab"),
-            Item("cowride",    "Cow ride",       "Kids' room", Lobby + "Arcade/CowRideMachine.prefab"),
-
-            Item("doghouse",   "Dog house",      "Garden", Hide + "Village/DogHouse.prefab"),
-            Item("chickens",   "Chicken coop",   "Garden", Hide + "Village/ChickenCoop.prefab"),
-            Item("shed",       "Shed",           "Garden", Hide + "Village/Shed.prefab"),
-            Item("stable",     "Stable",         "Garden", Hide + "Village/Stable.prefab"),
-            Item("bandstand",  "Band stand",     "Garden", Hide + "Village/BandStand.prefab"),
-            Item("sweetcorn",  "Sweetcorn",      "Garden", Hide + "Village/SweetCorn_Plant.prefab"),
-            Item("treehouse",  "Tree house",     "Garden", Hide + "Forrest/TreeHouse.prefab"),
-            Item("treeshort",  "Short tree",     "Garden", Hide + "Forrest/Tree_Short.prefab"),
-            Item("treetall",   "Tall tree",      "Garden", Hide + "Forrest/Tree_Tall.prefab"),
-            Item("ropebridge", "Rope bridge",    "Garden", Hide + "Forrest/RopeBridge_Short.prefab"),
-            Item("fence",      "Fence",          "Garden", Hide + "Quarry/Static/FenceBlock.prefab"),
-            Item("woodpile",   "Wood pile",      "Garden", Hide + "Quarry/Static/Prop_WoodPile_Small.prefab"),
-
-            Item("slidelong",  "Long slide",     "Playground", Lobby + "PlayZone/LongSlide.prefab"),
-            Item("slideshort", "Short slide",    "Playground", Lobby + "PlayZone/ShortSlide.prefab"),
-            Item("slidespiral", "Spiral slide",  "Playground", Lobby + "PlayZone/SpiralSlide.prefab"),
-            Item("swing",      "Big swing",      "Playground", Lobby + "PlayZone/LargeSwing.prefab"),
-            Item("trampgreen", "Green trampoline", "Playground", Run + "Trampoline_Green.prefab"),
-            Item("trampyellow", "Yellow trampoline", "Playground", Run + "Trampoline_Yellow.prefab"),
-            Item("trampred",   "Red trampoline", "Playground", Run + "Trampoline_Red.prefab"),
-            Item("trampblue",  "Blue trampoline", "Playground", Run + "Trampoline_Blue.prefab"),
-            Item("foambridge", "Foam bridge",    "Playground", Lobby + "PlayZone/FoamBridge.prefab"),
-            Item("foamtunnel", "Foam tunnel",    "Playground", Lobby + "PlayZone/FoamCubeTunnel.prefab"),
-            Item("steppingstone", "Stepping stone", "Playground", Lobby + "PlayZone/FoamSteppingStone.prefab"),
-            Item("turret",     "Castle tower",   "Playground", Lobby + "PlayZone/CastleTurret.prefab"),
-            Item("castle2",    "Foam castle 2",  "Playground", Sandbox + "FoamBlock/FoamCastle_2.prefab"),
-            Item("bigslide",   "Giant slide",    "Playground", Run + "LargeSlide.prefab"),
-
             // Skylar's animal tanks (task T24). Built from simple shapes and the game's own models.
             new CatalogItem
             {
@@ -187,20 +132,16 @@ namespace WobblyMods.HouseMenu
             },
         };
 
-        private const string Hide = "Assets/Content/Arcade/Hide And Seek/Prefabs/Props/";
-        private const string Run = "Assets/Content/Arcade/Wobble Run/Prefabs/Props/";
-        private const string Lobby = "Arcade/ArcadeLobby/Prefabs/Props/";
 
         /// <summary>
-        /// Room pages inside the Furniture tab (the tab row only fits five tabs). Each room's tile shows a photo
-        /// of one of its items, so Skylar can pick a room without reading: { room, item id for the picture }.
+        /// Room pages inside the Furniture tab (the tab row only fits five tabs): one per room that has model-pack
+        /// furniture. Each room's tile shows a photo of one of its items: { room, item id for the picture }.
+        /// (The game's own props from other game modes were removed on 2026-11-21: broken or unproven.)
         /// </summary>
-        public static readonly string[][] Rooms =
+        public static List<string[]> Rooms
         {
-            new[] { "Kids' room", "crayons" },
-            new[] { "Garden", "doghouse" },
-            new[] { "Playground", "slidelong" },
-        };
+            get { return ModelPack.Rooms(); }
+        }
 
         private const string Plants = "Assets/Content/Game/Prefabs/Environment/Vegitation/";
         private const string Treasure = "Assets/Content/Game/Prefabs/Props/Treasure/Money/";
@@ -214,6 +155,23 @@ namespace WobblyMods.HouseMenu
         private static CatalogItem Item(string id, string name, string category, string address)
         {
             return new CatalogItem { Id = id, DisplayName = name, Category = category, Address = address };
+        }
+
+        private static CatalogItem[] _items;
+
+        /// <summary>Everything the menu can place: the game's proven props and our own builds, plus the model pack.</summary>
+        public static CatalogItem[] Items
+        {
+            get
+            {
+                if (_items == null)
+                {
+                    var all = new List<CatalogItem>(GameItems);
+                    all.AddRange(ModelPack.Items());
+                    _items = all.ToArray();
+                }
+                return _items;
+            }
         }
 
         /// <summary>The catalog item with that id, or null (used when loading a saved house).</summary>

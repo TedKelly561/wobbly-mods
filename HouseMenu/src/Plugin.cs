@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.26.1";
+        public const string PluginVersion = "0.27.0";
 
         internal static ManualLogSource Log;
 
@@ -47,6 +47,9 @@ namespace WobblyMods.HouseMenu
             Log = Logger;
             CustomModels.Init();
             Outfits.Init(Config);
+            ModelPack.Init(Config.Bind("Furniture", "ModelScale", 1f,
+                "Size multiplier for model-pack furniture (the .obj files in plugins\\WobblyMods\\models\\furniture). " +
+                "The log prints each model's size in meters the first time it is placed.").Value);
             SavePaths.Init(Config.Bind("Saves", "SaveFolder", "",
                 "Folder for saved houses and builds. Empty = BepInEx\\config. Point both PCs at the same cloud-synced " +
                 "folder (e.g. %OneDrive%\\WobblyLifeSaves) so Skylar's saves follow her.").Value);

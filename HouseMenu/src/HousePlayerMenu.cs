@@ -69,7 +69,7 @@ namespace WobblyMods.HouseMenu
                 {
                     // "Copy this": look at any real thing in the world and keep a copy (WorldCopy). The copies
                     // page shows a photo per slot; an empty slot shows a dashed box.
-                    tab.Add("Copy this", () => { _session.Status = WorldCopy.Copy(Player); }).Icon = SymbolIcons.Key("copy");
+                    tab.Add("Copy this", () => { _session.Status = WorldCopy.Copy(Player); }).Icon = SymbolIcons.Key("camera");
                     var copies = new MenuPage("My copies");
                     MenuTab copyGrid = copies.MainTab().AsGrid();
                     for (int i = 0; i < WorldCopy.Slots; i++)
@@ -221,12 +221,14 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         private void CopyTarget()
         {
-            GameObject target = CurrentTarget();
-            if (target == null) return;
-            CatalogItem item = FurnitureCatalog.Find(GameBindings.CatalogIdOf(target));
+            // Looking at something the menu placed: make another one beside it. Looking at anything else (a real
+            // thing in the world, or one of her world copies): the same as "Copy this", so there is only ONE idea
+            // of "copy" for Skylar (test 2026-11-21: this button said "place something first" on world things).
+            GameObject target = GameBindings.FindEditableInView(Player);
+            CatalogItem item = target != null ? FurnitureCatalog.Find(GameBindings.CatalogIdOf(target)) : null;
             if (item == null)
             {
-                _session.Status = "That can't be copied.";
+                _session.Status = WorldCopy.Copy(Player);
                 return;
             }
 

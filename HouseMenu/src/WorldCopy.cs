@@ -45,7 +45,7 @@ namespace WobblyMods.HouseMenu
                 Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
                 Type character = GameReflection.FindType("PlayerCharacter");
 
-                string reason = "Look right at something first.";
+                string reason = "Point the middle of your screen at the thing, close up, then press this.";
                 foreach (RaycastHit hit in hits)
                 {
                     if (hit.collider == null || hit.collider.isTrigger) continue;

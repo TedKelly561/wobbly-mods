@@ -34,6 +34,7 @@ namespace WobblyMods.HouseMenu.Icons
                 case "minus": c.Rect(22, 54, 84, 20, 6); return true;
                 case "paint": Drop(c, tint ?? new Color(1f, 0.5f, 0f)); return true;
                 case "copy": Copy(c); return true;
+                case "camera": c.Rect(12, 38, 104, 70, 12); c.Rect(40, 22, 40, 22, 6); c.Circle(64, 74, 24, true); c.Circle(64, 74, 12); return true;
                 case "save": Disk(c); return true;
                 case "load": LoadBox(c); return true;
                 case "broom": Broom(c); return true;

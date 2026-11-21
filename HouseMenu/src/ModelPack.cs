@@ -104,6 +104,27 @@ namespace WobblyMods.HouseMenu
                     "radio", "plant", "pottedPlant", "coatRack", "ceilingFan", "computer", "laptop", "cardboardBox" },
         };
 
+        // Small things look lost at furniture scale (test 2026-11-21: "the blender should have been twice as big"),
+        // so they get an extra multiplier. Walls, floors, doorways and stairs ignore the furniture size setting and
+        // stay at 2 (walls about 2.6 m), so making furniture bigger doesn't make rooms huge.
+        private static readonly string[] SmallThings =
+        {
+            "kitchenBlender", "toaster", "kitchenCoffeeMachine", "kitchenMicrowave", "books", "computer", "laptop",
+            "lampRoundTable", "lampSquareTable", "radio", "speakerSmall", "plantSmall", "pottedPlant", "pillow", "bear", "trashcan"
+        };
+        private const float SmallThingBoost = 1.8f;
+        private const float BuildingPieceScale = 2f;
+
+        private static float ScaleFor(string name)
+        {
+            if (RoomFor(name) == "Walls & floors") return BuildingPieceScale;
+            foreach (string small in SmallThings)
+            {
+                if (name.StartsWith(small, StringComparison.OrdinalIgnoreCase)) return _scale * SmallThingBoost;
+            }
+            return _scale;
+        }
+
         private static string RoomFor(string name)
         {
             foreach (string[] rule in Prefixes)
@@ -149,8 +170,9 @@ namespace WobblyMods.HouseMenu
                         max = new V3(Math.Max(max.X, b.X), Math.Max(max.Y, b.Y), Math.Max(max.Z, b.Z));
                     }
                     Pivots[objPath] = new Vector3((min.X + max.X) * 0.5f, min.Y, (min.Z + max.Z) * 0.5f);
-                    Plugin.Log.LogInfo("Model pack: " + name + " is " + ((max.X - min.X) * _scale).ToString("0.00") + " x " +
-                                       ((max.Y - min.Y) * _scale).ToString("0.00") + " x " + ((max.Z - min.Z) * _scale).ToString("0.00") +
+                    float k = ScaleFor(name);
+                    Plugin.Log.LogInfo("Model pack: " + name + " is " + ((max.X - min.X) * k).ToString("0.00") + " x " +
+                                       ((max.Y - min.Y) * k).ToString("0.00") + " x " + ((max.Z - min.Z) * k).ToString("0.00") +
                                        " m (wide x tall x deep), " + parts.Count + " colours.");
                 }
             }
@@ -165,7 +187,7 @@ namespace WobblyMods.HouseMenu
                 if (mf != null && mf.sharedMesh != null) child.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
             }
             model.name = PropRooms.NiceName(name);
-            model.transform.localScale = Vector3.one * _scale;
+            model.transform.localScale = Vector3.one * ScaleFor(name);
             // The pack's models face -Z (seen in the preview pictures); turn them so the front faces the player
             // (and the camera that takes the menu photo).
             model.transform.SetPositionAndRotation(position, rotation * Quaternion.Euler(0f, 180f, 0f));

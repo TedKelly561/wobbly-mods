@@ -123,6 +123,7 @@ namespace WobblyMods.HouseMenu
                     placed.transform.localScale = placed.transform.localScale * item.Scale;
                 }
                 Spawned.Add(new Placed { Item = placed, Owner = playerIndex, CatalogId = item.Id });
+                Plugin.Log.LogInfo("Placed " + item.Id + " for player " + (playerIndex + 1) + " at " + placed.transform.position.ToString("0.0") + ".");
                 done(placed, null);
             };
 

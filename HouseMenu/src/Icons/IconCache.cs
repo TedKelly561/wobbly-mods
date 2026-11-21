@@ -343,6 +343,39 @@ namespace WobblyMods.HouseMenu.Icons
             }
         }
 
+        /// <summary>Makes (or replaces) the picture for any key from a live object, e.g. a "Copy this" slot.</summary>
+        public static void PictureOf(string key, GameObject subject, Color background)
+        {
+            GameObject preview = null;
+            try
+            {
+                preview = MeshOnlyCopy(subject);
+                preview.SetActive(true);
+                Texture2D tex = Snapshot(preview, background);
+                if (tex == null) { Ready.Remove(key); return; }
+                tex.name = "WobblyIcon " + key;
+                Ready[key] = tex;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Menu pictures: " + key + " picture failed: " + Inner(e));
+            }
+            finally
+            {
+                if (preview != null)
+                {
+                    preview.SetActive(false);
+                    Object.Destroy(preview);
+                }
+            }
+        }
+
+        /// <summary>The symbol to show for a key while it has no picture (e.g. an empty copy slot).</summary>
+        public static void SetFallback(string key, string symbolKey)
+        {
+            Fallbacks[key] = symbolKey;
+        }
+
         private static Color Background(CatalogItem item)
         {
             return TabTheme.Light(TabTheme.ColorFor(item.Category), 0.6f);

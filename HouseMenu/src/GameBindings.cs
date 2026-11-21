@@ -25,6 +25,12 @@ namespace WobblyMods.HouseMenu
 
         private static readonly List<Placed> Spawned = new List<Placed>();
 
+        /// <summary>Tracks an object made outside the catalog (a world copy), so it can be moved, colored and undone.</summary>
+        public static void Register(GameObject placed, int playerIndex)
+        {
+            Spawned.Add(new Placed { Item = placed, Owner = playerIndex, CatalogId = null });
+        }
+
         /// <summary>The most recent item this player placed that still exists, or null.</summary>
         public static GameObject LastSpawnedBy(int playerIndex)
         {
@@ -69,7 +75,7 @@ namespace WobblyMods.HouseMenu
         }
 
         /// <summary>Lifts a new object so its lowest point is just above the floor it was placed on.</summary>
-        private static void RestOnFloor(GameObject placed, float floorY)
+        internal static void RestOnFloor(GameObject placed, float floorY)
         {
             try
             {

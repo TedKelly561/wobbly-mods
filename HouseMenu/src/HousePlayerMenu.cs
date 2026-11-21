@@ -67,6 +67,25 @@ namespace WobblyMods.HouseMenu
                 tab.Icon = TabTheme.IconFor(category);
                 if (category == "Furniture")
                 {
+                    // "Copy this": look at any real thing in the world and keep a copy (WorldCopy). The copies
+                    // page shows a photo per slot; an empty slot shows a dashed box.
+                    tab.Add("Copy this", () => { _session.Status = WorldCopy.Copy(Player); }).Icon = SymbolIcons.Key("copy");
+                    var copies = new MenuPage("My copies");
+                    MenuTab copyGrid = copies.MainTab().AsGrid();
+                    for (int i = 0; i < WorldCopy.Slots; i++)
+                    {
+                        int slot = i;
+                        Icons.IconCache.SetFallback(WorldCopy.IconKey(slot), SymbolIcons.Key("ghostblock"));
+                        copyGrid.Add("Copy " + (slot + 1), () =>
+                        {
+                            string message;
+                            GameObject placed = WorldCopy.Paste(Player, slot, out message);
+                            _session.Status = message;
+                            if (placed != null) _session.Undo.Push("placed a copy", () => ObjectEdits.Remove(placed));
+                        }).Icon = WorldCopy.IconKey(slot);
+                    }
+                    tab.AddSubPage("My copies", copies).Icon = SymbolIcons.Key("load");
+
                     // All the rest of the game's furniture, one page per room (a photo of one item is the room's picture).
                     foreach (string[] room in FurnitureCatalog.Rooms)
                     {

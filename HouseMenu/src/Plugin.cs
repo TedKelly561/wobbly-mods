@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.29.0";
+        public const string PluginVersion = "0.30.0";
 
         internal static ManualLogSource Log;
 
@@ -107,6 +107,7 @@ namespace WobblyMods.HouseMenu
         private void Update()
         {
             MenuSounds.Tick();
+            Fun.Tick();
             if (Time.unscaledTime >= _nextPlayerSync)
             {
                 _nextPlayerSync = Time.unscaledTime + 1f;

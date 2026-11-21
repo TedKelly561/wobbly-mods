@@ -33,8 +33,8 @@ public class SkylarFurnitureTests
         Assert.Equal(0f, min.X + max.X, 2);
         Assert.Equal(0f, min.Z + max.Z, 2);
         Assert.InRange(max.Y, 0.02f, 1.6f);
-        Assert.InRange(max.X - min.X, 0.2f, 1.5f);
-        Assert.InRange(max.Z - min.Z, 0.2f, 1.5f);
+        Assert.InRange(max.X - min.X, 0.2f, 1.7f);
+        Assert.InRange(max.Z - min.Z, 0.2f, 1.7f);
     }
 
     [Theory, MemberData(nameof(AllIds))]

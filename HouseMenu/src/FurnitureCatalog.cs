@@ -190,6 +190,15 @@ namespace WobblyMods.HouseMenu
                                 UnityEngine.GameObject go = ShapeModels.BuildSolid("Skylar " + made, WobblyMods.Core.Shapes.SkylarFurniture.Build(made));
                                 go.name = WobblyMods.Core.Shapes.SkylarFurniture.NiceName(made);
                                 go.transform.SetPositionAndRotation(position, rotation);
+                                if (made == "trampoline")
+                                {
+                                    // A thin trigger just above the rug does the bouncing (Fun.cs Trampoline).
+                                    var zone = go.AddComponent<UnityEngine.BoxCollider>();
+                                    zone.isTrigger = true;
+                                    zone.center = new UnityEngine.Vector3(0f, 0.3f, 0f);
+                                    zone.size = new UnityEngine.Vector3(1.3f, 0.4f, 1.3f);
+                                    go.AddComponent<Trampoline>();
+                                }
                                 return go;
                             }
                         });

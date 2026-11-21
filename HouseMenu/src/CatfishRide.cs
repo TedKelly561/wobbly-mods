@@ -30,6 +30,7 @@ namespace WobblyMods.HouseMenu
             public GameObject Vehicle;
             public Component PlayerVehicle; // for invincibility (game's own SetIndestructable)
             public bool Invincible;
+            public bool FromWorldMode;   // changed by "every car is a catfish", not picked by a player
             public GameObject Fish;
             public readonly List<Renderer> Hidden = new List<Renderer>();
         }
@@ -71,6 +72,59 @@ namespace WobblyMods.HouseMenu
             Plugin.Log.LogInfo("Catfish ride: " + vehicle.name + " is now a catfish (" + ride.Fish.name + ")" +
                                (ride.Invincible ? ", invincible." : ", but invincibility didn't switch on."));
             return "Your " + Nice(vehicle.name) + " is an INVINCIBLE CATFISH!";
+        }
+
+        /// <summary>"Every car is a catfish": turns every vehicle in the loaded world into a catfish (not invincible). Returns how many are new.</summary>
+        public static int ApplyToAll()
+        {
+            Type vehicleType = GameReflection.FindType("PlayerVehicle");
+            if (vehicleType == null) return 0;
+
+            // Forget vehicles the game has unloaded.
+            var gone = new List<GameObject>();
+            foreach (KeyValuePair<GameObject, Ride> pair in Rides) if (pair.Key == null) gone.Add(pair.Key);
+            foreach (GameObject g in gone) Rides.Remove(g);
+
+            int added = 0;
+            foreach (UnityEngine.Object o in UnityEngine.Object.FindObjectsOfType(vehicleType))
+            {
+                Component c = o as Component;
+                if (c == null || Rides.ContainsKey(c.gameObject)) continue;
+                try
+                {
+                    Ride ride = Apply(c.gameObject);
+                    if (ride == null) continue;
+                    ride.FromWorldMode = true;
+                    Rides[c.gameObject] = ride;
+                    added++;
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Catfish world: " + c.name + " skipped: " + e.Message);
+                }
+            }
+            if (added > 0) Plugin.Log.LogInfo("Catfish world: " + added + " more vehicles are catfish (" + Rides.Count + " in all).");
+            return added;
+        }
+
+        /// <summary>Puts back every vehicle that "every car is a catfish" changed (her own invincible rides stay).</summary>
+        public static int RestoreAll()
+        {
+            var back = new List<GameObject>();
+            foreach (KeyValuePair<GameObject, Ride> pair in Rides)
+            {
+                if (pair.Key == null || pair.Value.FromWorldMode) back.Add(pair.Key);
+            }
+            int restored = 0;
+            foreach (GameObject g in back)
+            {
+                Ride ride = Rides[g];
+                Rides.Remove(g);
+                if (g == null) continue;
+                Restore(ride);
+                restored++;
+            }
+            return restored;
         }
 
         /// <summary>Turns the catfish on the nearest vehicle around (for models that face backwards).</summary>

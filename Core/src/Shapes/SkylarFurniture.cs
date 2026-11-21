@@ -12,7 +12,7 @@ namespace WobblyMods.Core.Shapes
     {
         public static readonly string[] Ids =
         {
-            "kidtable", "kidchair", "beanbag", "catbed", "cattree", "fishrug", "monstertruck", "dinotoy", "redtailplush"
+            "kidtable", "kidchair", "beanbag", "catbed", "cattree", "fishrug", "monstertruck", "dinotoy", "redtailplush", "trampoline"
         };
 
         public static readonly Rgb Orange = new Rgb(255, 128, 13);
@@ -36,6 +36,7 @@ namespace WobblyMods.Core.Shapes
                 case "monstertruck": return "Monster truck toy";
                 case "dinotoy": return "Dinosaur toy";
                 case "redtailplush": return "Redtail plush";
+                case "trampoline": return "Trampoline rug";
                 default: return id;
             }
         }
@@ -54,6 +55,7 @@ namespace WobblyMods.Core.Shapes
                 case "monstertruck": MonsterTruck(p); break;
                 case "dinotoy": DinoToy(p); break;
                 case "redtailplush": RedtailPlush(p); break;
+                case "trampoline": TrampolineRug(p); break;
                 default: throw new ArgumentException("Unknown furniture id: " + id, nameof(id));
             }
             return OnTheFloor(p);
@@ -168,6 +170,15 @@ namespace WobblyMods.Core.Shapes
         {
             foreach (ColoredMesh part in RedtailModel.Build())
                 p.Add(new ColoredMesh(part.Mesh.Transformed(new V3(0.8f, 0.8f, 0.8f), 0f, 0f, V3.Zero), part.Color));
+        }
+
+        private static void TrampolineRug(List<ColoredMesh> p)
+        {
+            p.Add(Post(Green, 0.8f, 0.07f, 0f, 0f, 0f));
+            p.Add(Post(Orange, 0.66f, 0.03f, 0f, 0.06f, 0f));
+            // A star of stripes on top, so it reads as "bouncy".
+            p.Add(Box(Green, 1.0f, 0.02f, 0.1f, 0f, 0.1f, 0f));
+            p.Add(Box(Green, 0.1f, 0.02f, 1.0f, 0f, 0.1f, 0f));
         }
 
         // ---- Building blocks ----

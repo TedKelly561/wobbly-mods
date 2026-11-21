@@ -99,6 +99,10 @@ namespace WobblyMods.HouseMenu
                         tab.AddSubPage(room[0], page).Icon = room[1];
                     }
                 }
+                if (category == "Toys")
+                {
+                    tab.AddSubPage("Fun", FunPage()).Icon = SymbolIcons.Key("star");
+                }
                 if (category == "Animals")
                 {
                     // Skylar's catfish rides: turn the car, boat or helicopter she's in into a giant catfish.
@@ -269,6 +273,28 @@ namespace WobblyMods.HouseMenu
             GameObject target = CurrentTarget();
             if (target == null) return;
             _session.Status = edit(target);
+        }
+
+        /// <summary>The fun page: catfish world, parade, pet, bubble gun, paint, gravity (Fun.cs).</summary>
+        private MenuPage FunPage()
+        {
+            var page = new MenuPage("Fun");
+            MenuTab grid = page.MainTab().AsGrid();
+            grid.Add("Bubble gun", () => { _session.Status = Fun.BubbleGun(Player); }).Icon = SymbolIcons.Key("bubble");
+            MenuItem paint = null;
+            paint = grid.Add("Paint this", () =>
+            {
+                _session.Status = Fun.Paint(Player);
+                paint.Icon = SymbolIcons.Key("paint", Fun.NextPaint(Player));
+            });
+            paint.Icon = SymbolIcons.Key("paint", Fun.NextPaint(Player));
+            grid.Add("Redtail pet", () => { _session.Status = Fun.TogglePet(Player); }).Icon = SymbolIcons.Key("fish");
+            grid.Add("Catfish parade", () => { _session.Status = Fun.ToggleParade(Player); }).Icon = SymbolIcons.Key("parade");
+            grid.Add("Every car a catfish", () => { _session.Status = Fun.ToggleCatfishWorld(); }).Icon = SymbolIcons.Key("redtail");
+            grid.Add("Floatier (less gravity)", () => { _session.Status = Fun.Gravity(1); }).Icon = SymbolIcons.Key("up");
+            grid.Add("Heavier (more gravity)", () => { _session.Status = Fun.Gravity(-1); }).Icon = SymbolIcons.Key("down");
+            grid.Add("Normal gravity", () => { _session.Status = Fun.Gravity(0); }).Icon = SymbolIcons.Key("tofloor");
+            return page;
         }
 
         /// <summary>Skylar's costumes: she stays a Wobbly, with ears, tails, whiskers and fur color added (Outfits).</summary>

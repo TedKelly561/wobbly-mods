@@ -52,7 +52,7 @@ namespace WobblyMods.HouseMenu
                 {
                     string name = Path.GetFileNameWithoutExtension(file);
                     if (name.IndexOf(' ') >= 0) continue; // ids are saved in house files, which split on spaces
-                    string room = RoomName(PropRooms.Classify("/Props/" + name));
+                    string room = RoomFor(name);
                     string path = file;
                     _items.Add(new CatalogItem
                     {
@@ -81,7 +81,7 @@ namespace WobblyMods.HouseMenu
         public static List<string[]> Rooms()
         {
             var rooms = new List<string[]>();
-            foreach (string room in new[] { "Kitchen", "Bathroom", "Bedroom", "Living room", "Kids' room", "Garden", "More" })
+            foreach (string room in new[] { "Kitchen", "Bathroom", "Bedroom", "Living room", "Tables & chairs", "Kids' room", "Garden", "Walls & floors", "More" })
             {
                 foreach (CatalogItem item in Items())
                 {
@@ -89,6 +89,31 @@ namespace WobblyMods.HouseMenu
                 }
             }
             return rooms;
+        }
+
+        // Name beginnings that decide the room, checked in order (the furniture pack names its files this way,
+        // e.g. kitchenFridge, loungeSofa, wallWindow). Anything else is sorted by Core PropRooms' keywords.
+        private static readonly string[][] Prefixes =
+        {
+            new[] { "Walls & floors", "wall", "floor", "doorway", "stairs", "paneling" },
+            new[] { "Kitchen", "kitchen", "hood", "toaster", "washer", "dryer", "trashcan" },
+            new[] { "Bathroom", "bathroom", "bathtub", "shower", "toilet" },
+            new[] { "Bedroom", "bed", "cabinetBed", "pillow", "bear" },
+            new[] { "Tables & chairs", "table", "chair", "stool", "bench", "desk", "sideTable" },
+            new[] { "Living room", "lounge", "television", "cabinetTelevision", "rug", "lamp", "bookcase", "books", "speaker",
+                    "radio", "plant", "pottedPlant", "coatRack", "ceilingFan", "computer", "laptop", "cardboardBox" },
+        };
+
+        private static string RoomFor(string name)
+        {
+            foreach (string[] rule in Prefixes)
+            {
+                for (int i = 1; i < rule.Length; i++)
+                {
+                    if (name.StartsWith(rule[i], StringComparison.OrdinalIgnoreCase)) return rule[0];
+                }
+            }
+            return RoomName(PropRooms.Classify("/Props/" + name));
         }
 
         private static string RoomName(Room room)
@@ -141,7 +166,9 @@ namespace WobblyMods.HouseMenu
             }
             model.name = PropRooms.NiceName(name);
             model.transform.localScale = Vector3.one * _scale;
-            model.transform.SetPositionAndRotation(position, rotation);
+            // The pack's models face -Z (seen in the preview pictures); turn them so the front faces the player
+            // (and the camera that takes the menu photo).
+            model.transform.SetPositionAndRotation(position, rotation * Quaternion.Euler(0f, 180f, 0f));
             return model;
         }
 

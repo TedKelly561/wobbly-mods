@@ -291,6 +291,56 @@ namespace WobblyMods.HouseMenu
             {
                 Plugin.Log.LogWarning("Dress up powers: jetpack push failed, jetpack off: " + e.Message);
                 _lerpY = null;
+                return;
+            }
+            if (_forwardOk) ForwardPush(rigidbody);
+        }
+
+        // Ted, 2026-11-20: the real jetpack "has a little bit more of a thrust forward". While flying AND moving,
+        // every ragdoll part's sideways speed is eased toward JetForwardSpeed in the direction the wobbly is already
+        // going (the game's own steering still decides that direction). Standing still = straight up, as before.
+        // Never slows her down if she's already faster.
+        private const float JetForwardSpeed = 7f;
+        private const float JetForwardLerp = 3f;
+        private const float JetForwardMinSpeed = 0.8f;
+        private bool _forwardOk = true;
+        private MethodInfo _getParts;
+        private MethodInfo _partRigidbody;
+
+        private void ForwardPush(Rigidbody main)
+        {
+            try
+            {
+                if (main == null) return;
+                Vector3 flat = main.velocity; flat.y = 0f;
+                float speed = flat.magnitude;
+                if (speed < JetForwardMinSpeed || speed >= JetForwardSpeed) return;
+                Vector3 dir = flat / speed;
+                float t = Time.fixedDeltaTime * JetForwardLerp;
+
+                object body = Body();
+                if (body == null) return;
+                if (_getParts == null) _getParts = body.GetType().GetMethod("GetRagdollParts", Any, null, Type.EmptyTypes, null);
+                var parts = _getParts != null ? _getParts.Invoke(body, null) as System.Collections.IEnumerable : null;
+                if (parts == null) { _forwardOk = false; Plugin.Log.LogWarning("Dress up powers: no GetRagdollParts, no forward push."); return; }
+                foreach (object part in parts)
+                {
+                    if (part == null) continue;
+                    if (_partRigidbody == null) _partRigidbody = part.GetType().GetMethod("GetRigidbody", Any, null, Type.EmptyTypes, null);
+                    Rigidbody rb = _partRigidbody != null ? _partRigidbody.Invoke(part, null) as Rigidbody : null;
+                    if (rb == null) continue;
+                    Vector3 v = rb.velocity;
+                    Vector3 h = new Vector3(v.x, 0f, v.z);
+                    Vector3 target = dir * JetForwardSpeed;
+                    h = Vector3.Lerp(h, target, t);
+                    rb.velocity = new Vector3(h.x, v.y, h.z);
+                }
+            }
+            catch (Exception e)
+            {
+                Exception inner = e is TargetInvocationException && e.InnerException != null ? e.InnerException : e;
+                Plugin.Log.LogWarning("Dress up powers: forward push failed, forward push off: " + inner.Message);
+                _forwardOk = false;
             }
         }
 

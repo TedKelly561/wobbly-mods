@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Game-independent build mode logic. No Unity references, so it can be unit-tested
+         with plain dotnet. netstandard2.0 + C# 7.3 keeps it loadable by Unity Mono / BepInEx 5. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>WobblyMods.BuildMode.Core</AssemblyName>
+    <RootNamespace>WobblyMods.BuildMode</RootNamespace>
+    <Description>Sandbox build mode core: grid snapping, block and material catalogs, chunked build model, per-player undo, save/load.</Description>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+</Project>

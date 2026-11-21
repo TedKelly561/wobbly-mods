@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Scout: a read-only mod that writes a report about the game's structure.
+       It needs no game files to build: BepInEx and Unity reference DLLs come from the BepInEx NuGet feed.
+       It changes nothing in the game. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>WobblyMods.Scout</AssemblyName>
+    <RootNamespace>WobblyMods.Scout</RootNamespace>
+    <Description>Wobbly Life scout: reports game structure for modding (read-only)</Description>
+    <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Compile-time only; the game supplies the real ones at runtime. -->
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" IncludeAssets="compile" />
+    <PackageReference Include="UnityEngine.Modules" Version="2019.4.40" IncludeAssets="compile" />
+  </ItemGroup>
+
+</Project>

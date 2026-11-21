@@ -1,0 +1,10 @@
+# Build output
+bin/
+obj/
+*.dll
+*.pdb
+*.user
+
+# Game files and decompiled game code are not part of this repo
+Wobbly Life_Data/
+BepInEx/

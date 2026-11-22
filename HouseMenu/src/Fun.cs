@@ -70,16 +70,29 @@ namespace WobblyMods.HouseMenu
         /// <summary>RB was tapped with a tool out. Always returns a message (it is logged).</summary>
         public static string Fire(int player)
         {
+            string said;
             switch (Tools[player & 7])
             {
-                case Tool.Bubble: return BubbleGun(player);
-                case Tool.Paint: return Paint(player);
-                case Tool.Copy: return WorldCopy.Copy(player);
+                case Tool.Bubble: said = BubbleGun(player); break;
+                case Tool.Paint: said = Paint(player); break;
+                case Tool.Copy: said = WorldCopy.Copy(player); break;
                 default: return "no tool";
             }
+            // Shown under the + for a few seconds: with the menu closed there was no sign that RB did anything
+            // (test 2026-11-22: "no button press that actually activates it").
+            HudSaid[player & 7] = said;
+            HudSaidUntil[player & 7] = Time.unscaledTime + 3.5f;
+            return said;
         }
 
-        /// <summary>Paints the thing in front of that player with their next color.</summary>
+        private static readonly string[] HudSaid = new string[8];
+        private static readonly float[] HudSaidUntil = new float[8];
+
+        /// <summary>
+        /// Paints the thing in front of that player with their next color, by giving it a plain material in that
+        /// color. (Setting the color on the game's own materials changed nothing on screen in test 2026-11-22: its
+        /// shaders don't use the usual color properties.) The plain color replaces any texture.
+        /// </summary>
         public static string Paint(int player)
         {
             try
@@ -87,38 +100,60 @@ namespace WobblyMods.HouseMenu
                 string how;
                 Collider hit = Target(player, false, out how);
                 if (hit == null) return Said(player, "paint", "nothing in front to paint");
-                GameObject root = hit.attachedRigidbody != null ? hit.attachedRigidbody.gameObject : hit.gameObject;
+
+                // The thing's renderers: on its physics body, or the first parent that has anything to see.
+                Transform root = hit.attachedRigidbody != null ? hit.attachedRigidbody.transform : hit.transform;
                 Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
-                if (renderers.Length == 0)
+                for (int i = 0; i < 4 && renderers.Length == 0 && root.parent != null; i++)
                 {
-                    Renderer inParent = hit.GetComponentInParent<Renderer>();
-                    if (inParent == null) return Said(player, "paint", root.name + " has nothing to paint (" + how + ")");
-                    renderers = new[] { inParent };
+                    root = root.parent;
+                    renderers = root.GetComponentsInChildren<Renderer>();
                 }
+                if (renderers.Length == 0) return Said(player, "paint", hit.name + " has nothing to paint (" + how + ")");
                 if (renderers.Length > 150) return Said(player, "paint", root.name + " is too big to paint, " + renderers.Length + " parts (" + how + ")");
 
                 Color color = NextPaint(player);
-                int painted = 0, glued = 0;
+                Material paint = PaintMaterial(color);
+                int painted = 0;
+                string shader = "";
                 foreach (Renderer r in renderers)
                 {
-                    if (r is ParticleSystemRenderer) continue;
-                    if (r.isPartOfStaticBatch) { glued++; continue; }
-                    foreach (Material m in r.materials) // instances: only this object changes
+                    if (r is ParticleSystemRenderer || !r.enabled) continue;
+                    Material[] old = r.sharedMaterials;
+                    if (old.Length == 0) continue;
+                    var now = new Material[old.Length];
+                    for (int i = 0; i < old.Length; i++)
                     {
-                        if (m == null || m.renderQueue >= 3000) continue;
-                        TankMaterials.SetColor(m, color);
-                        if (m.HasProperty("_Tint")) m.SetColor("_Tint", color);
-                        painted++;
+                        // Glass and other see-through parts stay as they are.
+                        bool seeThrough = old[i] != null && old[i].renderQueue >= 3000;
+                        now[i] = seeThrough ? old[i] : paint;
+                        if (!seeThrough) painted++;
+                        if (shader.Length == 0 && old[i] != null && old[i].shader != null) shader = old[i].shader.name;
                     }
+                    r.sharedMaterials = now;
                 }
                 if (painted > 0) PaintIndex[player & 7]++;
                 return Said(player, "paint", (painted > 0 ? "painted " : "could NOT paint ") + root.name + ": " + painted +
-                            " materials, " + glued + " glued into the scenery (" + how + ")");
+                            " materials swapped (was shader '" + shader + "'; " + how + ")");
             }
             catch (Exception e)
             {
                 return Said(player, "paint", "failed: " + e.Message);
             }
+        }
+
+        private static readonly Dictionary<Color, Material> PaintMaterials = new Dictionary<Color, Material>();
+
+        private static Material PaintMaterial(Color color)
+        {
+            Material m;
+            if (!PaintMaterials.TryGetValue(color, out m) || m == null)
+            {
+                m = TankMaterials.Solid(color);
+                m.name = "Wobbly paint";
+                PaintMaterials[color] = m;
+            }
+            return m;
         }
 
         // ---------- Bubble gun ----------
@@ -129,7 +164,7 @@ namespace WobblyMods.HouseMenu
             {
                 string how;
                 Collider hit = Target(player, true, out how);
-                if (hit == null) return Said(player, "bubble", "nothing loose in front (cars, balls and Wobblies work)");
+                if (hit == null) return Said(player, "bubble", "nothing loose in front (cars, balls and Wobblies work); " + LastTargetNote);
                 List<Rigidbody> bodies = BodiesOf(hit);
                 if (bodies.Count == 0) return Said(player, "bubble", hit.name + " is stuck down (" + how + ")");
                 if (FloatBubble.Holds(bodies[0])) return Said(player, "bubble", "already in a bubble");
@@ -172,7 +207,12 @@ namespace WobblyMods.HouseMenu
 
             Collider best = null;
             float bestScore = float.MaxValue;
-            foreach (Collider c in Physics.OverlapSphere(from + look * 10f, 16f))
+            Collider[] near = Physics.OverlapSphere(from + look * 10f, 16f);
+            int withBody = 0;
+            foreach (Collider c in near) if (c != null && c.attachedRigidbody != null) withBody++;
+            LastTargetNote = "middle of the screen hit " + (direct != null ? "'" + direct.name + "'" + (direct.attachedRigidbody == null ? " (no physics body)" : "") : "nothing") +
+                             "; " + near.Length + " things nearby, " + withBody + " with a physics body";
+            foreach (Collider c in near)
             {
                 if (c == null || c.isTrigger || !Usable(c, needBody)) continue;
                 if (me != null && character != null && c.GetComponentInParent(character) == me) continue;
@@ -188,9 +228,14 @@ namespace WobblyMods.HouseMenu
             return best;
         }
 
+        private static string LastTargetNote = "";
+
         private static bool Usable(Collider c, bool needBody)
         {
-            if (needBody) return c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic;
+            // Any physics body counts, even a "kinematic" one: the game seems to hold idle props, parked cars and
+            // other Wobblies that way until they're touched (test 2026-11-22: five presses, nothing found). The
+            // bubble switches that off while it floats and puts it back when it pops.
+            if (needBody) return c.attachedRigidbody != null;
             // Paint: anything that isn't the ground or a whole building.
             Vector3 size = c.bounds.size;
             return Mathf.Max(size.x, Mathf.Max(size.y, size.z)) < 25f;
@@ -250,7 +295,7 @@ namespace WobblyMods.HouseMenu
                 if (Tools[i] == Tool.None || menuOpen(i)) continue;
                 if (_hudStyle == null)
                 {
-                    _hudStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter, fontSize = 22, fontStyle = FontStyle.Bold };
+                    _hudStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter, fontSize = 22, fontStyle = FontStyle.Bold, wordWrap = true };
                     _hudStyle.normal.textColor = Color.white;
                 }
                 Rect area = GameBindings.ScreenAreaFor(i, playerCount);
@@ -263,11 +308,14 @@ namespace WobblyMods.HouseMenu
                 GUI.DrawTexture(new Rect(cx - 13f, cy - 1.5f, 26f, 3f), Texture2D.whiteTexture);
                 GUI.DrawTexture(new Rect(cx - 1.5f, cy - 13f, 3f, 26f), Texture2D.whiteTexture);
                 string tool = Tools[i] == Tool.Copy ? "Copy" : Tools[i] == Tool.Bubble ? "Bubble" : "Paint";
-                string text = tool + ": " + (HudTarget[i] ?? "nothing yet") + "   (tap RB)";
+                string none = Tools[i] == Tool.Copy ? (WorldCopy.LastReason(i) ?? "nothing yet") : "nothing yet";
+                string text = Time.unscaledTime < HudSaidUntil[i] && HudSaid[i] != null
+                    ? HudSaid[i]
+                    : tool + ": " + (HudTarget[i] ?? none) + "   (tap RB)";
                 GUI.color = new Color(0f, 0f, 0f, 0.8f);
-                GUI.Label(new Rect(cx - 299f, cy + 23f, 600f, 34f), text, _hudStyle);
+                GUI.Label(new Rect(cx - 399f, cy + 23f, 800f, 64f), text, _hudStyle);
                 GUI.color = HudTarget[i] != null ? new Color(0.6f, 1f, 0.6f) : Color.white;
-                GUI.Label(new Rect(cx - 300f, cy + 22f, 600f, 34f), text, _hudStyle);
+                GUI.Label(new Rect(cx - 400f, cy + 22f, 800f, 64f), text, _hudStyle);
                 GUI.color = old;
             }
         }
@@ -351,7 +399,7 @@ namespace WobblyMods.HouseMenu
             }
             if (owner != null) bodies.AddRange(owner.GetComponentsInChildren<Rigidbody>());
             if (bodies.Count == 0) bodies.Add(rb);
-            bodies.RemoveAll(b => b == null || b.isKinematic);
+            bodies.RemoveAll(b => b == null);
             return bodies;
         }
 
@@ -459,6 +507,7 @@ namespace WobblyMods.HouseMenu
 
         private readonly List<Rigidbody> _bodies = new List<Rigidbody>();
         private readonly List<bool> _hadGravity = new List<bool>();
+        private readonly List<bool> _wasKinematic = new List<bool>();
         private Transform _ball;
         private float _popAt;
         private float _radius;
@@ -475,6 +524,8 @@ namespace WobblyMods.HouseMenu
             {
                 _bodies.Add(rb);
                 _hadGravity.Add(rb.useGravity);
+                _wasKinematic.Add(rb.isKinematic);
+                rb.isKinematic = false; // a held-still body can't float
                 rb.useGravity = false;
                 Held.Add(rb);
                 foreach (Collider c in rb.GetComponentsInChildren<Collider>())
@@ -535,6 +586,8 @@ namespace WobblyMods.HouseMenu
             {
                 if (_bodies[i] == null) continue;
                 _bodies[i].useGravity = _hadGravity[i];
+                // Things the game was holding still stay loose after the pop so they can drop; the game takes them
+                // back when it next settles them.
                 Held.Remove(_bodies[i]);
             }
             _bodies.Clear();

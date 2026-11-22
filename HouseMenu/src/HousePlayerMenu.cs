@@ -109,8 +109,8 @@ namespace WobblyMods.HouseMenu
                 {
                     // Skylar's catfish rides: turn the car, boat or helicopter she's in into a giant catfish.
                     tab.AddSubPage("Dress up", DressUpPage()).Icon = SymbolIcons.Key("shirt");
-                    tab.Add("Catfish ride!", () => { _session.Status = CatfishRide.Toggle(Player); }).Icon = SymbolIcons.Key("fish");
-                    tab.Add("Flip catfish", () => { _session.Status = CatfishRide.Flip(Player); }).Icon = SymbolIcons.Key("turn");
+                    tab.Add("Catfish car!", () => { _session.Status = CatfishRide.Toggle(Player); }).Icon = SymbolIcons.Key("fish");
+                    tab.Add("Turn catfish", () => { _session.Status = CatfishRide.Flip(Player); }).Icon = SymbolIcons.Key("turn");
                 }
                 foreach (CatalogItem item in FurnitureCatalog.InCategory(category))
                 {

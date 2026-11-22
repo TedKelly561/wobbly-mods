@@ -30,6 +30,7 @@ namespace WobblyMods.HouseMenu
             public GameObject Vehicle;
             public Component PlayerVehicle; // for invincibility (game's own SetIndestructable)
             public bool Invincible;
+            public string Shape = "";    // the vehicle's own measurements, for the log
             public bool FromWorldMode;   // changed by "every car is a catfish", not picked by a player
             public GameObject Fish;
             public readonly List<Renderer> Hidden = new List<Renderer>();
@@ -43,7 +44,7 @@ namespace WobblyMods.HouseMenu
             GameObject vehicle = NearestVehicle(playerIndex);
             if (vehicle == null)
             {
-                return "Get in a car, boat or helicopter first!";
+                return "Get in a car, boat or helicopter first, then pick Catfish car!";
             }
 
             Ride ride;
@@ -70,7 +71,7 @@ namespace WobblyMods.HouseMenu
             Rides[vehicle] = ride;
             ride.Invincible = SetInvincible(ride, true);
             Plugin.Log.LogInfo("Catfish ride: " + vehicle.name + " is now a catfish (" + ride.Fish.name + ")" +
-                               (ride.Invincible ? ", invincible." : ", but invincibility didn't switch on."));
+                               (ride.Invincible ? ", invincible" : ", but invincibility didn't switch on") + ". Vehicle: " + ride.Shape + ".");
             return "Your " + Nice(vehicle.name) + " is an INVINCIBLE CATFISH!";
         }
 
@@ -127,7 +128,11 @@ namespace WobblyMods.HouseMenu
             return restored;
         }
 
-        /// <summary>Turns the catfish on the nearest vehicle around (for models that face backwards).</summary>
+        /// <summary>
+        /// Turns the catfish on the nearest vehicle a quarter turn (press again for the next quarter). For vehicles
+        /// whose model doesn't point the way they drive. It changes the wiggle's resting direction: turning the fish
+        /// itself was undone by the wiggle on the very next frame (test 2026-11-22: "we can't rotate it").
+        /// </summary>
         public static string Flip(int playerIndex)
         {
             GameObject vehicle = NearestVehicle(playerIndex);
@@ -136,8 +141,11 @@ namespace WobblyMods.HouseMenu
             {
                 return "No catfish here to turn.";
             }
-            ride.Fish.transform.Rotate(0f, 180f, 0f, Space.World);
-            return "Turned the catfish around.";
+            Wiggle wiggle = ride.Fish.GetComponent<Wiggle>();
+            if (wiggle != null) wiggle.Turn(90f);
+            else ride.Fish.transform.localRotation *= Quaternion.Euler(0f, 90f, 0f);
+            Plugin.Log.LogInfo("Catfish ride: turned the catfish on " + vehicle.name + " a quarter turn.");
+            return "Turned the catfish.";
         }
 
         private static Ride Apply(GameObject vehicle)
@@ -165,32 +173,34 @@ namespace WobblyMods.HouseMenu
             ride.Fish = fish;
             FishTank.MakeVisualOnly(fish);
 
-            // Size: as long as the vehicle (a bit longer, so it covers it), length along the vehicle's forward.
+            // Size and direction, measured in the VEHICLE'S OWN space (test 2026-11-22: the fish was sideways when
+            // the car wasn't lined up with the world, because the old code measured a world-aligned box).
             fish.transform.SetParent(vehicle.transform, false);
             fish.transform.localPosition = Vector3.zero;
             fish.transform.localRotation = Quaternion.identity;
             fish.transform.localScale = Vector3.one;
 
-            Bounds fb;
-            if (FishTank.TryGetBounds(fish, out fb))
+            Bounds local;
+            if (LocalBounds(vehicle.transform, ride.Hidden, out local))
             {
-                // Which way is the model long? Turn it so its length runs along the vehicle's forward (local Z).
-                Vector3 localSize = fish.transform.InverseTransformVector(fb.size);
-                if (Mathf.Abs(localSize.x) > Mathf.Abs(localSize.z) * 1.2f)
+                // The vehicle's long side is the way it drives: along its local Z, or its local X for models built sideways.
+                bool sideways = local.size.x > local.size.z * 1.15f;
+                float vehicleLength = Mathf.Max(local.size.x, local.size.z);
+                Bounds fishLocal;
+                float fishLength = 1f;
+                bool fishSideways = false;
+                var fishRenderers = new List<Renderer>(fish.GetComponentsInChildren<Renderer>());
+                if (LocalBounds(fish.transform, fishRenderers, out fishLocal))
                 {
-                    fish.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                    fishLength = Mathf.Max(fishLocal.size.x, fishLocal.size.z);
+                    fishSideways = fishLocal.size.x > fishLocal.size.z * 1.15f;
                 }
-                float vehicleLength = Mathf.Max(bounds.size.x, bounds.size.z);
-                float fishLength = Mathf.Max(fb.size.x, Mathf.Max(fb.size.y, fb.size.z));
-                if (fishLength > 0.001f)
-                {
-                    fish.transform.localScale = Vector3.one * (vehicleLength * 1.15f / fishLength) / Mathf.Max(0.0001f, vehicle.transform.lossyScale.x);
-                }
-                // Center the fish on the vehicle.
-                if (FishTank.TryGetBounds(fish, out fb))
-                {
-                    fish.transform.position += bounds.center - fb.center;
-                }
+                if (sideways != fishSideways) fish.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                if (fishLength > 0.001f) fish.transform.localScale = Vector3.one * (vehicleLength * 1.15f / fishLength);
+                // Center the fish on the vehicle (the fish models are centered on their own origin, give or take).
+                Vector3 fishCenter = fish.transform.localRotation * (fishLocal.center * fish.transform.localScale.x);
+                fish.transform.localPosition = local.center - fishCenter;
+ride.Shape = local.size.x.ToString("0.0") + " wide x " + local.size.z.ToString("0.0") + " long" + (sideways ? ", built sideways" : "");
             }
 
             fish.AddComponent<Wiggle>().Mover = vehicle.transform;
@@ -268,6 +278,32 @@ namespace WobblyMods.HouseMenu
             return gameFish;
         }
 
+        /// <summary>The box around those renderers' meshes, measured in root's own space (so root's heading doesn't matter).</summary>
+        private static bool LocalBounds(Transform root, List<Renderer> renderers, out Bounds bounds)
+        {
+            bounds = new Bounds();
+            bool any = false;
+            foreach (Renderer r in renderers)
+            {
+                if (r == null || r is ParticleSystemRenderer) continue;
+                Mesh mesh = null;
+                SkinnedMeshRenderer skinned = r as SkinnedMeshRenderer;
+                MeshFilter mf = r.GetComponent<MeshFilter>();
+                if (skinned != null) mesh = skinned.sharedMesh;
+                else if (mf != null) mesh = mf.sharedMesh;
+                if (mesh == null) continue;
+                Bounds b = mesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 corner = b.center + Vector3.Scale(b.extents,
+                        new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                    Vector3 inRoot = root.InverseTransformPoint(r.transform.TransformPoint(corner));
+                    if (!any) { bounds = new Bounds(inRoot, Vector3.zero); any = true; } else bounds.Encapsulate(inRoot);
+                }
+            }
+            return any;
+        }
+
         /// <summary>The closest game vehicle (PlayerVehicle) to that player's character, within SearchRadius.</summary>
         private static GameObject NearestVehicle(int playerIndex)
         {
@@ -323,6 +359,17 @@ namespace WobblyMods.HouseMenu
         private Vector3 _last;
         private float _phase;
         private bool _started;
+
+        /// <summary>Turns the resting direction (the wiggle swings around it).</summary>
+        public void Turn(float degrees)
+        {
+            if (!_started)
+            {
+                transform.localRotation *= Quaternion.Euler(0f, degrees, 0f);
+                return;
+            }
+            _rest *= Quaternion.Euler(0f, degrees, 0f);
+        }
 
         private void Update()
         {

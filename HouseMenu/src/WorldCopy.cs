@@ -26,6 +26,15 @@ namespace WobblyMods.HouseMenu
 
         private static readonly GameObject[] Templates = new GameObject[Slots];
         private static readonly string[] Names = new string[Slots];
+        private static readonly float[] Masses = new float[Slots];   // > 0 = the original was a loose thing, so copies are loose too
+        private static readonly int[] Pasted = new int[Slots];
+        private static readonly string[] Reasons = new string[8];
+
+        /// <summary>Why nothing can be copied right now (for the text under the +), or null.</summary>
+        public static string LastReason(int player)
+        {
+            return Reasons[player & 7];
+        }
         private static int _next;
         private static Transform _shelf;
 
@@ -39,6 +48,7 @@ namespace WobblyMods.HouseMenu
         {
             string reason;
             GameObject root = FindTarget(player, out reason);
+            Reasons[player & 7] = root != null ? null : reason;
             return root != null ? Nice(root.name) : null;
         }
 
@@ -75,9 +85,13 @@ namespace WobblyMods.HouseMenu
                 if (Templates[slot] != null) UnityEngine.Object.Destroy(Templates[slot]);
                 Templates[slot] = template;
                 Names[slot] = Nice(root.name);
+                // Skylar's request (2026-11-22): if the original moves around (a tennis ball, a floaty), so does the copy.
+                Rigidbody body = root.GetComponentInChildren<Rigidbody>();
+                Masses[slot] = body != null ? Mathf.Clamp(body.mass, 0.2f, 60f) : 0f;
+                Pasted[slot] = 0;
                 IconCache.PictureOf(IconKey(slot), template, TabTheme.Light(TabTheme.Furniture, 0.6f));
                 Plugin.Log.LogInfo("Copy this: player " + (player + 1) + " copied '" + Path(root.transform) + "' into slot " +
-                                   (slot + 1) + " (" + template.transform.childCount + " pieces).");
+                                   (slot + 1) + " (" + template.transform.childCount + " pieces, " + (Masses[slot] > 0f ? "loose, mass " + Masses[slot].ToString("0.0") : "fixed") + ").");
                 return "Copied the " + Names[slot] + "! It's in My copies, picture " + (slot + 1) + ".";
             }
             catch (Exception e)
@@ -106,11 +120,23 @@ namespace WobblyMods.HouseMenu
                 return null;
             }
 
+            // Each one a little to the side of the last, so several copies don't land inside each other.
+            int n = Pasted[slot]++;
+            position += rotation * new Vector3(((n % 5) - 2) * (longest + 0.15f), 0f, -(n / 5 % 3) * (longest + 0.15f));
+
             GameObject copy = UnityEngine.Object.Instantiate(Templates[slot], position, rotation);
             copy.name = Names[slot];
             copy.SetActive(true);
             GameBindings.Register(copy, player);
             GameBindings.RestOnFloor(copy, position.y);
+            if (Masses[slot] > 0f)
+            {
+                var body = copy.AddComponent<Rigidbody>();
+                body.mass = Masses[slot];
+                body.drag = 0.1f;
+                body.angularDrag = 0.4f;
+                body.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            }
             Plugin.Log.LogInfo("Copy this: player " + (player + 1) + " placed copy " + (slot + 1) + " (" + Names[slot] + ") at " + copy.transform.position.ToString("0.0") + ".");
             message = "Placed the " + Names[slot] + ".";
             return copy;
@@ -139,19 +165,51 @@ namespace WobblyMods.HouseMenu
             Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             Type character = GameReflection.FindType("PlayerCharacter");
 
-            int tried = 0;
+            // Looking past the building is only allowed a short way: the mansion's big collider sits a little in
+            // front of its furniture (F3 probe: 0.7 m). Without this limit, aiming at a house from OUTSIDE copied
+            // a treadmill from inside it (test 2026-11-22).
+            const float LookPast = 1.5f;
+            float buildingAt = -1f;
             foreach (RaycastHit hit in hits)
             {
                 if (hit.collider == null || hit.collider.isTrigger) continue;
                 if (character != null && hit.collider.GetComponentInParent(character) != null) continue; // no Wobblies
                 if (hit.collider.GetComponentInParent<FloatBubble>() != null || hit.collider.GetComponentInParent<Follower>() != null) continue;
+                if (buildingAt >= 0f && hit.distance - buildingAt > LookPast) break;
 
                 GameObject root = PickRoot(hit.collider);
                 if (root != null) return root;
-                reason = "That's part of the building. Point the + at a piece of furniture.";
-                if (++tried >= 4) break; // a few layers of walls and floors, then give up
+                if (buildingAt < 0f)
+                {
+                    buildingAt = hit.distance;
+                    reason = "Too big to copy: that's a whole building! Point the + at one thing.";
+                }
             }
-            return null;
+            if (buildingAt >= 0f) return null;
+
+            // The exact middle found nothing (thin things like lamps are easy to miss): the nearest furniture-sized
+            // thing within a narrow cone, as long as nothing is in the way of seeing it.
+            Vector3 eye = cam.transform.position, look = cam.transform.forward;
+            GameObject best = null;
+            float bestAngle = 10f;
+            foreach (Collider c in Physics.OverlapSphere(eye + look * 7f, 8f))
+            {
+                if (c == null || c.isTrigger) continue;
+                if (character != null && c.GetComponentInParent(character) != null) continue;
+                Vector3 to = c.bounds.center - eye;
+                if (to.magnitude > 14f) continue;
+                float angle = Vector3.Angle(look, to);
+                if (angle >= bestAngle) continue;
+                GameObject root = PickRoot(c);
+                if (root == null) continue;
+                RaycastHit seen;
+                if (Physics.Raycast(eye, to.normalized, out seen, to.magnitude + 0.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) &&
+                    !seen.collider.transform.IsChildOf(root.transform) &&
+                    !(character != null && seen.collider.GetComponentInParent(character) != null)) continue; // something is in the way
+                best = root;
+                bestAngle = angle;
+            }
+            return best;
         }
 
         private static GameObject PickRoot(Collider hit)

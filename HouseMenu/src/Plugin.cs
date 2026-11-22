@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.33.0";
+        public const string PluginVersion = "0.34.0";
 
         internal static ManualLogSource Log;
 
@@ -48,10 +48,10 @@ namespace WobblyMods.HouseMenu
             CustomModels.Init();
             Outfits.Init(Config);
             HiddenItems.Load();
-            Fun.Init(Config.Bind("Fun", "SwarmFishLength", 0.22f,
-                "Length in meters of each catfish in the catfish swarm. Skylar asked for about 0.1; very small physics " +
-                "objects jitter and slip through things, so it starts at 0.22.").Value,
-                Config.Bind("Fun", "SwarmCount", 50, "How many little catfish one press of Catfish swarm makes (1 to 300).").Value);
+            // New key names (0.34.0) so the new defaults apply on PCs that saved the old ones.
+            Fun.Init(Config.Bind("Fun", "SwarmFishSize", 0.35f,
+                "Length in meters of each catfish in the catfish swarm (was 0.22; the family found that a little small).").Value,
+                Config.Bind("Fun", "SwarmFishCount", 100, "How many little catfish one press of Catfish swarm makes (1 to 300).").Value);
             MenuCheck.Init(Config.Bind("Debug", "MenuSelfTest", false,
                 "Grown-ups only. true = about 15 seconds after the game world loads, place every menu item once in front of " +
                 "player 1, check it stays, remove it, and log \"Menu check: ...\". Items that fail are hidden from the menu " +

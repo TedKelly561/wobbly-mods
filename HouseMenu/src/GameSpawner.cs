@@ -87,6 +87,47 @@ namespace WobblyMods.HouseMenu
             }
         }
 
+        /// <summary>
+        /// Loads a prop by its address and places a STATIC, scripts-free copy of it (WorldCopy.StaticCopy): what it
+        /// looks like and its solid shape, with no physics body or network object. Used for catalog props since the
+        /// menu self-test (2026-11-21) showed the game's network spawner never answers for them.
+        /// </summary>
+        public static GameObject SpawnStatic(string address, Vector3 position, Quaternion rotation, out string problem)
+        {
+            problem = null;
+            Type addressables = GameReflection.FindType("UnityEngine.AddressableAssets.Addressables");
+            MethodInfo load = addressables == null ? null : addressables.GetMethods(AnyStatic).FirstOrDefault(m =>
+                m.Name == "LoadAssetAsync" && m.IsGenericMethodDefinition && m.GetParameters().Length == 1 &&
+                m.GetParameters()[0].ParameterType == typeof(object));
+            if (load == null)
+            {
+                problem = "Addressables.LoadAssetAsync wasn't found";
+                return null;
+            }
+            try
+            {
+                object handle = load.MakeGenericMethod(typeof(GameObject)).Invoke(null, new object[] { address });
+                MethodInfo wait = handle.GetType().GetMethod("WaitForCompletion", BindingFlags.Public | BindingFlags.Instance);
+                GameObject prefab = wait == null ? null : wait.Invoke(handle, null) as GameObject;
+                if (prefab == null)
+                {
+                    problem = "the model couldn't be loaded";
+                    return null;
+                }
+                GameObject copy = WorldCopy.StaticCopy(prefab, out problem);
+                if (copy == null) return null;
+                copy.name = prefab.name;
+                copy.transform.SetPositionAndRotation(position, rotation);
+                return copy;
+            }
+            catch (Exception e)
+            {
+                Exception inner = e is TargetInvocationException && e.InnerException != null ? e.InnerException : e;
+                problem = "loading failed: " + inner.GetType().Name + ": " + inner.Message;
+                return null;
+            }
+        }
+
         /// <summary>Loads a model by its address and places a plain (non-networked) copy. Returns null with a reason on failure.</summary>
         public static GameObject SpawnLocal(string address, Vector3 position, Quaternion rotation, out string problem)
         {

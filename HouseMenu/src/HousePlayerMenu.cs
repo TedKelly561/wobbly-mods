@@ -67,9 +67,26 @@ namespace WobblyMods.HouseMenu
                 tab.Icon = TabTheme.IconFor(category);
                 if (category == "Furniture")
                 {
-                    // "Copy this" / "My copies" (WorldCopy) are out of the menu: in test 23 every try said "too big" or
-                    // "part of the building". Parent's rule: if it's in the menu, it works. F3 logs a probe of the thing
-                    // in view (WorldCopy.Probe) so the cause can be found; they come back when copying is proven.
+                    // "Copy this" is a tool (parent's request, 2026-11-21): pick it, the menu closes, a + on screen
+                    // names what will be copied, tap RB to copy it into "My copies". Empty slots show a dashed box.
+                    MenuItem copyTool = tab.Add("Copy this", () => { _session.Status = Fun.ToggleTool(Player, Fun.Tool.Copy); });
+                    copyTool.Icon = SymbolIcons.Key("camera");
+                    copyTool.ClosesMenu = true;
+                    var copies = new MenuPage("My copies");
+                    MenuTab copyGrid = copies.MainTab().AsGrid();
+                    for (int i = 0; i < WorldCopy.Slots; i++)
+                    {
+                        int slot = i;
+                        Icons.IconCache.SetFallback(WorldCopy.IconKey(slot), SymbolIcons.Key("ghostblock"));
+                        copyGrid.Add("Copy " + (slot + 1), () =>
+                        {
+                            string message;
+                            GameObject placed = WorldCopy.Paste(Player, slot, out message);
+                            _session.Status = message;
+                            if (placed != null) _session.Undo.Push("placed a copy", () => ObjectEdits.Remove(placed));
+                        }).Icon = WorldCopy.IconKey(slot);
+                    }
+                    tab.AddSubPage("My copies", copies).Icon = SymbolIcons.Key("load");
                     // All the rest of the game's furniture, one page per room (a photo of one item is the room's picture).
                     foreach (string[] room in FurnitureCatalog.Rooms)
                     {

@@ -6,21 +6,23 @@ using WobblyMods.HouseMenu.Icons;
 namespace WobblyMods.HouseMenu
 {
     /// <summary>
-    /// "Copy this" (parent's request, 2026-11-21): the game's intact furniture (fridges, sofas, tables, baths...)
-    /// exists only inside the world's houses and shops, not as props the menu can load by name. So: look at any
-    /// real thing in the world, press "Copy this", and the menu keeps a copy in one of nine "My copies" slots
-    /// (shown as a photo). Picking a slot places a copy in front of you, e.g. back at home.
+    /// Scripts-free copies of game objects: their meshes, materials and solid shape, with no game scripts, physics
+    /// bodies or network objects, so a copy can't break the game's own object and can't fall through the floor.
     ///
-    /// A copy is the thing's LOOK and SHAPE only: its meshes, materials and solid colliders. No game scripts,
-    /// physics bodies or network objects are copied, so a copy can't break the game's own object, but it also
-    /// doesn't open, switch on or move by itself. Copies last until the game closes (they aren't in house saves yet).
-    /// The slots are shared by all players.
+    /// Two uses:
+    /// 1. "Copy this" (a tool: pick it, the menu closes, a crosshair shows what will be copied, tap RB): any real
+    ///    thing in the world goes into one of nine "My copies" slots, shown as a photo; picking a slot places it.
+    /// 2. Catalog props (beds, wardrobe, toys...): the game's network spawner stopped answering for all 26 of them
+    ///    (menu self-test, 2026-11-21), so the menu now places a static copy made from the prop's prefab.
+    ///
+    /// Copies last until the game closes (world copies aren't in house saves yet). Slots are shared by all players.
     /// </summary>
     internal static class WorldCopy
     {
         public const int Slots = 9;
-        private const float MaxSize = 8f;       // bigger than this is a building or the ground, not furniture
+        private const float MaxSize = 12f;      // bigger than this is a building or the ground (test: the giant TV is 8.3 m)
         private const int MaxRenderers = 80;
+        private const float Reach = 30f;
 
         private static readonly GameObject[] Templates = new GameObject[Slots];
         private static readonly string[] Names = new string[Slots];
@@ -32,43 +34,51 @@ namespace WobblyMods.HouseMenu
             return "worldcopy" + (slot + 1);
         }
 
-        /// <summary>Copies what that player is looking at into the next slot. Returns a message for the menu.</summary>
+        /// <summary>The name of what "Copy this" would copy right now, or null. For the crosshair label.</summary>
+        public static string TargetName(int player)
+        {
+            string reason;
+            GameObject root = FindTarget(player, out reason);
+            return root != null ? Nice(root.name) : null;
+        }
+
+        /// <summary>Copies what that player is aiming at into the next slot. Returns a message; every try is logged.</summary>
         public static string Copy(int player)
         {
             try
             {
-                Camera cam = GameBindings.CameraFor(player);
-                if (cam == null) return "Couldn't find your camera.";
-
-                Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-                RaycastHit[] hits = Physics.RaycastAll(ray, 25f);
-                Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-                Type character = GameReflection.FindType("PlayerCharacter");
-
-                string reason = "Point the middle of your screen at the thing, close up, then press this.";
-                foreach (RaycastHit hit in hits)
+                string reason;
+                GameObject root = FindTarget(player, out reason);
+                if (root == null)
                 {
-                    if (hit.collider == null || hit.collider.isTrigger) continue;
-                    if (character != null && hit.collider.GetComponentInParent(character) != null) continue; // not yourself
-
-                    GameObject root = PickRoot(hit.collider, out reason);
-                    if (root == null) break; // the first solid thing in view decides (don't copy through walls)
-
-                    GameObject template = BuildTemplate(root, out reason);
-                    if (template == null) break;
-
-                    int slot = _next;
-                    _next = (_next + 1) % Slots;
-                    if (Templates[slot] != null) UnityEngine.Object.Destroy(Templates[slot]);
-                    Templates[slot] = template;
-                    Names[slot] = Nice(root.name);
-                    IconCache.PictureOf(IconKey(slot), template, TabTheme.Light(TabTheme.Furniture, 0.6f));
-                    Plugin.Log.LogInfo("Copy this: player " + (player + 1) + " copied '" + Path(root.transform) + "' into slot " +
-                                       (slot + 1) + " (" + template.transform.childCount + " pieces).");
-                    return "Copied the " + Names[slot] + "! It's in My copies, picture " + (slot + 1) + ".";
+                    Plugin.Log.LogInfo("Copy this: player " + (player + 1) + " nothing copied: " + reason);
+                    return reason;
                 }
-                Plugin.Log.LogInfo("Copy this: player " + (player + 1) + " nothing copied: " + reason);
-                return reason;
+                GameObject template = BuildTemplate(root, false, out reason);
+                if (template == null)
+                {
+                    Plugin.Log.LogInfo("Copy this: player " + (player + 1) + " couldn't copy '" + Path(root.transform) + "': " + reason);
+                    return reason;
+                }
+
+                if (_shelf == null)
+                {
+                    var shelf = new GameObject("Wobbly copies shelf");
+                    UnityEngine.Object.DontDestroyOnLoad(shelf);
+                    shelf.SetActive(false);
+                    _shelf = shelf.transform;
+                }
+                template.transform.SetParent(_shelf, true);
+
+                int slot = _next;
+                _next = (_next + 1) % Slots;
+                if (Templates[slot] != null) UnityEngine.Object.Destroy(Templates[slot]);
+                Templates[slot] = template;
+                Names[slot] = Nice(root.name);
+                IconCache.PictureOf(IconKey(slot), template, TabTheme.Light(TabTheme.Furniture, 0.6f));
+                Plugin.Log.LogInfo("Copy this: player " + (player + 1) + " copied '" + Path(root.transform) + "' into slot " +
+                                   (slot + 1) + " (" + template.transform.childCount + " pieces).");
+                return "Copied the " + Names[slot] + "! It's in My copies, picture " + (slot + 1) + ".";
             }
             catch (Exception e)
             {
@@ -77,71 +87,17 @@ namespace WobblyMods.HouseMenu
             }
         }
 
-        /// <summary>
-        /// For grown-ups (F3): describes the thing in the middle of player 1's view, so we can learn why real
-        /// furniture can't be copied yet: each parent up the tree with its part count, size, and whether its meshes
-        /// are glued into the scenery's combined mesh.
-        /// </summary>
-        public static string Probe(int player)
-        {
-            try
-            {
-                Camera cam = GameBindings.CameraFor(player);
-                if (cam == null) return "Probe: no camera.";
-                Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-                RaycastHit[] hits = Physics.RaycastAll(ray, 25f);
-                Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-                Type character = GameReflection.FindType("PlayerCharacter");
-                var sb = new System.Text.StringBuilder("Probe (F3), nearest first:");
-                int shown = 0;
-                foreach (RaycastHit hit in hits)
-                {
-                    if (hit.collider == null || hit.collider.isTrigger) continue;
-                    if (character != null && hit.collider.GetComponentInParent(character) != null) continue;
-                    sb.Append("\n  HIT ").Append(hit.collider.GetType().Name).Append(" at ").Append(hit.distance.ToString("0.0")).Append(" m, body: ")
-                      .Append(hit.collider.attachedRigidbody != null ? hit.collider.attachedRigidbody.name : "none");
-                    int level = 0;
-                    for (Transform t = hit.collider.transform; t != null && level < 6; t = t.parent, level++)
-                    {
-                        Renderer[] rs = t.GetComponentsInChildren<Renderer>();
-                        int batched = 0, combined = 0, readable = 0;
-                        foreach (Renderer r in rs)
-                        {
-                            if (r.isPartOfStaticBatch) batched++;
-                            MeshFilter mf = r.GetComponent<MeshFilter>();
-                            if (mf != null && mf.sharedMesh != null)
-                            {
-                                if (mf.sharedMesh.name.StartsWith("Combined Mesh", StringComparison.Ordinal)) combined++;
-                                if (mf.sharedMesh.isReadable) readable++;
-                            }
-                        }
-                        Bounds b;
-                        string size = TryBounds(t.gameObject, false, out b) ? b.size.x.ToString("0.0") + "x" + b.size.y.ToString("0.0") + "x" + b.size.z.ToString("0.0") : "no size";
-                        sb.Append("\n    up ").Append(level).Append(": '").Append(t.name).Append("' parts ").Append(rs.Length).Append(", size ").Append(size)
-                          .Append(", static-batched ").Append(batched).Append(", combined-mesh ").Append(combined).Append(", readable ").Append(readable)
-                          .Append(", children ").Append(t.childCount);
-                    }
-                    if (++shown >= 3) break;
-                }
-                return shown == 0 ? "Probe (F3): nothing in the middle of the view." : sb.ToString();
-            }
-            catch (Exception e)
-            {
-                return "Probe failed: " + e.Message;
-            }
-        }
-
         /// <summary>Places a copy from that slot in front of the player. Returns the new object, or null with a message.</summary>
         public static GameObject Paste(int player, int slot, out string message)
         {
             if (slot < 0 || slot >= Slots || Templates[slot] == null)
             {
-                message = "That one is empty. Look at something and pick Copy this.";
+                message = "That one is empty. Pick Copy this, aim at something and tap RB.";
                 return null;
             }
 
             Bounds size;
-            float longest = TryBounds(Templates[slot], true, out size) ? Mathf.Max(size.size.x, size.size.z) : 1f;
+            float longest = MeshBounds(Templates[slot], true, out size) ? Mathf.Max(size.size.x, size.size.z) : 1f;
             Vector3 position;
             Quaternion rotation;
             if (!GameBindings.PlacementFor(player, 1f, 2f + longest, out position, out rotation))
@@ -155,62 +111,97 @@ namespace WobblyMods.HouseMenu
             copy.SetActive(true);
             GameBindings.Register(copy, player);
             GameBindings.RestOnFloor(copy, position.y);
+            Plugin.Log.LogInfo("Copy this: player " + (player + 1) + " placed copy " + (slot + 1) + " (" + Names[slot] + ") at " + copy.transform.position.ToString("0.0") + ".");
             message = "Placed the " + Names[slot] + ".";
             return copy;
         }
 
-        /// <summary>
-        /// From the collider that was hit, the object that is "the whole thing": the nearest physics body if there
-        /// is one, otherwise as far up the parents as it stays furniture-sized.
-        /// </summary>
-        private static GameObject PickRoot(Collider hit, out string reason)
+        /// <summary>A static, scripts-free copy of a prop prefab (for catalog items), origin at its bottom center. Null with a reason on failure.</summary>
+        public static GameObject StaticCopy(GameObject prefab, out string reason)
         {
-            reason = null;
-            Transform best = hit.attachedRigidbody != null ? hit.attachedRigidbody.transform : hit.transform;
-            if (!FurnitureSized(best.gameObject))
+            return BuildTemplate(prefab, true, out reason);
+        }
+
+        /// <summary>
+        /// What the middle of that player's view points at, as "the whole thing". From the F3 probes (2026-11-21):
+        /// the house's one big mesh collider is often hit a little in front of the furniture, so anything
+        /// building-sized is skipped and the next hit is tried; colliders often sit on a child with nothing to
+        /// see, so we climb to the physics body, or to the first parent that has something to see.
+        /// </summary>
+        private static GameObject FindTarget(int player, out string reason)
+        {
+            reason = "Point the + at the thing, close up, then tap RB.";
+            Camera cam = GameBindings.CameraFor(player);
+            if (cam == null) { reason = "Couldn't find your camera."; return null; }
+
+            Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            RaycastHit[] hits = Physics.RaycastAll(ray, Reach);
+            Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            Type character = GameReflection.FindType("PlayerCharacter");
+
+            int tried = 0;
+            foreach (RaycastHit hit in hits)
             {
-                // A body can be a whole vehicle or building piece; fall back to just the part that was hit.
-                best = hit.transform;
-                if (!FurnitureSized(best.gameObject))
-                {
-                    reason = "That's too big to copy (or it's part of the building).";
-                    return null;
-                }
+                if (hit.collider == null || hit.collider.isTrigger) continue;
+                if (character != null && hit.collider.GetComponentInParent(character) != null) continue; // no Wobblies
+                if (hit.collider.GetComponentInParent<FloatBubble>() != null || hit.collider.GetComponentInParent<Follower>() != null) continue;
+
+                GameObject root = PickRoot(hit.collider);
+                if (root != null) return root;
+                reason = "That's part of the building. Point the + at a piece of furniture.";
+                if (++tried >= 4) break; // a few layers of walls and floors, then give up
             }
-            for (Transform up = best.parent; up != null; up = up.parent)
+            return null;
+        }
+
+        private static GameObject PickRoot(Collider hit)
+        {
+            Transform start = hit.attachedRigidbody != null ? hit.attachedRigidbody.transform : hit.transform;
+            // Nothing to see here (a "Collider" child, or a group whose meshes are in a sibling): climb a little.
+            for (int i = 0; i < 4 && start != null && !Sized(start.gameObject); i++) start = start.parent;
+            if (start == null || !FurnitureSized(start.gameObject)) return null;
+            if (hit.attachedRigidbody != null) return start.gameObject;
+
+            // A static prop: climb only while the parent is still the same object (hardly any bigger).
+            Bounds mine;
+            MeshBounds(start.gameObject, false, out mine);
+            for (Transform up = start.parent; up != null; up = up.parent)
             {
-                if (!FurnitureSized(up.gameObject)) break;
-                best = up;
+                Bounds theirs;
+                if (!FurnitureSized(up.gameObject) || !MeshBounds(up.gameObject, false, out theirs)) break;
+                if (theirs.size.magnitude > mine.size.magnitude * 1.25f + 0.2f) break;
+                start = up;
+                mine = theirs;
             }
-            return best.gameObject;
+            return start.gameObject;
+        }
+
+        private static bool Sized(GameObject go)
+        {
+            Bounds b;
+            return MeshBounds(go, false, out b);
         }
 
         private static bool FurnitureSized(GameObject go)
         {
-            Renderer[] renderers = go.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0 || renderers.Length > MaxRenderers) return false;
+            if (go.GetComponentsInChildren<Renderer>().Length > MaxRenderers) return false;
             Bounds b;
-            if (!TryBounds(go, false, out b)) return false;
+            if (!MeshBounds(go, false, out b)) return false;
             return Mathf.Max(b.size.x, Mathf.Max(b.size.y, b.size.z)) <= MaxSize;
         }
 
-        /// <summary>A scripts-free copy: one child per mesh, plus the solid colliders. Kept switched off on a hidden shelf.</summary>
-        private static GameObject BuildTemplate(GameObject source, out string reason)
+        /// <summary>
+        /// One child per mesh plus the solid colliders. prefab = the source is a prefab asset (nothing in it is
+        /// "active in the scene", and physics bounds don't exist), so everything is worked out from the meshes.
+        /// </summary>
+        private static GameObject BuildTemplate(GameObject source, bool prefab, out string reason)
         {
             reason = null;
             Bounds bounds;
-            if (!TryBounds(source, false, out bounds))
+            if (!MeshBounds(source, prefab, out bounds))
             {
                 reason = "There's nothing to see there to copy.";
                 return null;
-            }
-
-            if (_shelf == null)
-            {
-                var shelf = new GameObject("Wobbly copies shelf");
-                UnityEngine.Object.DontDestroyOnLoad(shelf);
-                shelf.SetActive(false);
-                _shelf = shelf.transform;
             }
 
             // Origin at the bottom center, facing the way the source faces (flat), so it places nicely.
@@ -221,7 +212,7 @@ namespace WobblyMods.HouseMenu
 
             // Only the detailed version of each mesh (the far-away LOD versions would overlap it).
             var lowDetail = new HashSet<Renderer>();
-            foreach (LODGroup group in source.GetComponentsInChildren<LODGroup>())
+            foreach (LODGroup group in source.GetComponentsInChildren<LODGroup>(prefab))
             {
                 LOD[] lods = group.GetLODs();
                 for (int i = 1; i < lods.Length; i++)
@@ -231,22 +222,16 @@ namespace WobblyMods.HouseMenu
             }
 
             int meshes = 0, batched = 0;
-            foreach (Renderer r in source.GetComponentsInChildren<Renderer>())
+            foreach (Renderer r in source.GetComponentsInChildren<Renderer>(prefab))
             {
-                if (lowDetail.Contains(r)) continue;
-                if (!r.enabled || !r.gameObject.activeInHierarchy || r is ParticleSystemRenderer) continue;
-                Mesh mesh = null;
-                MeshFilter mf = r.GetComponent<MeshFilter>();
-                SkinnedMeshRenderer skinned = r as SkinnedMeshRenderer;
-                if (r is MeshRenderer && mf != null) mesh = mf.sharedMesh;
-                else if (skinned != null) mesh = skinned.sharedMesh;
+                if (lowDetail.Contains(r) || !r.enabled || !Shown(r.transform, source.transform, prefab) || r is ParticleSystemRenderer) continue;
+                Mesh mesh = MeshOf(r);
                 if (mesh == null) continue;
                 if (r.isPartOfStaticBatch || mesh.name.StartsWith("Combined Mesh", StringComparison.Ordinal))
                 {
                     batched++; // glued into the scenery's big combined mesh: can't be taken out on its own
                     continue;
                 }
-
                 GameObject piece = Piece(template.transform, r.transform, "mesh");
                 piece.AddComponent<MeshFilter>().sharedMesh = mesh;
                 piece.AddComponent<MeshRenderer>().sharedMaterials = r.sharedMaterials;
@@ -261,15 +246,16 @@ namespace WobblyMods.HouseMenu
             }
 
             int solids = 0;
-            foreach (Collider c in source.GetComponentsInChildren<Collider>())
+            foreach (Collider c in source.GetComponentsInChildren<Collider>(prefab))
             {
-                if (c.isTrigger || !c.enabled || !c.gameObject.activeInHierarchy) continue;
+                if (c.isTrigger || !c.enabled || !Shown(c.transform, source.transform, prefab)) continue;
                 try
                 {
                     GameObject piece = Piece(template.transform, c.transform, "solid");
                     BoxCollider box = c as BoxCollider;
                     SphereCollider sphere = c as SphereCollider;
                     CapsuleCollider capsule = c as CapsuleCollider;
+                    MeshCollider meshCollider = c as MeshCollider;
                     if (box != null) { var n = piece.AddComponent<BoxCollider>(); n.center = box.center; n.size = box.size; }
                     else if (sphere != null) { var n = piece.AddComponent<SphereCollider>(); n.center = sphere.center; n.radius = sphere.radius; }
                     else if (capsule != null)
@@ -277,33 +263,54 @@ namespace WobblyMods.HouseMenu
                         var n = piece.AddComponent<CapsuleCollider>();
                         n.center = capsule.center; n.radius = capsule.radius; n.height = capsule.height; n.direction = capsule.direction;
                     }
+                    else if (meshCollider != null && meshCollider.sharedMesh != null)
+                    {
+                        // The game's meshes are locked, so a mesh collider can't be rebuilt: a box around that mesh.
+                        var n = piece.AddComponent<BoxCollider>();
+                        n.center = meshCollider.sharedMesh.bounds.center;
+                        n.size = meshCollider.sharedMesh.bounds.size;
+                    }
                     else
                     {
-                        // Mesh (or other) colliders: a box around it. Mesh colliders can't be rebuilt from the
-                        // game's locked meshes, and a box is plenty for furniture.
-                        piece.transform.rotation = Quaternion.identity;
-                        piece.transform.localScale = Vector3.one;
-                        piece.transform.position = c.bounds.center;
-                        piece.AddComponent<BoxCollider>().size = c.bounds.size;
+                        UnityEngine.Object.Destroy(piece);
+                        continue;
                     }
                     solids++;
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning("Copy this: skipped a collider on " + c.name + ": " + e.Message);
+                    Plugin.Log.LogWarning("Copy: skipped a collider on " + c.name + ": " + e.Message);
                 }
             }
             if (solids == 0)
             {
                 // Nothing solid came across: one box around the whole thing, so it isn't a ghost.
-                GameObject piece = new GameObject("solid");
+                var piece = new GameObject("solid");
                 piece.transform.position = bounds.center;
                 piece.transform.SetParent(template.transform, true);
                 piece.AddComponent<BoxCollider>().size = bounds.size;
             }
-
-            template.transform.SetParent(_shelf, true);
             return template;
+        }
+
+        private static Mesh MeshOf(Renderer r)
+        {
+            SkinnedMeshRenderer skinned = r as SkinnedMeshRenderer;
+            if (skinned != null) return skinned.sharedMesh;
+            MeshFilter mf = r is MeshRenderer ? r.GetComponent<MeshFilter>() : null;
+            return mf != null ? mf.sharedMesh : null;
+        }
+
+        /// <summary>Switched on, counting only the objects between it and the thing being copied (works for prefabs too).</summary>
+        private static bool Shown(Transform t, Transform root, bool prefab)
+        {
+            if (!prefab) return t.gameObject.activeInHierarchy;
+            for (; t != null; t = t.parent)
+            {
+                if (!t.gameObject.activeSelf) return false;
+                if (t == root) break;
+            }
+            return true;
         }
 
         private static GameObject Piece(Transform template, Transform like, string name)
@@ -317,14 +324,28 @@ namespace WobblyMods.HouseMenu
             return piece;
         }
 
-        private static bool TryBounds(GameObject go, bool includeInactive, out Bounds bounds)
+        /// <summary>
+        /// The space an object's meshes take up, worked out from the meshes themselves (each mesh's own box, moved
+        /// by its transform), so it is right for prefab assets too, where Renderer.bounds can't be trusted.
+        /// </summary>
+        private static bool MeshBounds(GameObject go, bool includeInactive, out Bounds bounds)
         {
             bounds = new Bounds();
             bool any = false;
             foreach (Renderer r in go.GetComponentsInChildren<Renderer>(includeInactive))
             {
                 if (r is ParticleSystemRenderer) continue;
-                if (!any) { bounds = r.bounds; any = true; } else bounds.Encapsulate(r.bounds);
+                Mesh mesh = MeshOf(r);
+                if (mesh == null) continue;
+                Bounds local = mesh.bounds;
+                Matrix4x4 m = r.transform.localToWorldMatrix;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 corner = local.center + Vector3.Scale(local.extents,
+                        new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                    Vector3 world = m.MultiplyPoint3x4(corner);
+                    if (!any) { bounds = new Bounds(world, Vector3.zero); any = true; } else bounds.Encapsulate(world);
+                }
             }
             return any;
         }
@@ -336,11 +357,61 @@ namespace WobblyMods.HouseMenu
             return path;
         }
 
-        /// <summary>"Prop_Fridge_01 (3)" becomes "fridge".</summary>
+        /// <summary>"Prop_Couch_14" becomes "couch".</summary>
         private static string Nice(string name)
         {
             string n = Core.PropRooms.NiceName(name.Replace("(Clone)", "").Replace("Prop_", ""));
             return string.IsNullOrEmpty(n) || n == "thing" ? "thing" : n;
+        }
+
+        /// <summary>
+        /// For grown-ups (F3): describes the things in the middle of player 1's view: each parent up the tree with
+        /// its part count, size, and whether its meshes are glued into the scenery's combined mesh.
+        /// </summary>
+        public static string Probe(int player)
+        {
+            try
+            {
+                Camera cam = GameBindings.CameraFor(player);
+                if (cam == null) return "Probe: no camera.";
+                Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                RaycastHit[] hits = Physics.RaycastAll(ray, Reach);
+                Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                Type character = GameReflection.FindType("PlayerCharacter");
+                string reason;
+                GameObject would = FindTarget(player, out reason);
+                var sb = new System.Text.StringBuilder("Probe (F3). Copy this would take: " + (would != null ? "'" + Path(would.transform) + "'" : "nothing (" + reason + ")") + ". Nearest first:");
+                int shown = 0;
+                foreach (RaycastHit hit in hits)
+                {
+                    if (hit.collider == null || hit.collider.isTrigger) continue;
+                    if (character != null && hit.collider.GetComponentInParent(character) != null) continue;
+                    sb.Append("\n  HIT ").Append(hit.collider.GetType().Name).Append(" at ").Append(hit.distance.ToString("0.0")).Append(" m, body: ")
+                      .Append(hit.collider.attachedRigidbody != null ? hit.collider.attachedRigidbody.name : "none");
+                    int level = 0;
+                    for (Transform t = hit.collider.transform; t != null && level < 6; t = t.parent, level++)
+                    {
+                        Renderer[] rs = t.GetComponentsInChildren<Renderer>();
+                        int batched = 0, combined = 0;
+                        foreach (Renderer r in rs)
+                        {
+                            if (r.isPartOfStaticBatch) batched++;
+                            Mesh mesh = MeshOf(r);
+                            if (mesh != null && mesh.name.StartsWith("Combined Mesh", StringComparison.Ordinal)) combined++;
+                        }
+                        Bounds b;
+                        string size = MeshBounds(t.gameObject, false, out b) ? b.size.x.ToString("0.0") + "x" + b.size.y.ToString("0.0") + "x" + b.size.z.ToString("0.0") : "no size";
+                        sb.Append("\n    up ").Append(level).Append(": '").Append(t.name).Append("' parts ").Append(rs.Length).Append(", size ").Append(size)
+                          .Append(", static-batched ").Append(batched).Append(", combined-mesh ").Append(combined).Append(", children ").Append(t.childCount);
+                    }
+                    if (++shown >= 3) break;
+                }
+                return shown == 0 ? "Probe (F3): nothing in the middle of the view." : sb.ToString();
+            }
+            catch (Exception e)
+            {
+                return "Probe failed: " + e.Message;
+            }
         }
     }
 }

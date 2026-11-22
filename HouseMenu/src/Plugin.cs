@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.32.0";
+        public const string PluginVersion = "0.33.0";
 
         internal static ManualLogSource Log;
 
@@ -50,11 +50,12 @@ namespace WobblyMods.HouseMenu
             HiddenItems.Load();
             Fun.Init(Config.Bind("Fun", "SwarmFishLength", 0.22f,
                 "Length in meters of each catfish in the catfish swarm. Skylar asked for about 0.1; very small physics " +
-                "objects jitter and slip through things, so it starts at 0.22.").Value);
+                "objects jitter and slip through things, so it starts at 0.22.").Value,
+                Config.Bind("Fun", "SwarmCount", 50, "How many little catfish one press of Catfish swarm makes (1 to 300).").Value);
             MenuCheck.Init(Config.Bind("Debug", "MenuSelfTest", false,
                 "Grown-ups only. true = about 15 seconds after the game world loads, place every menu item once in front of " +
                 "player 1, check it stays, remove it, and log \"Menu check: ...\". Items that fail are hidden from the menu " +
-                "(listed in BepInEx\\config\\WobblyMods.hidden-items.txt). Set back to false afterwards.").Value);
+                "(listed in BepInEx\\config\\WobblyMods.hidden-items-v2.txt). Set back to false afterwards.").Value);
             ModelPack.Init(Config.Bind("Furniture", "ModelSize", 2.4f,
                 "Size multiplier for model-pack furniture (the .obj files in plugins\\WobblyMods\\models\\furniture). " +
                 "The log prints each model's size in meters the first time it is placed. Small things (blender, toaster, books...) are 1.8 times bigger again; walls and floors always stay at 2.").Value);
@@ -311,6 +312,7 @@ namespace WobblyMods.HouseMenu
         private void OnGUI()
         {
             _window.Draw();
+            Fun.DrawHud(System.Math.Max(_lastPlayerCount, 1), i => { PlayerSession m = _sessions.Get(i); return m != null && m.IsOpen; });
         }
     }
 }

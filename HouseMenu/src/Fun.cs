@@ -46,7 +46,7 @@ namespace WobblyMods.HouseMenu
         // ---------- Fun tools: pick the tile, the menu closes, then tap RB to shoot (test 2026-11-21: aiming
         // with the menu open didn't work for either tool, and nothing was logged) ----------
 
-        public enum Tool { None, Bubble, Paint }
+        public enum Tool { None, Bubble, Paint, Copy }
 
         private static readonly Tool[] Tools = new Tool[8];
 
@@ -62,6 +62,7 @@ namespace WobblyMods.HouseMenu
             Tools[i] = Tools[i] == tool ? Tool.None : tool;
             Plugin.Log.LogInfo("Fun: player " + (player + 1) + " tool is now " + Tools[i] + ".");
             if (Tools[i] == Tool.None) return "Put away. RB is back to normal.";
+            if (tool == Tool.Copy) return "Copy this! Point the + at something and tap RB. Pick it again to put it away.";
             return tool == Tool.Bubble ? "Bubble gun! Tap RB to shoot. Pick it again to put it away."
                                        : "Paint brush! Tap RB to paint. Pick it again to put it away.";
         }
@@ -73,6 +74,7 @@ namespace WobblyMods.HouseMenu
             {
                 case Tool.Bubble: return BubbleGun(player);
                 case Tool.Paint: return Paint(player);
+                case Tool.Copy: return WorldCopy.Copy(player);
                 default: return "no tool";
             }
         }
@@ -207,9 +209,67 @@ namespace WobblyMods.HouseMenu
         private static float _swarmLength = 0.22f;
         private static PhysicMaterial _grippy;
 
-        public static void Init(float swarmFishLength)
+        private static int _swarmCount = 50;
+
+        public static void Init(float swarmFishLength, int swarmCount)
         {
             _swarmLength = Mathf.Clamp(swarmFishLength, 0.05f, 2f);
+            _swarmCount = Mathf.Clamp(swarmCount, 1, 300);
+        }
+
+        // ---------- The + on screen while a tool is out (parent's request: see what you're aiming at) ----------
+
+        private static readonly string[] HudTarget = new string[8];
+        private static float _nextHud;
+        private static GUIStyle _hudStyle;
+
+        private static void RefreshHud()
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                if (Tools[i] == Tool.None) { HudTarget[i] = null; continue; }
+                try
+                {
+                    string how;
+                    if (Tools[i] == Tool.Copy) HudTarget[i] = WorldCopy.TargetName(i);
+                    else
+                    {
+                        Collider c = Target(i, Tools[i] == Tool.Bubble, out how);
+                        HudTarget[i] = c == null ? null : (c.attachedRigidbody != null ? c.attachedRigidbody.name : c.name).Replace("(Clone)", "").Trim();
+                    }
+                }
+                catch (Exception) { HudTarget[i] = null; }
+            }
+        }
+
+        /// <summary>Draws the + and the name of what the tool will act on, in each player's own part of the screen.</summary>
+        public static void DrawHud(int playerCount, Func<int, bool> menuOpen)
+        {
+            for (int i = 0; i < playerCount && i < 8; i++)
+            {
+                if (Tools[i] == Tool.None || menuOpen(i)) continue;
+                if (_hudStyle == null)
+                {
+                    _hudStyle = new GUIStyle(GUI.skin.label) { alignment = TextAnchor.UpperCenter, fontSize = 22, fontStyle = FontStyle.Bold };
+                    _hudStyle.normal.textColor = Color.white;
+                }
+                Rect area = GameBindings.ScreenAreaFor(i, playerCount);
+                float cx = area.x + area.width / 2f, cy = area.y + area.height / 2f;
+                Color old = GUI.color;
+                GUI.color = new Color(0f, 0f, 0f, 0.7f);
+                GUI.DrawTexture(new Rect(cx - 15f, cy - 3f, 30f, 6f), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cx - 3f, cy - 15f, 6f, 30f), Texture2D.whiteTexture);
+                GUI.color = HudTarget[i] != null ? new Color(0.4f, 1f, 0.4f) : Color.white;
+                GUI.DrawTexture(new Rect(cx - 13f, cy - 1.5f, 26f, 3f), Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(cx - 1.5f, cy - 13f, 3f, 26f), Texture2D.whiteTexture);
+                string tool = Tools[i] == Tool.Copy ? "Copy" : Tools[i] == Tool.Bubble ? "Bubble" : "Paint";
+                string text = tool + ": " + (HudTarget[i] ?? "nothing yet") + "   (tap RB)";
+                GUI.color = new Color(0f, 0f, 0f, 0.8f);
+                GUI.Label(new Rect(cx - 299f, cy + 23f, 600f, 34f), text, _hudStyle);
+                GUI.color = HudTarget[i] != null ? new Color(0.6f, 1f, 0.6f) : Color.white;
+                GUI.Label(new Rect(cx - 300f, cy + 22f, 600f, 34f), text, _hudStyle);
+                GUI.color = old;
+            }
         }
 
         public static string Swarm(int player)
@@ -221,11 +281,11 @@ namespace WobblyMods.HouseMenu
                 if (!GameBindings.PlacementFor(player, 1f, 3f, out position, out rotation)) return "Couldn't find where you are.";
                 if (_grippy == null) _grippy = new PhysicMaterial("Wobbly catfish") { dynamicFriction = 0.9f, staticFriction = 0.95f, bounciness = 0.05f };
 
-                // A loose block, 5 x 5 x 4, with gaps, so they tumble into a pile instead of bursting apart.
+                // A loose block, 5 x 5 and as many layers as needed, with gaps, so they tumble into a pile instead of bursting apart.
                 float gap = _swarmLength * 1.4f;
                 var rng = new System.Random();
                 int made = 0;
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < _swarmCount; i++)
                 {
                     int x = i % 5, z = (i / 5) % 5, y = i / 25;
                     Vector3 at = position + rotation * new Vector3((x - 2) * gap, 0.4f + y * gap, (z - 2) * gap);
@@ -374,6 +434,11 @@ namespace WobblyMods.HouseMenu
         /// <summary>Call once per frame from the plugin.</summary>
         public static void Tick()
         {
+            if (Time.unscaledTime >= _nextHud)
+            {
+                _nextHud = Time.unscaledTime + 0.25f;
+                RefreshHud();
+            }
             if (_catfishWorld && Time.unscaledTime >= _nextWorldSweep)
             {
                 _nextWorldSweep = Time.unscaledTime + 2f;

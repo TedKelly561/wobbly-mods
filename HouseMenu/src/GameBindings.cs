@@ -150,28 +150,13 @@ namespace WobblyMods.HouseMenu
                 return;
             }
 
-            // The game's spawner answers later. If it answers with nothing (the prop isn't a network object),
-            // place a plain local copy instead of giving up (test 2026-11-20: only a few new items appeared).
-            System.Action<GameObject> finishOrLocal = placed =>
-            {
-                if (placed == null)
-                {
-                    string why;
-                    placed = GameSpawner.SpawnLocal(item.Address, position, rotation, out why);
-                    Plugin.Log.LogWarning("Spawn " + item.Id + ": the game's spawner gave nothing; local copy " +
-                                          (placed != null ? "placed." : "failed: " + why));
-                }
-                finish(placed);
-            };
-
-            if (!GameSpawner.TrySpawnNetworked(item.Address, position, rotation, finishOrLocal, out problem))
-            {
-                Plugin.Log.LogWarning("Spawn " + item.Id + ": " + problem + ". Trying a local copy instead.");
-                string localProblem;
-                GameObject local = GameSpawner.SpawnLocal(item.Address, position, rotation, out localProblem);
-                if (localProblem != null) Plugin.Log.LogWarning("Spawn " + item.Id + " (local): " + localProblem);
-                finish(local);
-            }
+            // Catalog props: a static, scripts-free copy made from the prop's prefab. The game's network spawner
+            // (GameSpawner.TrySpawnNetworked) used to place these, but the menu self-test of 2026-11-21 showed it
+            // never answers any more for any of the 26 props (beds, wardrobe, desk, toys...), which is why Skylar
+            // couldn't spawn what she picked. A static copy always appears, and can't fall through the floor.
+            GameObject copy = GameSpawner.SpawnStatic(item.Address, position, rotation, out problem);
+            if (problem != null) Plugin.Log.LogWarning("Spawn " + item.Id + ": " + problem);
+            finish(copy);
         }
 
         /// <summary>

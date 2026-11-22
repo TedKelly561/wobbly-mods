@@ -6,7 +6,8 @@ namespace WobblyMods.HouseMenu
 {
     /// <summary>
     /// Parent's rule (2026-11-21): "If it's in the menu, it's got to be buildable." Any item that fails to appear is
-    /// written to BepInEx\config\WobblyMods.hidden-items.txt and left out of the menu from the next start. A grown-up
+    /// written to BepInEx\config\WobblyMods.hidden-items-v2.txt (v2: the first list was made when
+    /// catalog props still used the network spawner; they are placed a new way now, so they get another chance) and left out of the menu from the next start. A grown-up
     /// can delete a line (or the file) to give an item another chance. One id per line; text after a tab is the reason.
     /// </summary>
     internal static class HiddenItems
@@ -15,7 +16,7 @@ namespace WobblyMods.HouseMenu
 
         private static string FilePath
         {
-            get { return Path.Combine(BepInEx.Paths.ConfigPath, "WobblyMods.hidden-items.txt"); }
+            get { return Path.Combine(BepInEx.Paths.ConfigPath, "WobblyMods.hidden-items-v2.txt"); }
         }
 
         public static void Load()

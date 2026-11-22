@@ -272,6 +272,12 @@ namespace WobblyMods.HouseMenu.Build
                 case BuildCatalog.Ids.Pillar: return "pillar";
                 case BuildCatalog.Ids.Beam: return "beam";
                 case BuildCatalog.Ids.CornerWall: return "corner";
+                case BuildCatalog.Ids.TWall: return "twall";
+                case BuildCatalog.Ids.CrossWall: return "crosswall";
+                case BuildCatalog.Ids.Doorway: return "doorway";
+                case BuildCatalog.Ids.Ramp: return "ramp";
+                case BuildCatalog.Ids.RoofLow: return "rooflow";
+                case BuildCatalog.Ids.Fence: return "fence";
                 default: return "brick";
             }
         }

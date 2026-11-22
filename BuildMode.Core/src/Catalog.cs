@@ -285,6 +285,13 @@ namespace WobblyMods.BuildMode
             public const string Pillar = "pillar";
             public const string Beam = "beam";
             public const string CornerWall = "corner_wall";
+            // Added 2026-11-22 (parent: "more pieces", "certain things not fitting together").
+            public const string TWall = "t_wall";
+            public const string CrossWall = "cross_wall";
+            public const string Doorway = "doorway";
+            public const string Ramp = "ramp";
+            public const string RoofLow = "roof_low";
+            public const string Fence = "fence";
 
             public const string Wood = "wood";
             public const string Brick = "brick";
@@ -313,6 +320,14 @@ namespace WobblyMods.BuildMode
             // Added for room kits: at rotation 0 its two arms run from the cell centre toward local +X and +Z.
             c.Add(new BlockType(Ids.CornerWall, "Corner wall", BlockKind.Corner,  OccupancyLayer.Body,  1, 1, 1));
             c.Add(new BlockType(Ids.Beam,      "Beam",       BlockKind.Beam,     OccupancyLayer.Body,  3, 1, 1));
+            // Connectors: where a wall meets the middle of another (T), or two cross (+), without a gap.
+            c.Add(new BlockType(Ids.TWall,     "T wall",     BlockKind.Corner,   OccupancyLayer.Body,  1, 1, 1));
+            c.Add(new BlockType(Ids.CrossWall, "Cross wall", BlockKind.Corner,   OccupancyLayer.Body,  1, 1, 1));
+            // A doorway one wall high (the Door is two cells tall), so it fits in a row of walls.
+            c.Add(new BlockType(Ids.Doorway,   "Doorway",    BlockKind.Door,     OccupancyLayer.Body,  1, 1, 1));
+            c.Add(new BlockType(Ids.Ramp,      "Ramp",       BlockKind.Stairs,   OccupancyLayer.Body,  1, 1, 2));
+            c.Add(new BlockType(Ids.RoofLow,   "Low roof",   BlockKind.Roof,     OccupancyLayer.Body,  1, 1, 1));
+            c.Add(new BlockType(Ids.Fence,     "Fence",      BlockKind.HalfWall, OccupancyLayer.Body,  1, 1, 1));
 
             c.Add(new BuildMaterial(Ids.Wood,     "Wood",       new PaintColor(255, 255, 255), false));
             c.Add(new BuildMaterial(Ids.Brick,    "Brick",      new PaintColor(255, 255, 255), false));

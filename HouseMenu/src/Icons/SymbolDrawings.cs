@@ -85,6 +85,12 @@ namespace WobblyMods.HouseMenu.Icons
                 case "bigfloor": Floor(c, 5); return true;
                 case "pillar": c.Rect(48, 22, 32, 84); c.Rect(36, 12, 56, 14, 4); c.Rect(36, 102, 56, 14, 4); return true;
                 case "beam": c.Rect(8, 50, 112, 28, 4); c.Line(30, 56, 30, 72, 4, true); c.Line(64, 56, 64, 72, 4, true); c.Line(98, 56, 98, 72, 4, true); return true;
+                case "twall": c.Rect(10, 30, 108, 26, 4); c.Rect(51, 56, 26, 60, 4); return true;
+                case "crosswall": c.Rect(10, 51, 108, 26, 4); c.Rect(51, 10, 26, 108, 4); return true;
+                case "doorway": c.Rect(26, 16, 14, 98); c.Rect(88, 16, 14, 98); c.Rect(26, 16, 76, 12); c.Line(10, 114, 118, 114, 8); return true;
+                case "ramp": c.Poly(12, 112, 116, 112, 116, 36); return true;
+                case "rooflow": c.Poly(8, 96, 120, 96, 120, 58); c.Rect(8, 100, 112, 10, 3); return true;
+                case "fence": c.Rect(16, 44, 12, 68, 3); c.Rect(100, 44, 12, 68, 3); c.Rect(8, 56, 112, 10, 3); c.Rect(8, 84, 112, 10, 3); c.Rect(58, 44, 12, 68, 3); return true;
                 case "corner": c.Poly(18, 18, 50, 18, 50, 78, 110, 78, 110, 110, 18, 110); return true;
                 case "room": House(c, false); return true;
                 case "bigroom": House(c, true); return true;

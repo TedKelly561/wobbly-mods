@@ -111,6 +111,61 @@ namespace WobblyMods.HouseMenu.Build
                     p.Add(Box(cx, h - 0.1f, cz, w, 0.2f, 0.25f));
                     break;
 
+                case BuildCatalog.Ids.TWall:
+                {
+                    // A full wall along X through the cell centre, plus an arm to the +Z edge.
+                    const float half = WallThickness * 0.5f;
+                    p.Add(Box(0f, h * 0.5f, 0f, 1f, h, WallThickness));
+                    p.Add(Box(0f, h * 0.5f, half + (0.5f - half) * 0.5f, WallThickness, h, 0.5f - half));
+                    break;
+                }
+
+                case BuildCatalog.Ids.CrossWall:
+                {
+                    // Walls along X and along Z crossing at the cell centre.
+                    const float half = WallThickness * 0.5f;
+                    float arm = 0.5f - half;
+                    p.Add(Box(0f, h * 0.5f, 0f, 1f, h, WallThickness));
+                    p.Add(Box(0f, h * 0.5f, half + arm * 0.5f, WallThickness, h, arm));
+                    p.Add(Box(0f, h * 0.5f, -half - arm * 0.5f, WallThickness, h, arm));
+                    break;
+                }
+
+                case BuildCatalog.Ids.Doorway:
+                {
+                    // One wall high: two posts and a thin top bar, open in the middle to walk through.
+                    const float post = 0.12f;
+                    const float top = 0.1f;
+                    p.Add(Box(left + post * 0.5f, h * 0.5f, cz, post, h, WallThickness));
+                    p.Add(Box(right - post * 0.5f, h * 0.5f, cz, post, h, WallThickness));
+                    p.Add(Box(cx, h - top * 0.5f, cz, w - 2f * post, top, WallThickness));
+                    break;
+                }
+
+                case BuildCatalog.Ids.Ramp:
+                    // Like the stairs but smooth: good for cars and for sliding down.
+                    p.Add(new BlockPart { Shape = PartShape.Wedge, Center = new Vector3(cx, h * 0.5f, cz), Size = new Vector3(w, h, d) });
+                    p.Add(Ramp(cx, w, h, d));
+                    break;
+
+                case BuildCatalog.Ids.RoofLow:
+                    // A gentler roof: half the height of the normal roof piece.
+                    p.Add(new BlockPart { Shape = PartShape.Wedge, Center = new Vector3(cx, h * 0.25f, cz), Size = new Vector3(w, h * 0.5f, d) });
+                    p.Add(Ramp(cx, w, h * 0.5f, d));
+                    break;
+
+                case BuildCatalog.Ids.Fence:
+                {
+                    // Two rails and two posts, knee high.
+                    const float post = 0.1f;
+                    float fenceH = h * 0.4f;
+                    p.Add(Box(left + post * 0.5f, fenceH * 0.5f, cz, post, fenceH, post));
+                    p.Add(Box(right - post * 0.5f, fenceH * 0.5f, cz, post, fenceH, post));
+                    p.Add(Box(cx, fenceH * 0.85f, cz, w, 0.08f * h, 0.06f));
+                    p.Add(Box(cx, fenceH * 0.4f, cz, w, 0.08f * h, 0.06f));
+                    break;
+                }
+
                 case BuildCatalog.Ids.Window:
                 {
                     // Frame in the block's material, with a glass pane in the middle.

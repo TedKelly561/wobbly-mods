@@ -219,7 +219,7 @@ namespace WobblyMods.BuildMode.Tests
             var p = new PlayerBuildState(2, T.Catalog);
             Assert.Equal("floor", p.Block.Id);
             p.CycleBlock(-1);
-            Assert.Equal("beam", p.Block.Id);
+            Assert.Equal("fence", p.Block.Id); // the last block in the catalog (wraps around)
             p.CycleBlock(1);
             Assert.True(p.SelectBlock("door"));
             Assert.False(p.SelectBlock("rocket"));

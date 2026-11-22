@@ -60,6 +60,12 @@ namespace WobblyMods.HouseMenu
 
         /// <summary>True on the frame a quick tap of the build "undo" button (LB) finished.</summary>
         public bool QuickUndoTapped { get; private set; }
+
+        /// <summary>True on the one frame LB (the quick-undo button) has been held alone for about a second.</summary>
+        public bool QuickUndoHeld { get; private set; }
+
+        private float _undoHeldSince = -1f;
+        private bool _undoHoldFired;
         private bool _toggleFired;              // already toggled during this hold
         private float _nextRepeatTime;
 
@@ -99,6 +105,18 @@ namespace WobblyMods.HouseMenu
             float t = Time.unscaledTime;
             QuickPlaceTapped = _placeTap.Update(place, undo, t);
             QuickUndoTapped = _undoTap.Update(undo, place, t);
+
+            // Holding LB alone for a second (build mode: remove the piece you're looking at). RB spoils it.
+            QuickUndoHeld = false;
+            if (undo && !place)
+            {
+                if (_undoHeldSince < 0f) { _undoHeldSince = t; _undoHoldFired = false; }
+                if (!_undoHoldFired && t - _undoHeldSince >= 0.9f) { _undoHoldFired = true; QuickUndoHeld = true; }
+            }
+            else
+            {
+                _undoHeldSince = -1f;
+            }
 
             // Tab switching uses the same kind of quick tap (LB/RB by default). They're reported every frame, but
             // the menu only uses them while it's open, and build mode only uses its taps while the menu is closed

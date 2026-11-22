@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.30.1";
+        public const string PluginVersion = "0.31.0";
 
         internal static ManualLogSource Log;
 
@@ -47,6 +47,14 @@ namespace WobblyMods.HouseMenu
             Log = Logger;
             CustomModels.Init();
             Outfits.Init(Config);
+            HiddenItems.Load();
+            Fun.Init(Config.Bind("Fun", "SwarmFishLength", 0.22f,
+                "Length in meters of each catfish in the catfish swarm. Skylar asked for about 0.1; very small physics " +
+                "objects jitter and slip through things, so it starts at 0.22.").Value);
+            MenuCheck.Init(Config.Bind("Debug", "MenuSelfTest", false,
+                "Grown-ups only. true = about 15 seconds after the game world loads, place every menu item once in front of " +
+                "player 1, check it stays, remove it, and log \"Menu check: ...\". Items that fail are hidden from the menu " +
+                "(listed in BepInEx\\config\\WobblyMods.hidden-items.txt). Set back to false afterwards.").Value);
             ModelPack.Init(Config.Bind("Furniture", "ModelSize", 2.4f,
                 "Size multiplier for model-pack furniture (the .obj files in plugins\\WobblyMods\\models\\furniture). " +
                 "The log prints each model's size in meters the first time it is placed. Small things (blender, toaster, books...) are 1.8 times bigger again; walls and floors always stay at 2.").Value);
@@ -108,6 +116,8 @@ namespace WobblyMods.HouseMenu
         {
             MenuSounds.Tick();
             Fun.Tick();
+            MenuCheck.Tick();
+            if (Input.GetKeyDown(KeyCode.F3)) Log.LogInfo(WorldCopy.Probe(0));
             if (Time.unscaledTime >= _nextPlayerSync)
             {
                 _nextPlayerSync = Time.unscaledTime + 1f;
@@ -117,6 +127,26 @@ namespace WobblyMods.HouseMenu
             foreach (KeyValuePair<int, RewiredPlayerInput> pair in _controllers)
             {
                 pair.Value.Tick();
+                PlayerSession menu = _sessions.Get(pair.Key);
+                bool menuClosed = menu == null || !menu.IsOpen;
+
+                // A fun tool (bubble gun, paint) is in this player's hands: tap RB shoots it, with the menu closed.
+                if (pair.Value.QuickPlaceTapped && menuClosed && Fun.HasTool(pair.Key))
+                {
+                    string shot = Fun.Fire(pair.Key);
+                    Log.LogInfo("Player " + (pair.Key + 1) + " fun tool: " + shot);
+                    MenuSounds.Play(MenuSound.Pop);
+                    continue;
+                }
+                if (pair.Value.QuickUndoHeld && Build.BuildWorld.Instance != null)
+                {
+                    string removed = Build.BuildWorld.Instance.RemoveLookedAt(pair.Key);
+                    if (removed != null)
+                    {
+                        Log.LogInfo("Player " + (pair.Key + 1) + " hold-LB remove: " + removed);
+                        MenuSounds.Play(MenuSound.Swish);
+                    }
+                }
                 if ((pair.Value.QuickPlaceTapped || pair.Value.QuickUndoTapped) && Build.BuildWorld.Instance != null)
                 {
                     string said = Build.BuildWorld.Instance.QuickAction(pair.Key, pair.Value.QuickPlaceTapped);

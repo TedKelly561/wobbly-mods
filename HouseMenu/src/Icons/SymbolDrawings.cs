@@ -43,6 +43,13 @@ namespace WobblyMods.HouseMenu.Icons
                 case "no": c.Line(30, 30, 98, 98, 20); c.Line(98, 30, 30, 98, 20); return true;
                 case "star": c.Star(64, 66, 52, 22); return true;
                 case "fish": Fish(c); return true;
+                case "swarm":
+                    for (int i = 0; i < 12; i++)
+                    {
+                        float x = 22 + (i % 4) * 28 + ((i / 4) % 2) * 8, y = 30 + (i / 4) * 34;
+                        c.Ellipse(x, y, 9, 5); c.Poly(x + 7, y, x + 15, y - 5, x + 15, y + 5);
+                    }
+                    return true;
                 case "bubble": c.Circle(64, 64, 54); c.Circle(64, 64, 44, true); c.Circle(46, 46, 9); return true;
                 case "parade":
                     for (int i = 0; i < 3; i++)

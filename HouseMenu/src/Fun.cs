@@ -43,29 +43,64 @@ namespace WobblyMods.HouseMenu
             return Paints[PaintIndex[player & 7] % Paints.Length];
         }
 
-        /// <summary>Paints whatever that player is looking at with their next color.</summary>
+        // ---------- Fun tools: pick the tile, the menu closes, then tap RB to shoot (test 2026-11-21: aiming
+        // with the menu open didn't work for either tool, and nothing was logged) ----------
+
+        public enum Tool { None, Bubble, Paint }
+
+        private static readonly Tool[] Tools = new Tool[8];
+
+        public static bool HasTool(int player)
+        {
+            return Tools[player & 7] != Tool.None;
+        }
+
+        /// <summary>Picks up (or puts away) a tool. Returns the message for the menu.</summary>
+        public static string ToggleTool(int player, Tool tool)
+        {
+            int i = player & 7;
+            Tools[i] = Tools[i] == tool ? Tool.None : tool;
+            Plugin.Log.LogInfo("Fun: player " + (player + 1) + " tool is now " + Tools[i] + ".");
+            if (Tools[i] == Tool.None) return "Put away. RB is back to normal.";
+            return tool == Tool.Bubble ? "Bubble gun! Tap RB to shoot. Pick it again to put it away."
+                                       : "Paint brush! Tap RB to paint. Pick it again to put it away.";
+        }
+
+        /// <summary>RB was tapped with a tool out. Always returns a message (it is logged).</summary>
+        public static string Fire(int player)
+        {
+            switch (Tools[player & 7])
+            {
+                case Tool.Bubble: return BubbleGun(player);
+                case Tool.Paint: return Paint(player);
+                default: return "no tool";
+            }
+        }
+
+        /// <summary>Paints the thing in front of that player with their next color.</summary>
         public static string Paint(int player)
         {
             try
             {
-                Collider hit = LookedAt(player, 40f);
-                if (hit == null) return "Point the middle of your screen at something.";
+                string how;
+                Collider hit = Target(player, false, out how);
+                if (hit == null) return Said(player, "paint", "nothing in front to paint");
                 GameObject root = hit.attachedRigidbody != null ? hit.attachedRigidbody.gameObject : hit.gameObject;
                 Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
                 if (renderers.Length == 0)
                 {
                     Renderer inParent = hit.GetComponentInParent<Renderer>();
-                    if (inParent == null) return "That can't be painted.";
+                    if (inParent == null) return Said(player, "paint", root.name + " has nothing to paint (" + how + ")");
                     renderers = new[] { inParent };
                 }
-                if (renderers.Length > 150) return "That's too big to paint.";
+                if (renderers.Length > 150) return Said(player, "paint", root.name + " is too big to paint, " + renderers.Length + " parts (" + how + ")");
 
                 Color color = NextPaint(player);
-                PaintIndex[player & 7]++;
-                int painted = 0;
+                int painted = 0, glued = 0;
                 foreach (Renderer r in renderers)
                 {
-                    if (r is ParticleSystemRenderer || r.isPartOfStaticBatch) continue;
+                    if (r is ParticleSystemRenderer) continue;
+                    if (r.isPartOfStaticBatch) { glued++; continue; }
                     foreach (Material m in r.materials) // instances: only this object changes
                     {
                         if (m == null || m.renderQueue >= 3000) continue;
@@ -74,13 +109,13 @@ namespace WobblyMods.HouseMenu
                         painted++;
                     }
                 }
-                Plugin.Log.LogInfo("Fun: player " + (player + 1) + " painted " + root.name + " (" + painted + " materials).");
-                return painted > 0 ? "Painted!" : "That one is glued into the scenery. Try another.";
+                if (painted > 0) PaintIndex[player & 7]++;
+                return Said(player, "paint", (painted > 0 ? "painted " : "could NOT paint ") + root.name + ": " + painted +
+                            " materials, " + glued + " glued into the scenery (" + how + ")");
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning("Fun: paint failed: " + e.Message);
-                return "That can't be painted.";
+                return Said(player, "paint", "failed: " + e.Message);
             }
         }
 
@@ -90,22 +125,151 @@ namespace WobblyMods.HouseMenu
         {
             try
             {
-                Collider hit = LookedAt(player, 40f);
-                if (hit == null) return "Point the middle of your screen at something.";
+                string how;
+                Collider hit = Target(player, true, out how);
+                if (hit == null) return Said(player, "bubble", "nothing loose in front (cars, balls and Wobblies work)");
                 List<Rigidbody> bodies = BodiesOf(hit);
-                if (bodies.Count == 0) return "That's stuck down. Try something loose, like a car or a ball.";
-                if (bodies[0].GetComponentInParent<FloatBubble>() != null || FloatBubble.Holds(bodies[0])) return "It's already in a bubble!";
+                if (bodies.Count == 0) return Said(player, "bubble", hit.name + " is stuck down (" + how + ")");
+                if (FloatBubble.Holds(bodies[0])) return Said(player, "bubble", "already in a bubble");
 
                 var go = new GameObject("Wobbly bubble");
                 go.AddComponent<FloatBubble>().Begin(bodies);
-                Plugin.Log.LogInfo("Fun: player " + (player + 1) + " bubbled " + bodies[0].transform.root.name + " (" + bodies.Count + " bodies).");
-                return "Bubble!";
+                return Said(player, "bubble", "bubbled " + bodies[0].transform.root.name + ", " + bodies.Count + " bodies (" + how + ")");
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning("Fun: bubble failed: " + e.Message);
-                return "The bubble popped too soon.";
+                return Said(player, "bubble", "failed: " + e.Message);
             }
+        }
+
+        /// <summary>Every press is logged, hit or miss, so a silent failure can't hide.</summary>
+        private static string Said(int player, string tool, string what)
+        {
+            Plugin.Log.LogInfo("Fun: player " + (player + 1) + " " + tool + ": " + what + ".");
+            return char.ToUpperInvariant(what[0]) + what.Substring(1) + ".";
+        }
+
+        /// <summary>
+        /// What a tool acts on. First the exact middle of the screen; if that finds nothing usable (in third person
+        /// the middle is often the ground), aim assist: the closest usable thing within about 35 degrees of where
+        /// the camera looks, up to 25 m away. needBody = it must have a physics body (bubble gun).
+        /// </summary>
+        private static Collider Target(int player, bool needBody, out string how)
+        {
+            how = "middle of the screen";
+            Collider direct = LookedAt(player, 40f);
+            if (direct != null && Usable(direct, needBody)) return direct;
+
+            how = "aim assist";
+            Camera cam = GameBindings.CameraFor(player);
+            if (cam == null) return null;
+            Component me = CharacterOf(player);
+            Type character = GameReflection.FindType("PlayerCharacter");
+            Vector3 from = GameBindings.CharacterPosition(player) ?? cam.transform.position;
+            Vector3 look = cam.transform.forward;
+
+            Collider best = null;
+            float bestScore = float.MaxValue;
+            foreach (Collider c in Physics.OverlapSphere(from + look * 10f, 16f))
+            {
+                if (c == null || c.isTrigger || !Usable(c, needBody)) continue;
+                if (me != null && character != null && c.GetComponentInParent(character) == me) continue;
+                if (c.GetComponentInParent<FloatBubble>() != null || c.GetComponentInParent<Follower>() != null) continue;
+                Vector3 to = c.bounds.center - cam.transform.position;
+                float distance = Vector3.Distance(c.bounds.center, from);
+                if (distance > 25f || distance < 0.6f) continue;
+                float angle = Vector3.Angle(look, to);
+                if (angle > 35f) continue;
+                float score = angle + distance * 0.8f;
+                if (score < bestScore) { bestScore = score; best = c; }
+            }
+            return best;
+        }
+
+        private static bool Usable(Collider c, bool needBody)
+        {
+            if (needBody) return c.attachedRigidbody != null && !c.attachedRigidbody.isKinematic;
+            // Paint: anything that isn't the ground or a whole building.
+            Vector3 size = c.bounds.size;
+            return Mathf.Max(size.x, Mathf.Max(size.y, size.z)) < 25f;
+        }
+
+        private static Component CharacterOf(int player)
+        {
+            List<object> locals = GameReflection.LocalPlayerControllers();
+            if (player < 0 || player >= locals.Count) return null;
+            return (GameReflection.Call(locals[player], "GetPlayerCharacter") ?? GameReflection.Get(locals[player], "playerCharacter")) as Component;
+        }
+
+        // ---------- Catfish swarm (Skylar's request, 2026-11-21): 100 little redtails to scoop into a truck ----------
+
+        private static readonly List<GameObject> SwarmFish = new List<GameObject>();
+        private static float _swarmLength = 0.22f;
+        private static PhysicMaterial _grippy;
+
+        public static void Init(float swarmFishLength)
+        {
+            _swarmLength = Mathf.Clamp(swarmFishLength, 0.05f, 2f);
+        }
+
+        public static string Swarm(int player)
+        {
+            try
+            {
+                Vector3 position;
+                Quaternion rotation;
+                if (!GameBindings.PlacementFor(player, 1f, 3f, out position, out rotation)) return "Couldn't find where you are.";
+                if (_grippy == null) _grippy = new PhysicMaterial("Wobbly catfish") { dynamicFriction = 0.9f, staticFriction = 0.95f, bounciness = 0.05f };
+
+                // A loose block, 5 x 5 x 4, with gaps, so they tumble into a pile instead of bursting apart.
+                float gap = _swarmLength * 1.4f;
+                var rng = new System.Random();
+                int made = 0;
+                for (int i = 0; i < 100; i++)
+                {
+                    int x = i % 5, z = (i / 5) % 5, y = i / 25;
+                    Vector3 at = position + rotation * new Vector3((x - 2) * gap, 0.4f + y * gap, (z - 2) * gap);
+                    GameObject fish = ShapeModels.Build("Swarm redtail", WobblyMods.Core.Shapes.RedtailModel.BuildSimple());
+                    fish.name = "Little redtail";
+                    fish.transform.localScale = Vector3.one * _swarmLength;
+                    fish.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f));
+                    var capsule = fish.AddComponent<CapsuleCollider>();
+                    capsule.direction = 2;      // along the fish (Z)
+                    capsule.radius = 0.15f;     // in fish units (the fish is 1 long before scaling)
+                    capsule.height = 0.95f;
+                    capsule.sharedMaterial = _grippy;
+                    var body = fish.AddComponent<Rigidbody>();
+                    body.mass = 0.4f;
+                    body.drag = 0.2f;
+                    body.angularDrag = 1.5f;
+                    body.collisionDetectionMode = CollisionDetectionMode.Continuous; // small and fast: don't tunnel through a truck bed
+                    SwarmFish.Add(fish);
+                    made++;
+                }
+                SwarmFish.RemoveAll(f => f == null);
+                Plugin.Log.LogInfo("Fun: player " + (player + 1) + " catfish swarm: made " + made + " fish, " + _swarmLength.ToString("0.00") +
+                                   " m long, at " + position.ToString("0.0") + " (" + SwarmFish.Count + " in the world).");
+                return made + " little catfish! Scoop them up.";
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError("Fun: catfish swarm failed: " + e);
+                return "The catfish swam away.";
+            }
+        }
+
+        public static string ClearSwarm()
+        {
+            int n = 0;
+            foreach (GameObject fish in SwarmFish)
+            {
+                if (fish == null) continue;
+                UnityEngine.Object.Destroy(fish);
+                n++;
+            }
+            SwarmFish.Clear();
+            Plugin.Log.LogInfo("Fun: catfish swarm cleared, " + n + " fish.");
+            return n > 0 ? "The little catfish swam home. (" + n + ")" : "No little catfish to clear.";
         }
 
         /// <summary>

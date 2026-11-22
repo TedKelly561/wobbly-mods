@@ -85,6 +85,24 @@ namespace WobblyMods.Core.Shapes
             return parts;
         }
 
+        /// <summary>
+        /// A light version for crowds (the catfish swarm: 100 at once): dark body, cream belly, red tail, three
+        /// parts and few triangles. Same size and direction as Build(): length 1 along Z, nose at +0.5.
+        /// </summary>
+        public static List<ColoredMesh> BuildSimple()
+        {
+            var parts = new List<ColoredMesh>();
+            float[] z = { 0.5f, 0.44f, 0.3f, 0.1f, -0.12f, -0.3f };
+            float[] r = { 0f, 0.11f, 0.165f, 0.15f, 0.08f, 0.045f };
+            var path = new List<V3>();
+            var radii = new List<float>();
+            for (int i = 0; i < z.Length; i++) { path.Add(new V3(0f, 0f, z[i])); radii.Add(r[i]); }
+            parts.Add(new ColoredMesh(Shapes.Tube(path, radii, 8).Transformed(new V3(1f, 0.85f, 1f), 0f, 0f, V3.Zero), Body));
+            parts.Add(new ColoredMesh(Shapes.Ellipsoid(new V3(0.14f, 0.09f, 0.28f), 8, 5).Transformed(new V3(1f, 1f, 1f), 0f, 0f, new V3(0f, -0.07f, 0.13f)), Belly));
+            parts.Add(Fin(Tail, 0.03f, 0.26f, -0.035f, 0.44f, -0.17f, 0.5f, -0.13f, 0.44f, 0f, 0.5f, 0.13f, 0.44f, 0.17f, 0.26f, 0.035f));
+            return parts;
+        }
+
         /// <summary>A flat fin standing in the Y-Z plane. Pairs are (distance toward the tail, height).</summary>
         private static ColoredMesh Fin(Rgb color, float thickness, params float[] xy)
         {

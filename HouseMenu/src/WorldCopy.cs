@@ -77,6 +77,60 @@ namespace WobblyMods.HouseMenu
             }
         }
 
+        /// <summary>
+        /// For grown-ups (F3): describes the thing in the middle of player 1's view, so we can learn why real
+        /// furniture can't be copied yet: each parent up the tree with its part count, size, and whether its meshes
+        /// are glued into the scenery's combined mesh.
+        /// </summary>
+        public static string Probe(int player)
+        {
+            try
+            {
+                Camera cam = GameBindings.CameraFor(player);
+                if (cam == null) return "Probe: no camera.";
+                Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                RaycastHit[] hits = Physics.RaycastAll(ray, 25f);
+                Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+                Type character = GameReflection.FindType("PlayerCharacter");
+                var sb = new System.Text.StringBuilder("Probe (F3), nearest first:");
+                int shown = 0;
+                foreach (RaycastHit hit in hits)
+                {
+                    if (hit.collider == null || hit.collider.isTrigger) continue;
+                    if (character != null && hit.collider.GetComponentInParent(character) != null) continue;
+                    sb.Append("\n  HIT ").Append(hit.collider.GetType().Name).Append(" at ").Append(hit.distance.ToString("0.0")).Append(" m, body: ")
+                      .Append(hit.collider.attachedRigidbody != null ? hit.collider.attachedRigidbody.name : "none");
+                    int level = 0;
+                    for (Transform t = hit.collider.transform; t != null && level < 6; t = t.parent, level++)
+                    {
+                        Renderer[] rs = t.GetComponentsInChildren<Renderer>();
+                        int batched = 0, combined = 0, readable = 0;
+                        foreach (Renderer r in rs)
+                        {
+                            if (r.isPartOfStaticBatch) batched++;
+                            MeshFilter mf = r.GetComponent<MeshFilter>();
+                            if (mf != null && mf.sharedMesh != null)
+                            {
+                                if (mf.sharedMesh.name.StartsWith("Combined Mesh", StringComparison.Ordinal)) combined++;
+                                if (mf.sharedMesh.isReadable) readable++;
+                            }
+                        }
+                        Bounds b;
+                        string size = TryBounds(t.gameObject, false, out b) ? b.size.x.ToString("0.0") + "x" + b.size.y.ToString("0.0") + "x" + b.size.z.ToString("0.0") : "no size";
+                        sb.Append("\n    up ").Append(level).Append(": '").Append(t.name).Append("' parts ").Append(rs.Length).Append(", size ").Append(size)
+                          .Append(", static-batched ").Append(batched).Append(", combined-mesh ").Append(combined).Append(", readable ").Append(readable)
+                          .Append(", children ").Append(t.childCount);
+                    }
+                    if (++shown >= 3) break;
+                }
+                return shown == 0 ? "Probe (F3): nothing in the middle of the view." : sb.ToString();
+            }
+            catch (Exception e)
+            {
+                return "Probe failed: " + e.Message;
+            }
+        }
+
         /// <summary>Places a copy from that slot in front of the player. Returns the new object, or null with a message.</summary>
         public static GameObject Paste(int player, int slot, out string message)
         {

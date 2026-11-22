@@ -293,5 +293,24 @@ namespace WobblyMods.Core.Tests
             Assert.True(sideBytes.Length > 1000, $"Side BMP size {sideBytes.Length} <= 1000");
             Assert.True(frontBytes.Length > 1000, $"Front BMP size {frontBytes.Length} <= 1000");
         }
+
+
+        [Fact]
+        public void SimpleFishIsLightAndTheSameSize()
+        {
+            var parts = WobblyMods.Core.Shapes.RedtailModel.BuildSimple();
+            Assert.Equal(3, parts.Count);
+            int triangles = 0;
+            float minZ = 9f, maxZ = -9f;
+            foreach (var p in parts)
+            {
+                triangles += p.Mesh.Triangles.Count / 3;
+                minZ = System.Math.Min(minZ, p.Mesh.Min.Z);
+                maxZ = System.Math.Max(maxZ, p.Mesh.Max.Z);
+            }
+            Assert.True(triangles < 400, "too many triangles for a crowd: " + triangles);
+            Assert.Equal(-0.5f, minZ, 2);
+            Assert.Equal(0.5f, maxZ, 2);
+        }
     }
 }

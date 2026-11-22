@@ -67,25 +67,9 @@ namespace WobblyMods.HouseMenu
                 tab.Icon = TabTheme.IconFor(category);
                 if (category == "Furniture")
                 {
-                    // "Copy this": look at any real thing in the world and keep a copy (WorldCopy). The copies
-                    // page shows a photo per slot; an empty slot shows a dashed box.
-                    tab.Add("Copy this", () => { _session.Status = WorldCopy.Copy(Player); }).Icon = SymbolIcons.Key("camera");
-                    var copies = new MenuPage("My copies");
-                    MenuTab copyGrid = copies.MainTab().AsGrid();
-                    for (int i = 0; i < WorldCopy.Slots; i++)
-                    {
-                        int slot = i;
-                        Icons.IconCache.SetFallback(WorldCopy.IconKey(slot), SymbolIcons.Key("ghostblock"));
-                        copyGrid.Add("Copy " + (slot + 1), () =>
-                        {
-                            string message;
-                            GameObject placed = WorldCopy.Paste(Player, slot, out message);
-                            _session.Status = message;
-                            if (placed != null) _session.Undo.Push("placed a copy", () => ObjectEdits.Remove(placed));
-                        }).Icon = WorldCopy.IconKey(slot);
-                    }
-                    tab.AddSubPage("My copies", copies).Icon = SymbolIcons.Key("load");
-
+                    // "Copy this" / "My copies" (WorldCopy) are out of the menu: in test 23 every try said "too big" or
+                    // "part of the building". Parent's rule: if it's in the menu, it works. F3 logs a probe of the thing
+                    // in view (WorldCopy.Probe) so the cause can be found; they come back when copying is proven.
                     // All the rest of the game's furniture, one page per room (a photo of one item is the room's picture).
                     foreach (string[] room in FurnitureCatalog.Rooms)
                     {
@@ -93,6 +77,7 @@ namespace WobblyMods.HouseMenu
                         MenuTab grid = page.MainTab().AsGrid();
                         foreach (CatalogItem item in FurnitureCatalog.InCategory(room[0]))
                         {
+                            if (HiddenItems.IsHidden(item.Id)) continue;
                             CatalogItem captured = item;
                             grid.Add(item.DisplayName, () => Spawn(captured)).Icon = item.Id;
                         }
@@ -112,6 +97,7 @@ namespace WobblyMods.HouseMenu
                 }
                 foreach (CatalogItem item in FurnitureCatalog.InCategory(category))
                 {
+                    if (HiddenItems.IsHidden(item.Id)) continue;
                     CatalogItem captured = item;
                     tab.Add(item.DisplayName, () => Spawn(captured)).Icon = item.Id;
                 }
@@ -192,13 +178,15 @@ namespace WobblyMods.HouseMenu
         private void Spawn(CatalogItem item)
         {
             _session.Status = "Placing " + item.DisplayName + "...";
+            Plugin.Log.LogInfo("Menu pick: player " + (Player + 1) + " picked " + item.Id + " (" + item.DisplayName + ").");
             PlayerSession session = _session;
             GameBindings.Spawn(item, Player, (placed, problem) =>
             {
                 if (placed == null)
                 {
                     session.Status = "Couldn't place " + item.DisplayName + ".";
-                    Plugin.Log.LogWarning("Player " + (Player + 1) + " couldn't place " + item.Id + ": " + problem);
+                    Plugin.Log.LogWarning("Menu pick FAILED: player " + (Player + 1) + " couldn't place " + item.Id + ": " + problem);
+                    if (problem != null && problem.Contains("couldn't place")) HiddenItems.Hide(item.Id, problem);
                     return;
                 }
 
@@ -232,7 +220,7 @@ namespace WobblyMods.HouseMenu
             CatalogItem item = target != null ? FurnitureCatalog.Find(GameBindings.CatalogIdOf(target)) : null;
             if (item == null)
             {
-                _session.Status = WorldCopy.Copy(Player);
+                _session.Status = "Copy works on things you placed from this menu. Look at one, then press Copy.";
                 return;
             }
 
@@ -280,14 +268,20 @@ namespace WobblyMods.HouseMenu
         {
             var page = new MenuPage("Fun");
             MenuTab grid = page.MainTab().AsGrid();
-            grid.Add("Bubble gun", () => { _session.Status = Fun.BubbleGun(Player); }).Icon = SymbolIcons.Key("bubble");
+            // Tools: picking one closes the menu; then tap RB to shoot (Fun.Fire, from Plugin.Update).
+            MenuItem bubble = grid.Add("Bubble gun", () => { _session.Status = Fun.ToggleTool(Player, Fun.Tool.Bubble); });
+            bubble.Icon = SymbolIcons.Key("bubble");
+            bubble.ClosesMenu = true;
             MenuItem paint = null;
-            paint = grid.Add("Paint this", () =>
+            paint = grid.Add("Paint brush", () =>
             {
-                _session.Status = Fun.Paint(Player);
+                _session.Status = Fun.ToggleTool(Player, Fun.Tool.Paint);
                 paint.Icon = SymbolIcons.Key("paint", Fun.NextPaint(Player));
             });
             paint.Icon = SymbolIcons.Key("paint", Fun.NextPaint(Player));
+            paint.ClosesMenu = true;
+            grid.Add("Catfish swarm", () => { _session.Status = Fun.Swarm(Player); }).Icon = SymbolIcons.Key("swarm");
+            grid.Add("Clear swarm", () => { _session.Status = Fun.ClearSwarm(); }).Icon = SymbolIcons.Key("trash");
             grid.Add("Redtail pet", () => { _session.Status = Fun.TogglePet(Player); }).Icon = SymbolIcons.Key("fish");
             grid.Add("Catfish parade", () => { _session.Status = Fun.ToggleParade(Player); }).Icon = SymbolIcons.Key("parade");
             grid.Add("Every car a catfish", () => { _session.Status = Fun.ToggleCatfishWorld(); }).Icon = SymbolIcons.Key("redtail");

@@ -501,6 +501,34 @@ namespace WobblyMods.HouseMenu.Build
             return r.Ok ? "Removed " + r.Message.Replace("Remove ", "").ToLowerInvariant() + "." : r.Message + ".";
         }
 
+        /// <summary>
+        /// Parent's request (2026-11-21): hold LB about a second to remove the piece under the crosshair, anywhere
+        /// in the build. Only while that player's Build mode is on and their menu is closed. Null = didn't apply.
+        /// </summary>
+        public string RemoveLookedAt(int playerIndex)
+        {
+            BuildPlayer p;
+            if (!_players.TryGetValue(playerIndex, out p) || !p.KeepGhost || p.Session.IsOpen) return null;
+            Camera cam = GameBindings.CameraFor(playerIndex);
+            if (cam == null) return "Can't find your camera.";
+
+            Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            RaycastHit[] hits = Physics.RaycastAll(ray, 40f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            foreach (RaycastHit hit in hits)
+            {
+                // The cell just inside the surface that was hit; a thin wall can sit on the cell's edge, so also
+                // try the cell just outside it.
+                PlacedBlock block = _model.GetBlockAt(_grid.CellBehindSurface(BuildRenderer.ToCore(hit.point), BuildRenderer.ToCore(hit.normal)))
+                                    ?? _model.GetBlockAt(_grid.WorldToCell(BuildRenderer.ToCore(hit.point - hit.normal * 0.02f)))
+                                    ?? _model.GetBlockAt(_grid.WorldToCell(BuildRenderer.ToCore(hit.point + hit.normal * 0.02f)));
+                if (block == null) continue;
+                EditResult r = _editor.RemoveBlock(playerIndex, block.Id);
+                return r.Ok ? "Removed the piece you were looking at." : r.Message + ".";
+            }
+            return "Look right at a piece you built, then hold LB.";
+        }
+
         public string Undo(BuildPlayer p)
         {
             return _editor.Undo(p.Index).Message + ".";

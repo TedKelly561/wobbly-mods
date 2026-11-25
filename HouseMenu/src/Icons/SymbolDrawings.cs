@@ -50,6 +50,12 @@ namespace WobblyMods.HouseMenu.Icons
                         c.Ellipse(x, y, 9, 5); c.Poly(x + 7, y, x + 15, y - 5, x + 15, y + 5);
                     }
                     return true;
+                case "aquarium":
+                    // A building with a wavy roof line and a big fish in its window.
+                    c.Rect(10, 40, 108, 76, 6); c.Poly(4, 44, 64, 10, 124, 44);
+                    c.Rect(22, 54, 84, 44, 6, true);
+                    c.Ellipse(58, 76, 22, 13); c.Poly(76, 76, 96, 62, 96, 90); c.Circle(46, 73, 3, true);
+                    return true;
                 case "bubble": c.Circle(64, 64, 54); c.Circle(64, 64, 44, true); c.Circle(46, 46, 9); return true;
                 case "parade":
                     for (int i = 0; i < 3; i++)

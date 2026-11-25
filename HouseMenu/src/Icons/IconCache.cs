@@ -85,6 +85,7 @@ namespace WobblyMods.HouseMenu.Icons
             _started = true;
             foreach (CatalogItem item in FurnitureCatalog.Items)
             {
+                if (item.Symbol != null) continue; // drawn symbol, no photo (and no need to build it just for a picture)
                 Waiting.Enqueue(item);
             }
             Plugin.Log.LogInfo("Menu pictures: making " + Waiting.Count + " item pictures in the background (preview layer " +

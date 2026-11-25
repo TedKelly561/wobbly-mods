@@ -96,7 +96,7 @@ namespace WobblyMods.HouseMenu
                         {
                             if (HiddenItems.IsHidden(item.Id)) continue;
                             CatalogItem captured = item;
-                            grid.Add(item.DisplayName, () => Spawn(captured)).Icon = item.Id;
+                            grid.Add(item.DisplayName, () => Spawn(captured)).Icon = item.Symbol != null ? SymbolIcons.Key(item.Symbol) : item.Id;
                         }
                         tab.AddSubPage(room[0], page).Icon = room[1];
                     }
@@ -116,7 +116,7 @@ namespace WobblyMods.HouseMenu
                 {
                     if (HiddenItems.IsHidden(item.Id)) continue;
                     CatalogItem captured = item;
-                    tab.Add(item.DisplayName, () => Spawn(captured)).Icon = item.Id;
+                    tab.Add(item.DisplayName, () => Spawn(captured)).Icon = item.Symbol != null ? SymbolIcons.Key(item.Symbol) : item.Id;
                 }
             }
 

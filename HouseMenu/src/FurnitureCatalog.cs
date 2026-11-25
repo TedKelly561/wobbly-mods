@@ -29,6 +29,12 @@ namespace WobblyMods.HouseMenu
 
         /// <summary>How far in front of the player to place it, in meters. 0 = automatic from Scale.</summary>
         public float Distance;
+
+        /// <summary>
+        /// A drawn symbol to use as the tile picture instead of a photo (SymbolDrawings name), for things too big
+        /// to photograph sensibly, like the whole aquarium. Null = take a photo.
+        /// </summary>
+        public string Symbol;
     }
 
     /// <summary>
@@ -98,6 +104,13 @@ namespace WobblyMods.HouseMenu
             {
                 Id = "fishtank", DisplayName = "Giant fish tank", Category = "Animals",
                 Build = Tanks.FishTank.Build, Distance = 7f
+            },
+            // Skylar's whole aquarium: one big building to walk around in (Tanks/Aquarium.cs). It is 44 x 40 m,
+            // so it is placed well in front of the player and needs a big open flat spot.
+            new CatalogItem
+            {
+                Id = "aquarium", DisplayName = "Aquarium", Category = "Animals",
+                Build = Tanks.Aquarium.Build, Distance = 27f, Symbol = "aquarium"
             },
             // Skylar's aquarium tunnel and planted tank (after the real aquarium visit, 2026-11-25).
             new CatalogItem

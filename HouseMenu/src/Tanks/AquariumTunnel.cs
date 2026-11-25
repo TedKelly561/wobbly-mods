@@ -25,11 +25,23 @@ namespace WobblyMods.HouseMenu.Tanks
         private static readonly Color Leaf = new Color(0.25f, 0.72f, 0.22f);
         private static readonly Color LeafDark = new Color(0.12f, 0.5f, 0.2f);
 
+        public const float TankLength = Length, TankWidth = Width, TankHeight = Height, TunnelRadius = Radius;
+
         public static GameObject Build(Vector3 position, Quaternion rotation)
         {
             var root = new GameObject("Aquarium tunnel");
             root.transform.SetPositionAndRotation(position, rotation);
-            Transform t = root.transform;
+            BuildInto(root.transform, false, null);
+            return root;
+        }
+
+        /// <summary>
+        /// Builds the tunnel tank under t. habitat = the fuller Amazon flooded-forest version for the aquarium
+        /// building: sunken trees, other river fish, floating plants and light rays. The redtails' Swim components
+        /// are added to redtails (for the feeding button).
+        /// </summary>
+        public static void BuildInto(Transform t, bool habitat, List<Swim> redtails)
+        {
             var rng = new System.Random(7);
             Material water = TankMaterials.Tinted(Water);
             Material sand = TankMaterials.Solid(Sand);
@@ -119,8 +131,58 @@ namespace WobblyMods.HouseMenu.Tanks
                     swim.RadiusZ = Length / 2f - 1.6f;
                     swim.Speed = side * (0.2f + (float)rng.NextDouble() * 0.12f);
                 }
+                if (redtails != null) redtails.Add(swim);
             }
-            return root;
+            if (!habitat) return;
+
+            // The flooded forest: drowned tree trunks standing in the water, with roots spreading on the sand.
+            float[][] trees = { new[] { -4.6f, -4.5f }, new[] { -3.7f, 3.5f }, new[] { 4.4f, -1.5f }, new[] { 3.6f, 5.2f }, new[] { -4.9f, 0.3f } };
+            foreach (float[] tree in trees)
+            {
+                var foot = new Vector3(tree[0], 0.2f, tree[1]);
+                Log(t, foot, foot + new Vector3(((float)rng.NextDouble() - 0.5f) * 0.8f, Height - 0.4f, ((float)rng.NextDouble() - 0.5f) * 0.8f), 0.22f);
+                for (int r = 0; r < 5; r++)
+                {
+                    float a = r * 1.26f + (float)rng.NextDouble();
+                    Log(t, foot + new Vector3(Mathf.Cos(a) * 1.1f, 0f, Mathf.Sin(a) * 1.1f), foot + Vector3.up * 1.3f, 0.07f);
+                }
+            }
+
+            // Floating plants on the surface, and shafts of light coming down between them.
+            Material pad = TankMaterials.Solid(LeafDark);
+            Material ray = TankMaterials.Tinted(new Color(1f, 1f, 0.75f, 0.07f));
+            for (int i = 0; i < 16; i++)
+            {
+                float x = ((float)rng.NextDouble() - 0.5f) * (Width - 1.5f), z = ((float)rng.NextDouble() - 0.5f) * (Length - 1.5f);
+                GameObject lily = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                Object.DestroyImmediate(lily.GetComponent<Collider>());
+                lily.name = "floating plant";
+                lily.transform.SetParent(t, false);
+                float size = 0.5f + (float)rng.NextDouble() * 0.7f;
+                lily.transform.localPosition = new Vector3(x, Height - 0.02f, z);
+                lily.transform.localScale = new Vector3(size, 0.015f, size);
+                lily.GetComponent<Renderer>().sharedMaterial = pad;
+                if (i % 3 == 0 && Mathf.Abs(x) > Radius + 0.6f)
+                {
+                    GameObject shaft = FishTank.Box(t, "light ray", new Vector3(x + 0.4f, Height / 2f, z), new Vector3(0.5f, Height - 0.4f, 0.5f), ray, false);
+                    shaft.transform.localRotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 90f, 9f);
+                }
+            }
+
+            // Other river fish alongside the redtails (the game's own fish models).
+            string[] river = { "Pike", "Carp", "Carp", "Eel", "Bream", "Trout" };
+            for (int i = 0; i < river.Length; i++)
+            {
+                float side = i % 2 == 0 ? -1f : 1f;
+                Aquarium.GameFish(t, river[i], 1.1f + (float)rng.NextDouble() * 0.5f,
+                    new Vector3(side * (Radius + (Width / 2f - Radius) / 2f), 2.6f + (float)rng.NextDouble() * 3f, ((float)rng.NextDouble() - 0.5f) * 3f),
+                    (Width / 2f - Radius) / 2f - 0.6f, Length / 2f - 2f, side * (0.3f + (float)rng.NextDouble() * 0.2f), 0.2f, rng);
+            }
+            // A stingray resting over the sand on each side.
+            for (int s = -1; s <= 1; s += 2)
+            {
+                Aquarium.GameFish(t, "StingRay", 1.6f, new Vector3(s * (Radius + 1.7f), 0.55f, 0f), 0.9f, 4.5f, s * 0.12f, 0.04f, rng);
+            }
         }
 
         /// <summary>A planted wall tank: a dark frame, glass, sand, lots of plants, branches and a few little fish.</summary>
@@ -282,7 +344,7 @@ namespace WobblyMods.HouseMenu.Tanks
         // ---- Pieces ----
 
         /// <summary>A leafy water plant: a few long leaves fanning up from one spot, swaying.</summary>
-        private static void Plant(Transform parent, Vector3 at, float tall, System.Random rng)
+        internal static void Plant(Transform parent, Vector3 at, float tall, System.Random rng)
         {
             var plant = new GameObject("plant");
             plant.transform.SetParent(parent, false);
@@ -310,7 +372,7 @@ namespace WobblyMods.HouseMenu.Tanks
         }
 
         /// <summary>A branch or sunken log between two points.</summary>
-        private static void Log(Transform parent, Vector3 from, Vector3 to, float radius)
+        internal static void Log(Transform parent, Vector3 from, Vector3 to, float radius)
         {
             GameObject log = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             Object.DestroyImmediate(log.GetComponent<Collider>());

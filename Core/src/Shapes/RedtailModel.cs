@@ -15,7 +15,8 @@ namespace WobblyMods.Core.Shapes
         public static readonly Rgb Body = new Rgb(40, 40, 46);
         public static readonly Rgb Belly = new Rgb(245, 235, 205);
         public static readonly Rgb Tail = new Rgb(255, 77, 13);
-        public static readonly Rgb Whisker = new Rgb(60, 60, 66);
+        public static readonly Rgb Whisker = new Rgb(236, 236, 226);   // long and pale, as on the real fish (aquarium photos, 2026-11-25)
+        public static readonly Rgb Stripe = new Rgb(250, 250, 244);    // the bold white band along each side
         public static readonly Rgb EyeWhite = new Rgb(255, 255, 255);
         public static readonly Rgb Pupil = new Rgb(0, 0, 0);
 
@@ -34,7 +35,21 @@ namespace WobblyMods.Core.Shapes
 
             // Cream belly under the front two thirds, and the cream lower lip.
             parts.Add(new ColoredMesh(Shapes.Ellipsoid(new V3(0.15f, 0.1f, 0.3f), 24, 14).Transformed(one, 0f, 0f, new V3(0f, -0.07f, 0.13f)), Belly));
-            parts.Add(new ColoredMesh(Shapes.Ellipsoid(new V3(0.105f, 0.035f, 0.07f), 16, 8).Transformed(one, 0f, 0f, new V3(0f, -0.035f, 0.435f)), Belly));
+            parts.Add(new ColoredMesh(Shapes.Ellipsoid(new V3(0.125f, 0.05f, 0.08f), 16, 8).Transformed(one, 0f, 0f, new V3(0f, -0.04f, 0.415f)), Stripe));
+
+            // The white band along each side, from behind the mouth to the tail (the real fish's most striking mark):
+            // a flattened tube that follows the body's side.
+            for (int s = -1; s <= 1; s += 2)
+            {
+                var side = new List<V3>();
+                var width = new List<float>();
+                for (int i = 3; i < z.Length; i++)
+                {
+                    side.Add(new V3(s * r[i] * 0.93f, -0.012f, z[i]));
+                    width.Add(i == 3 ? 0.012f : (i == z.Length - 1 ? 0.03f : 0.034f));
+                }
+                parts.Add(new ColoredMesh(Shapes.Tube(side, width, 8), Stripe));
+            }
 
             // Tail fin: forked, with rounded lobes.
             parts.Add(Fin(Tail, 0.02f,
@@ -44,6 +59,9 @@ namespace WobblyMods.Core.Shapes
             // Back fin (rounded, swept back), and the small red fin behind it.
             parts.Add(Fin(Body, 0.016f,
                 -0.12f, 0.1f, -0.08f, 0.2f, -0.02f, 0.27f, 0.05f, 0.3f, 0.1f, 0.28f, 0.13f, 0.2f, 0.14f, 0.1f));
+            // Its orange-red trailing edge: the same shape pushed up and back a little, thinner, so only the rim shows.
+            parts.Add(Fin(Tail, 0.008f,
+                -0.1f, 0.12f, -0.06f, 0.21f, 0f, 0.28f, 0.07f, 0.312f, 0.125f, 0.295f, 0.155f, 0.21f, 0.16f, 0.1f));
             parts.Add(Fin(Tail, 0.014f,
                 0.19f, 0.03f, 0.22f, 0.13f, 0.27f, 0.16f, 0.31f, 0.13f, 0.33f, 0.03f));
 

@@ -99,6 +99,22 @@ namespace WobblyMods.HouseMenu
                 Id = "fishtank", DisplayName = "Giant fish tank", Category = "Animals",
                 Build = Tanks.FishTank.Build, Distance = 7f
             },
+            // Skylar's aquarium tunnel and planted tank (after the real aquarium visit, 2026-11-25).
+            new CatalogItem
+            {
+                Id = "aquariumtunnel", DisplayName = "Catfish tunnel", Category = "Animals",
+                Build = Tanks.AquariumTunnel.Build, Distance = 12f
+            },
+            new CatalogItem
+            {
+                Id = "plantedtank", DisplayName = "Planted tank", Category = "Animals",
+                Build = Tanks.AquariumTunnel.BuildPlanted, Distance = 4f
+            },
+            new CatalogItem
+            {
+                Id = "mangrovetank", DisplayName = "Mangrove tank", Category = "Animals",
+                Build = Tanks.AquariumTunnel.BuildMangrove, Distance = 4f
+            },
             new CatalogItem
             {
                 Id = "smallfishtank", DisplayName = "Small fish tank", Category = "Animals",

@@ -50,6 +50,12 @@ namespace WobblyMods.HouseMenu.Icons
                         c.Ellipse(x, y, 9, 5); c.Poly(x + 7, y, x + 15, y - 5, x + 15, y + 5);
                     }
                     return true;
+                case "bigaquarium":
+                    // A tall building with five rows of windows, a pointed glass roof and a fish.
+                    c.Rect(26, 30, 76, 90, 4); c.Poly(18, 34, 64, 6, 110, 34);
+                    for (int row = 0; row < 5; row++) c.Rect(34, 38 + row * 16, 60, 8, 2, true);
+                    c.Ellipse(60, 78, 18, 11); c.Poly(74, 78, 92, 66, 92, 90); c.Circle(50, 75, 3, true);
+                    return true;
                 case "aquarium":
                     // A building with a wavy roof line and a big fish in its window.
                     c.Rect(10, 40, 108, 76, 6); c.Poly(4, 44, 64, 10, 124, 44);

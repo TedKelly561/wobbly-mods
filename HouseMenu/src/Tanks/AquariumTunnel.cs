@@ -31,7 +31,7 @@ namespace WobblyMods.HouseMenu.Tanks
         {
             var root = new GameObject("Aquarium tunnel");
             root.transform.SetPositionAndRotation(position, rotation);
-            BuildInto(root.transform, false, null);
+            BuildInto(root.transform, false, null, true);
             return root;
         }
 
@@ -40,7 +40,11 @@ namespace WobblyMods.HouseMenu.Tanks
         /// building: sunken trees, other river fish, floating plants and light rays. The redtails' Swim components
         /// are added to redtails (for the feeding button).
         /// </summary>
-        public static void BuildInto(Transform t, bool habitat, List<Swim> redtails)
+        /// <param name="closed">
+        /// true = a tank on its own: side glass and a water surface at the top. false = the bottom of a taller tank
+        /// (the big aquarium's river): the caller adds its own glass, and there is no surface here.
+        /// </param>
+        public static void BuildInto(Transform t, bool habitat, List<Swim> redtails, bool closed)
         {
             var rng = new System.Random(7);
             Material water = TankMaterials.Tinted(Water);
@@ -73,7 +77,7 @@ namespace WobblyMods.HouseMenu.Tanks
             // The tank's outside glass (sides and a water surface on top), and stone end walls around each doorway.
             for (int s = -1; s <= 1; s += 2)
             {
-                FishTank.Box(t, "side glass", new Vector3(s * Width / 2f, Height / 2f, 0f), new Vector3(0.15f, Height, Length), water, true);
+                if (closed) FishTank.Box(t, "side glass", new Vector3(s * Width / 2f, Height / 2f, 0f), new Vector3(0.15f, Height, Length), water, true);
                 // End wall: one piece each side of the doorway, and one above it.
                 float z = s * Length / 2f;
                 for (int x = -1; x <= 1; x += 2)
@@ -87,7 +91,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 portal.AddComponent<MeshFilter>().sharedMesh = PortalMesh();
                 portal.AddComponent<MeshRenderer>().sharedMaterial = stone;
             }
-            FishTank.Box(t, "water surface", new Vector3(0f, Height - 0.05f, 0f), new Vector3(Width, 0.06f, Length), water, false);
+            if (closed) FishTank.Box(t, "water surface", new Vector3(0f, Height - 0.05f, 0f), new Vector3(Width, 0.06f, Length), water, false);
 
             // A sunken log lying across the top of the tunnel, like the real one.
             Log(t, new Vector3(-4.6f, 2.2f, -2.5f), new Vector3(4.4f, 4.3f, 1.5f), 0.55f);
@@ -151,7 +155,7 @@ namespace WobblyMods.HouseMenu.Tanks
             // Floating plants on the surface, and shafts of light coming down between them.
             Material pad = TankMaterials.Solid(LeafDark);
             Material ray = TankMaterials.Tinted(new Color(1f, 1f, 0.75f, 0.07f));
-            for (int i = 0; i < 16; i++)
+            for (int i = 0; closed && i < 16; i++)
             {
                 float x = ((float)rng.NextDouble() - 0.5f) * (Width - 1.5f), z = ((float)rng.NextDouble() - 0.5f) * (Length - 1.5f);
                 GameObject lily = GameObject.CreatePrimitive(PrimitiveType.Cylinder);

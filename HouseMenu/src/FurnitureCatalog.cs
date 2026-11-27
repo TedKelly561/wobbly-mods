@@ -107,9 +107,16 @@ namespace WobblyMods.HouseMenu
             },
             // Skylar's whole aquarium: one big building to walk around in (Tanks/Aquarium.cs). It is 44 x 40 m,
             // so it is placed well in front of the player and needs a big open flat spot.
+            // The BIG one: five floors, 52 x 52 m and 50 m tall (Tanks/BigAquarium.cs). It needs a very big open
+            // flat place, and is put 35 m in front of the player with the entrance facing them.
             new CatalogItem
             {
-                Id = "aquarium", DisplayName = "Aquarium", Category = "Animals",
+                Id = "bigaquarium", DisplayName = "Big aquarium", Category = "Animals",
+                Build = Tanks.BigAquarium.Build, Distance = 35f, Symbol = "bigaquarium"
+            },
+            new CatalogItem
+            {
+                Id = "aquarium", DisplayName = "Little aquarium", Category = "Animals",
                 Build = Tanks.Aquarium.Build, Distance = 27f, Symbol = "aquarium"
             },
             // Skylar's aquarium tunnel and planted tank (after the real aquarium visit, 2026-11-25).

@@ -41,7 +41,7 @@ namespace WobblyMods.HouseMenu.Tanks
             {
                 var amazon = new GameObject("Amazon flooded forest");
                 amazon.transform.SetParent(t, false);
-                AquariumTunnel.BuildInto(amazon.transform, true, redtails);
+                AquariumTunnel.BuildInto(amazon.transform, true, redtails, true);
                 Sign(t, new Vector3(4.6f, 0f, 9.2f), 180f, sign => { GameObject f = ShapeModels.Redtail(); f.transform.SetParent(sign, false); f.transform.localScale = Vector3.one * 1.1f; f.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); });
             });
             parts += Safely("feeding button", () => Feeding(t, redtails));
@@ -54,7 +54,7 @@ namespace WobblyMods.HouseMenu.Tanks
             return root;
         }
 
-        private static int Safely(string what, Action build)
+        internal static int Safely(string what, Action build)
         {
             try
             {
@@ -114,7 +114,7 @@ namespace WobblyMods.HouseMenu.Tanks
             FishTank.Box(t, "front desk", new Vector3(-6f, 0.6f, 15f), new Vector3(4f, 1.0f, 1.2f), trim, true);
         }
 
-        private static void Lamp(Transform t, Vector3 at, Color color, float range, float intensity)
+        internal static void Lamp(Transform t, Vector3 at, Color color, float range, float intensity)
         {
             var go = new GameObject("lamp");
             go.transform.SetParent(t, false);
@@ -341,7 +341,7 @@ namespace WobblyMods.HouseMenu.Tanks
         // ---------- Building blocks ----------
 
         /// <summary>A look-only shape (no collider) under a parent.</summary>
-        private static GameObject Shape(Transform parent, PrimitiveType kind, Vector3 at, Vector3 scale, Quaternion rotation, Material material)
+        internal static GameObject Shape(Transform parent, PrimitiveType kind, Vector3 at, Vector3 scale, Quaternion rotation, Material material)
         {
             GameObject go = GameObject.CreatePrimitive(kind);
             UnityEngine.Object.DestroyImmediate(go.GetComponent<Collider>());
@@ -378,7 +378,7 @@ namespace WobblyMods.HouseMenu.Tanks
         /// A picture sign for someone who can't read yet: a post with an orange plaque, and whatever fill adds in
         /// front of it (a small model of the animal). yaw = which way the plaque faces.
         /// </summary>
-        private static void Sign(Transform t, Vector3 at, float yaw, Action<Transform> fill)
+        internal static void Sign(Transform t, Vector3 at, float yaw, Action<Transform> fill)
         {
             var sign = new GameObject("picture sign");
             sign.transform.SetParent(t, false);
@@ -394,10 +394,22 @@ namespace WobblyMods.HouseMenu.Tanks
             catch (Exception e) { Plugin.Log.LogWarning("Aquarium: a sign's picture failed: " + e.Message); }
         }
 
-        private static void MiniFish(Transform sign, string name, float size)
+        /// <summary>
+        /// A small model of one of the game's fish on a sign. It is turned side-on to the viewer and centered on the
+        /// plaque (first version, 2026-11-27: "some fish are in the wrong position on the signs", because the
+        /// models' own origins and directions differ).
+        /// </summary>
+        internal static void MiniFish(Transform sign, string name, float size)
         {
-            GameObject fish = FishTank.Place(sign, FishPath + name + "_Static.prefab", size, new Vector3(0f, -0.25f, 0f), new System.Random(1));
-            if (fish != null) fish.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            GameObject fish = FishTank.Place(sign, FishPath + name + "_Static.prefab", size, Vector3.zero, new System.Random(1));
+            if (fish == null) return;
+            fish.transform.localRotation = Quaternion.identity;
+            Bounds b;
+            if (!FishTank.TryGetBounds(fish, out b)) return;
+            // Long side across the plaque, not poking out of it.
+            Vector3 size3 = sign.InverseTransformVector(b.size);
+            if (Mathf.Abs(size3.z) > Mathf.Abs(size3.x) * 1.15f) fish.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
+            if (FishTank.TryGetBounds(fish, out b)) fish.transform.position += sign.position - b.center;
         }
     }
 

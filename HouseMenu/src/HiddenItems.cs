@@ -44,6 +44,32 @@ namespace WobblyMods.HouseMenu
             return id != null && Ids.Contains(id);
         }
 
+        /// <summary>
+        /// Gives an item its place in the menu back (the self-test calls this when a hidden item passes): its line
+        /// is taken out of the file, every other line is left as it is. Like hiding, the menu shows it from the next start.
+        /// </summary>
+        public static void Unhide(string id)
+        {
+            if (string.IsNullOrEmpty(id) || !Ids.Remove(id)) return;
+            try
+            {
+                if (File.Exists(FilePath))
+                {
+                    var keep = new List<string>();
+                    foreach (string line in File.ReadAllLines(FilePath))
+                    {
+                        if (line.Split('\t')[0].Trim() != id) keep.Add(line);
+                    }
+                    File.WriteAllLines(FilePath, keep.ToArray());
+                }
+                Plugin.Log.LogInfo("Menu: " + id + " works again and will be back in the menu from the next start.");
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Menu: couldn't save the hidden-items list: " + e.Message);
+            }
+        }
+
         public static void Hide(string id, string reason)
         {
             if (string.IsNullOrEmpty(id) || !Ids.Add(id)) return;

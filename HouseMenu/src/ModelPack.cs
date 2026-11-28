@@ -180,17 +180,22 @@ namespace WobblyMods.HouseMenu
 
             GameObject model = ShapeModels.Build("model " + name, parts);
             Vector3 pivot = Pivots[objPath];
+            // The pack's models face -Z (seen in the preview pictures); turn them so the front faces the player
+            // (and the camera that takes the menu photo). The half turn is on the PARTS, not on the model itself,
+            // so the model's own spot and facing are exactly what was asked for. (It used to be on the model:
+            // a saved house, or Change > Copy, then asked for that facing again and got another half turn on top,
+            // so furniture came back facing the wall.) It looks and stands the same as before.
+            Quaternion faceFront = Quaternion.Euler(0f, 180f, 0f);
             foreach (Transform child in model.transform)
             {
-                child.localPosition = -pivot;
+                child.localRotation = faceFront;
+                child.localPosition = faceFront * -pivot;
                 MeshFilter mf = child.GetComponent<MeshFilter>();
                 if (mf != null && mf.sharedMesh != null) child.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
             }
             model.name = PropRooms.NiceName(name);
             model.transform.localScale = Vector3.one * ScaleFor(name);
-            // The pack's models face -Z (seen in the preview pictures); turn them so the front faces the player
-            // (and the camera that takes the menu photo).
-            model.transform.SetPositionAndRotation(position, rotation * Quaternion.Euler(0f, 180f, 0f));
+            model.transform.SetPositionAndRotation(position, rotation);
             return model;
         }
 

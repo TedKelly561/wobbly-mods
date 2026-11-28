@@ -30,6 +30,8 @@ namespace WobblyMods.HouseMenu
         private MenuItem _colorItem;
         private MenuItem _furItem;
         private int _furIndex;
+        private readonly MenuItem[] _saveItems = new MenuItem[HouseSave.Slots];
+        private readonly MenuItem[] _loadItems = new MenuItem[HouseSave.Slots];
 
         private HousePlayerMenu(PlayerSession session)
         {
@@ -40,7 +42,23 @@ namespace WobblyMods.HouseMenu
         /// <summary>Pass to SessionManager: builds the menu for each player who joins.</summary>
         public static MenuPage BuildRootPage(PlayerSession session)
         {
-            return new HousePlayerMenu(session).Build();
+            var menu = new HousePlayerMenu(session);
+            JustBuilt[session] = menu;
+            return menu.Build();
+        }
+
+        // The session's menu doesn't exist yet while its pages are being built, so anything that needs to listen
+        // to the menu is hooked up a moment later, in Attach.
+        private static readonly System.Collections.Generic.Dictionary<PlayerSession, HousePlayerMenu> JustBuilt =
+            new System.Collections.Generic.Dictionary<PlayerSession, HousePlayerMenu>();
+
+        /// <summary>Pass to SessionManager.PlayerJoined: refreshes the save-slot labels each time this player's menu opens.</summary>
+        public static void Attach(PlayerSession session)
+        {
+            HousePlayerMenu menu;
+            if (!JustBuilt.TryGetValue(session, out menu)) return;
+            JustBuilt.Remove(session);
+            session.Menu.OpenChanged += open => { if (open) menu.RefreshSlotLabels(); };
         }
 
         /// <summary>Undo for this player (the menu button and the F2 backup key).</summary>
@@ -92,13 +110,19 @@ namespace WobblyMods.HouseMenu
                     {
                         var page = new MenuPage(room[0]);
                         MenuTab grid = page.MainTab().AsGrid();
+                        string firstShown = null;
                         foreach (CatalogItem item in FurnitureCatalog.InCategory(room[0]))
                         {
                             if (HiddenItems.IsHidden(item.Id)) continue;
                             CatalogItem captured = item;
-                            grid.Add(item.DisplayName, () => Spawn(captured)).Icon = item.Symbol != null ? SymbolIcons.Key(item.Symbol) : item.Id;
+                            string icon = item.Symbol != null ? SymbolIcons.Key(item.Symbol) : item.Id;
+                            grid.Add(item.DisplayName, () => Spawn(captured)).Icon = icon;
+                            if (firstShown == null) firstShown = icon;
                         }
-                        tab.AddSubPage(room[0], page).Icon = room[1];
+                        // A room with nothing left to place (every item hidden) gets no tile: it would open an empty page.
+                        if (firstShown == null) continue;
+                        // The room's picture is one of its items; if that one is hidden, use the first that isn't.
+                        tab.AddSubPage(room[0], page).Icon = HiddenItems.IsHidden(room[1]) ? firstShown : room[1];
                     }
                 }
                 if (category == "Toys")
@@ -153,11 +177,13 @@ namespace WobblyMods.HouseMenu
             {
                 int slot = i;
                 string digit = SymbolIcons.Key(slot.ToString());
-                savePage.MainTab().Add("House " + slot + (HouseSave.SlotExists(slot) ? " (replace)" : " (empty)"), () =>
+                _saveItems[slot - 1] = savePage.MainTab().Add("House " + slot, () =>
                 {
                     _session.Status = HouseSave.Save(slot);
+                    RefreshSlotLabels();
                     _session.Menu.Back();
-                }).Icon = digit;
+                });
+                _saveItems[slot - 1].Icon = digit;
 
                 // Loading replaces what's placed now, so it asks first.
                 var confirmLoad = new MenuPage("Load house " + slot + "?");
@@ -169,8 +195,12 @@ namespace WobblyMods.HouseMenu
                     _session.Menu.Back();
                     _session.Menu.Back();
                 }).Icon = SymbolIcons.Key("yes");
-                loadPage.MainTab().AddSubPage("House " + slot + (HouseSave.SlotExists(slot) ? "" : " (empty)"), confirmLoad).Icon = digit;
+                _loadItems[slot - 1] = loadPage.MainTab().AddSubPage("House " + slot, confirmLoad);
+                _loadItems[slot - 1].Icon = digit;
             }
+            // "(empty)" / "(replace)" on the slot tiles: set now, again right after this player saves, and each time
+            // this player's menu opens (see Attach: another player may have saved, or the shared folder come back).
+            RefreshSlotLabels();
             change.AddSubPage("Save house", savePage).Icon = SymbolIcons.Key("save");
             change.AddSubPage("Load house", loadPage).Icon = SymbolIcons.Key("load");
 
@@ -212,6 +242,17 @@ namespace WobblyMods.HouseMenu
             });
         }
 
+        /// <summary>Puts "(replace)" or "(empty)" on the Save house and Load house slot tiles, from the files as they are now.</summary>
+        private void RefreshSlotLabels()
+        {
+            for (int i = 0; i < HouseSave.Slots; i++)
+            {
+                bool used = HouseSave.SlotExists(i + 1);
+                if (_saveItems[i] != null) _saveItems[i].Label = "House " + (i + 1) + (used ? " (replace)" : " (empty)");
+                if (_loadItems[i] != null) _loadItems[i].Label = "House " + (i + 1) + (used ? "" : " (empty)");
+            }
+        }
+
         private void Nudge(Vector3 direction)
         {
             GameObject target = CurrentTarget();
@@ -230,11 +271,12 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         private void CopyTarget()
         {
-            // Looking at something the menu placed: make another one beside it. Looking at anything else (a real
-            // thing in the world, or one of her world copies): the same as "Copy this", so there is only ONE idea
-            // of "copy" for Skylar (test 2026-11-21: this button said "place something first" on world things).
-            GameObject target = GameBindings.FindEditableInView(Player);
-            CatalogItem item = target != null ? FurnitureCatalog.Find(GameBindings.CatalogIdOf(target)) : null;
+            // The thing she is looking at, or (like every other Change button) the last thing she placed: aiming a
+            // third-person camera is hard at 5, and without that Copy seemed to do nothing. Only things placed from
+            // the menu's own tiles can be made again here; world copies come from "Copy this" / "My copies".
+            GameObject target = CurrentTarget();
+            if (target == null) return; // CurrentTarget already said "Place something first..."
+            CatalogItem item = FurnitureCatalog.Find(GameBindings.CatalogIdOf(target));
             if (item == null)
             {
                 _session.Status = "Copy works on things you placed from this menu. Look at one, then press Copy.";

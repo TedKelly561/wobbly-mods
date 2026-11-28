@@ -8,7 +8,7 @@ namespace WobblyMods.HouseMenu
     /// The menu self-test (parent's idea, 2026-11-21), for a grown-up to run once after an update, with
     /// [Debug] MenuSelfTest = true: about 15 seconds after the world has loaded it places every menu item once in
     /// front of player 1, waits, checks it is still there and hasn't fallen away, removes it, and logs
-    /// "Menu check: X ok / Y failed: ids". Failed items go on the hidden list (HiddenItems).
+    /// "Menu check: X ok / Y failed: ids". Failed items go on the hidden list (HiddenItems); items that pass come off it.
     /// </summary>
     internal static class MenuCheck
     {
@@ -47,7 +47,26 @@ namespace WobblyMods.HouseMenu
 
         private static void Step()
         {
-            if (GameBindings.CharacterPosition(0) == null) { _readySince = -1f; return; }
+            if (GameBindings.CharacterPosition(0) == null)
+            {
+                // Player 1 is gone (left the world, or the game is loading). An item that was in the middle of its
+                // test is NOT a failure: whatever was placed went away with the world. Tidy up and test the same
+                // item again once player 1 is back. (It used to be written down as "nothing appeared" and hidden.)
+                if (_state != 0)
+                {
+                    Plugin.Log.LogInfo("Menu check: interrupted while testing " + _items[_index].Id + "; it will be tested again.");
+                    if (_placed != null)
+                    {
+                        try { ObjectEdits.Remove(_placed); }
+                        catch (Exception) { /* it is going away with the world anyway */ }
+                    }
+                    _placed = null;
+                    _state = 0;
+                    _index--;
+                }
+                _readySince = -1f;
+                return;
+            }
             if (_readySince < 0f) _readySince = Time.unscaledTime;
             if (Time.unscaledTime - _readySince < StartDelay) return;
 
@@ -92,7 +111,11 @@ namespace WobblyMods.HouseMenu
         private static void Record(bool ok, string why)
         {
             CatalogItem item = _items[_index];
-            if (ok) Ok.Add(item.Id);
+            if (ok)
+            {
+                Ok.Add(item.Id);
+                HiddenItems.Unhide(item.Id); // it works now: let it back into the menu if it was hidden before
+            }
             else
             {
                 Failed.Add(item.Id);

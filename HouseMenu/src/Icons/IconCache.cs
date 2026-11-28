@@ -36,7 +36,7 @@ namespace WobblyMods.HouseMenu.Icons
     /// - Models are assumed to face +Z (Unity's usual "front"); a model facing the other way is photographed from
     ///   behind.
     /// - Callbacks the game hooks onto every camera (Camera.onPreRender) also run for the preview camera.
-    /// Every item is wrapped in try/catch: a failure logs once and the tile keeps its letter placeholder.
+    /// Every item is wrapped in try/catch: a failure logs once and the tile shows a symbol for its kind instead.
     /// </summary>
     internal static class IconCache
     {
@@ -86,6 +86,7 @@ namespace WobblyMods.HouseMenu.Icons
             foreach (CatalogItem item in FurnitureCatalog.Items)
             {
                 if (item.Symbol != null) continue; // drawn symbol, no photo (and no need to build it just for a picture)
+                if (HiddenItems.IsHidden(item.Id)) continue; // not in the menu, so nobody would see its picture
                 Waiting.Enqueue(item);
             }
             Plugin.Log.LogInfo("Menu pictures: making " + Waiting.Count + " item pictures in the background (preview layer " +
@@ -353,6 +354,9 @@ namespace WobblyMods.HouseMenu.Icons
                 preview = MeshOnlyCopy(subject);
                 preview.SetActive(true);
                 Texture2D tex = Snapshot(preview, background);
+                // The picture this one replaces (the slot's last copy) is thrown away, or one would pile up per copy.
+                Texture2D old;
+                if (Ready.TryGetValue(key, out old) && old != null) Object.Destroy(old);
                 if (tex == null) { Ready.Remove(key); return; }
                 tex.name = "WobblyIcon " + key;
                 Ready[key] = tex;
@@ -627,6 +631,14 @@ namespace WobblyMods.HouseMenu.Icons
 
         private static void Fail(CatalogItem item, string problem)
         {
+            // No photo: show a symbol for the kind of thing it is rather than a letter (she can't read yet).
+            if (!Fallbacks.ContainsKey(item.Id))
+            {
+                Fallbacks[item.Id] = item.Category == "Animals" ? SymbolIcons.Key("fish")
+                                   : item.Category == "Toys" ? TabTheme.IconFor("Toys")
+                                   : item.Category == "Furniture" ? TabTheme.IconFor("Furniture")
+                                   : SymbolIcons.Key("star");
+            }
             if (Failed.Add(item.Id))
             {
                 Plugin.Log.LogWarning("Menu picture for " + item.Id + ": " + problem + ".");

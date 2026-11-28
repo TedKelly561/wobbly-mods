@@ -48,6 +48,10 @@ namespace WobblyMods.HouseMenu
         private readonly RewiredMenuActions _names;
         private readonly HashSet<MenuAction> _pressed = new HashSet<MenuAction>();
 
+        // The action names, split once here instead of on every frame (the config is read once at start-up).
+        private readonly string[] _select, _back, _quickPlace, _quickUndo, _tabNext, _tabPrev, _vertical, _horizontal;
+        private readonly string[][] _toggle; // choices, each a combo of one or more buttons
+
         private int _heldDirection = -1; // index into Directions, -1 = none
         private float _toggleHeldSince = -1f;  // when the toggle button went down, -1 = not held
         private readonly TapWatcher _placeTap = new TapWatcher();
@@ -77,6 +81,23 @@ namespace WobblyMods.HouseMenu
         {
             _rewiredPlayer = rewiredPlayer;
             _names = names;
+            _select = Split(names.Select);
+            _back = Split(names.Back);
+            _quickPlace = Split(names.QuickPlace);
+            _quickUndo = Split(names.QuickUndo);
+            _tabNext = Split(names.TabNext);
+            _tabPrev = Split(names.TabPrev);
+            _vertical = Split(names.Vertical);
+            _horizontal = Split(names.Horizontal);
+
+            string[] choices = Split(names.Toggle);
+            _toggle = new string[choices.Length][];
+            for (int i = 0; i < choices.Length; i++)
+            {
+                string[] parts = choices[i].Split('+');
+                for (int k = 0; k < parts.Length; k++) parts[k] = parts[k].Trim();
+                _toggle[i] = parts;
+            }
         }
 
         public bool WasPressed(MenuAction action)
@@ -91,17 +112,32 @@ namespace WobblyMods.HouseMenu
             object player = _rewiredPlayer();
             if (player == null)
             {
+                // No controller to read this frame (the player left, or the game is between worlds). Forget
+                // everything, as if every button had been let go. Without this the one-frame answers below kept
+                // their last value, so a tap that finished on the last good frame would count again on every
+                // frame until the controller came back (a bubble gun firing by itself).
                 _heldDirection = -1;
+                QuickPlaceTapped = false;
+                QuickUndoTapped = false;
+                QuickUndoHeld = false;
+                _undoHeldSince = -1f;
+                _toggleHeldSince = -1f;
+                _toggleFired = false;
+                float never = Time.unscaledTime;
+                _placeTap.Update(false, false, never);
+                _undoTap.Update(false, false, never);
+                _tabNextTap.Update(false, false, never);
+                _tabPrevTap.Update(false, false, never);
                 return;
             }
 
-            if (ButtonDown(player, _names.Select)) _pressed.Add(MenuAction.Select);
-            if (ButtonDown(player, _names.Back)) _pressed.Add(MenuAction.Back);
+            if (ButtonDown(player, _select)) _pressed.Add(MenuAction.Select);
+            if (ButtonDown(player, _back)) _pressed.Add(MenuAction.Back);
             UpdateToggle(player);
 
             // Quick taps for build mode. Holding both bumpers (the menu combo) cancels both taps.
-            bool place = ButtonHeld(player, _names.QuickPlace);
-            bool undo = ButtonHeld(player, _names.QuickUndo);
+            bool place = ButtonHeld(player, _quickPlace);
+            bool undo = ButtonHeld(player, _quickUndo);
             float t = Time.unscaledTime;
             QuickPlaceTapped = _placeTap.Update(place, undo, t);
             QuickUndoTapped = _undoTap.Update(undo, place, t);
@@ -122,12 +158,12 @@ namespace WobblyMods.HouseMenu
             // the menu only uses them while it's open, and build mode only uses its taps while the menu is closed
             // (BuildWorld.QuickAction), so the same bumper does one thing at a time. Holding LB+RB to open or close
             // spoils both taps, so the menu combo never switches tabs.
-            bool next = ButtonHeld(player, _names.TabNext);
-            bool prev = ButtonHeld(player, _names.TabPrev);
+            bool next = ButtonHeld(player, _tabNext);
+            bool prev = ButtonHeld(player, _tabPrev);
             if (_tabNextTap.Update(next, prev, t)) _pressed.Add(MenuAction.TabNext);
             if (_tabPrevTap.Update(prev, next, t)) _pressed.Add(MenuAction.TabPrev);
 
-            int direction = CurrentDirection(Axis(player, _names.Vertical), Axis(player, _names.Horizontal));
+            int direction = CurrentDirection(Axis(player, _vertical), Axis(player, _horizontal));
             float now = Time.unscaledTime;
 
             if (direction < 0)
@@ -155,7 +191,7 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         private void UpdateToggle(object player)
         {
-            if (!AnyChoiceHeld(player, _names.Toggle))
+            if (!AnyChoiceHeld(player, _toggle))
             {
                 _toggleHeldSince = -1f;
                 _toggleFired = false;
@@ -175,21 +211,20 @@ namespace WobblyMods.HouseMenu
         }
 
         /// <summary>True if every button of at least one choice ("A+B" or "C") is held right now.</summary>
-        private static bool AnyChoiceHeld(object player, string choices)
+        private static bool AnyChoiceHeld(object player, string[][] choices)
         {
-            foreach (string choice in Split(choices))
+            foreach (string[] choice in choices)
             {
-                if (choice.Length == 0) continue;
+                if (choice.Length == 0 || (choice.Length == 1 && choice[0].Length == 0)) continue;
                 bool all = true;
-                foreach (string part in choice.Split('+'))
+                foreach (string action in choice)
                 {
-                    string action = part.Trim();
                     if (action.Length == 0 || !Usable(action))
                     {
                         all = false;
                         break;
                     }
-                    object result = Invoke(player, "GetButton", action);
+                    object result = Invoke(player, GetButton, action);
                     if (!(result is bool) || !(bool)result)
                     {
                         all = false;
@@ -213,19 +248,19 @@ namespace WobblyMods.HouseMenu
             return horizontal < 0 ? 2 : 3;
         }
 
-        private static bool ButtonDown(object player, string actions)
+        private static bool ButtonDown(object player, string[] actions)
         {
-            return AnyButton(player, actions, "GetButtonDown");
+            return AnyButton(player, actions, GetButtonDown);
         }
 
-        private static bool ButtonHeld(object player, string actions)
+        private static bool ButtonHeld(object player, string[] actions)
         {
-            return AnyButton(player, actions, "GetButton");
+            return AnyButton(player, actions, GetButton);
         }
 
-        private static bool AnyButton(object player, string actions, string method)
+        private static bool AnyButton(object player, string[] actions, int method)
         {
-            foreach (string action in Split(actions))
+            foreach (string action in actions)
             {
                 if (!Usable(action)) continue;
                 object result = Invoke(player, method, action);
@@ -235,12 +270,12 @@ namespace WobblyMods.HouseMenu
         }
 
         /// <summary>The first listed axis that's past the dead zone, or 0.</summary>
-        private static float Axis(object player, string actions)
+        private static float Axis(object player, string[] actions)
         {
-            foreach (string action in Split(actions))
+            foreach (string action in actions)
             {
                 if (!Usable(action)) continue;
-                object result = Invoke(player, "GetAxis", action);
+                object result = Invoke(player, GetAxis, action);
                 if (result is float && Mathf.Abs((float)result) >= 0.2f) return (float)result;
             }
             return 0f;
@@ -254,13 +289,37 @@ namespace WobblyMods.HouseMenu
             return parts;
         }
 
-        private static object Invoke(object player, string method, string action)
+        // The three Rewired calls used here, by number (an index into Found).
+        private const int GetButton = 0, GetButtonDown = 1, GetAxis = 2;
+        private static readonly string[] MethodNames = { "GetButton", "GetButtonDown", "GetAxis" };
+
+        // Looked up once per kind of player object and kept. Looking them up on every call (a dozen calls per
+        // controller per frame, each listing every method Rewired's player has) cost time and made garbage on
+        // every frame, even with the menu closed.
+        private static Type _foundFor;
+        private static readonly MethodInfo[] Found = new MethodInfo[MethodNames.Length];
+        private static readonly object[] OneArgument = new object[1];
+
+        private static object Invoke(object player, int method, string action)
         {
             try
             {
-                MethodInfo m = player.GetType().GetMethods(Any).FirstOrDefault(x =>
-                    x.Name == method && x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == typeof(string));
-                return m == null ? null : m.Invoke(player, new object[] { action });
+                Type type = player.GetType();
+                if (type != _foundFor)
+                {
+                    MethodInfo[] all = type.GetMethods(Any);
+                    for (int i = 0; i < MethodNames.Length; i++)
+                    {
+                        string name = MethodNames[i];
+                        Found[i] = all.FirstOrDefault(x =>
+                            x.Name == name && x.GetParameters().Length == 1 && x.GetParameters()[0].ParameterType == typeof(string));
+                    }
+                    _foundFor = type;
+                }
+                MethodInfo m = Found[method];
+                if (m == null) return null;
+                OneArgument[0] = action;
+                return m.Invoke(player, OneArgument);
             }
             catch (Exception)
             {

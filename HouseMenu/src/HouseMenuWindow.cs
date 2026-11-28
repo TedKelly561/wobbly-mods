@@ -48,6 +48,11 @@ namespace WobblyMods.HouseMenu
 
         private GUIStyle _text;
         private GUIStyle _letter;
+        private readonly Dictionary<FitKey, int> _fitted = new Dictionary<FitKey, int>();
+
+        // Small and quiet in the panel's corner, so a grown-up can tell which version is running.
+        private static readonly string VersionText = "v" + Plugin.PluginVersion;
+        private static readonly Color VersionColor = new Color(1f, 1f, 1f, 0.4f);
 
         // Mouse clicks are applied after drawing, so the menu doesn't change halfway through an IMGUI pass.
         private PlayerSession _clickSession;
@@ -419,6 +424,12 @@ namespace WobblyMods.HouseMenu
             x = Hint(x, y, s, "A", AButton, "sym:yes");
             x = Hint(x + 14f, y, s, "B", BButton, menu.Depth > 1 ? "sym:back" : "sym:no");
 
+            // The plugin version, at the right end of the hint row (clear of the hints and the status line below).
+            if (r.xMax - 70f > x + 8f)
+            {
+                Label(new Rect(r.xMax - 70f, y, 70f, s), VersionText, 11, VersionColor, TextAnchor.LowerRight);
+            }
+
             Label(new Rect(r.x, y + s + 4f, r.width, r.yMax - y - s - 4f), session.Status ?? string.Empty, 15,
                   new Color(1f, 1f, 1f, 0.85f), TextAnchor.UpperLeft, true);
         }
@@ -517,13 +528,55 @@ namespace WobblyMods.HouseMenu
         {
             _text.alignment = TextAnchor.MiddleCenter;
             _text.wordWrap = false;
-            var content = new GUIContent(text);
-            _text.fontSize = size;
-            while (_text.fontSize > 10 && _text.CalcSize(content).x > r.width)
+
+            // The size that fits is worked out once per word, width and starting size, then remembered: measuring
+            // every tile's word again on every draw (several times a frame, for every open menu) was wasted work.
+            var key = new FitKey(text, Mathf.RoundToInt(r.width), size);
+            int fitted;
+            if (!_fitted.TryGetValue(key, out fitted))
             {
-                _text.fontSize--;
+                var content = new GUIContent(text);
+                _text.fontSize = size;
+                while (_text.fontSize > 10 && _text.CalcSize(content).x > r.width)
+                {
+                    _text.fontSize--;
+                }
+                fitted = _text.fontSize;
+                if (_fitted.Count > 4000) _fitted.Clear(); // far more than the menu has; just a safety net
+                _fitted[key] = fitted;
             }
+            _text.fontSize = fitted;
             DrawShadowed(r, text, _text, Color.white);
+        }
+
+        /// <summary>What a fitted label's size depends on: the word, the room it has (whole pixels) and the size it starts from.</summary>
+        private struct FitKey : System.IEquatable<FitKey>
+        {
+            public readonly string Text;
+            public readonly int Width;
+            public readonly int Size;
+
+            public FitKey(string text, int width, int size)
+            {
+                Text = text ?? string.Empty;
+                Width = width;
+                Size = size;
+            }
+
+            public bool Equals(FitKey other)
+            {
+                return Width == other.Width && Size == other.Size && Text == other.Text;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is FitKey && Equals((FitKey)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return (Text.GetHashCode() * 397 ^ Width) * 397 ^ Size;
+            }
         }
 
         private static void DrawShadowed(Rect r, string text, GUIStyle style, Color color)

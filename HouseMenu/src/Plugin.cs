@@ -51,7 +51,7 @@ namespace WobblyMods.HouseMenu
                 "How strong the moving ripples of light on the Big aquarium's floors are. 1 = normal, 2 = twice as bright, 0 = off. " +
                 "Takes effect the next time a Big aquarium is placed.").Value, 0f, 10f);
             Tanks.BigAquarium.JungleTrees = Mathf.Clamp(Config.Bind("Aquarium", "JungleTrees", 60,
-                "How many big rainforest trees grow on the Big aquarium's top floor (0 to 80). Lower it if the top floor is " +
+                "How many big rainforest trees grow on the Big aquarium's top floor (2 to 80). Lower it if the top floor is " +
                 "slow on a weaker graphics card. Takes effect the next time a Big aquarium is placed.").Value, 2, 80);
             Tanks.TankMaterials.Instancing = Config.Bind("Aquarium", "Instancing", true,
                 "Lets the graphics card draw many same-colored parts of the aquariums in one go (faster on a slow card). " +
@@ -64,7 +64,7 @@ namespace WobblyMods.HouseMenu
             MenuCheck.Init(Config.Bind("Debug", "MenuSelfTest", false,
                 "Grown-ups only. true = about 15 seconds after the game world loads, place every menu item once in front of " +
                 "player 1, check it stays, remove it, and log \"Menu check: ...\". Items that fail are hidden from the menu " +
-                "(listed in BepInEx\\config\\WobblyMods.hidden-items-v2.txt). Set back to false afterwards.").Value);
+                "(listed in BepInEx\\config\\WobblyMods.hidden-items-v2.txt); hidden items that pass come back. Set back to false afterwards.").Value);
             ModelPack.Init(Config.Bind("Furniture", "ModelSize", 2.4f,
                 "Size multiplier for model-pack furniture (the .obj files in plugins\\WobblyMods\\models\\furniture). " +
                 "The log prints each model's size in meters the first time it is placed. Small things (blender, toaster, books...) are 1.8 times bigger again; walls and floors always stay at 2.").Value);
@@ -97,8 +97,10 @@ namespace WobblyMods.HouseMenu
                 "Menu open: quick tap shows the next tab (holding LB+RB to close never switches tabs).").Value;
             _actions.TabPrev = Config.Bind("Controller", "TabPrevAction", "UILB",
                 "Menu open: quick tap shows the previous tab.").Value;
-            _actions.ToggleHoldSeconds = Config.Bind("Controller", "ToggleHoldSeconds", 1f,
-                "Seconds the button or combo must be held. 1 second keeps a quick tap of Map opening the map.").Value;
+            // Kept between 0.2 and 3 seconds: a typo like 100 would make the menu impossible to open with a controller.
+            float hold = Config.Bind("Controller", "ToggleHoldSeconds", 1f,
+                "Seconds the button or combo must be held (0.2 to 3). 1 second keeps a quick tap of Map opening the map.").Value;
+            _actions.ToggleHoldSeconds = float.IsNaN(hold) ? 1f : Mathf.Clamp(hold, 0.2f, 3f);
 
             FmodSounds.SetOverrides(
                 Config.Bind("Sounds", "FmodTick", "", "Game sound (FMOD event path) when moving in the menu. Empty = choose automatically; the log lists the menu sounds found.").Value,
@@ -113,6 +115,7 @@ namespace WobblyMods.HouseMenu
 
             _sessions = new SessionManager(HousePlayerMenu.BuildRootPage);
             _sessions.PlayerJoined += MenuSounds.Attach;
+            _sessions.PlayerJoined += HousePlayerMenu.Attach;
 
             // Player 1 always exists, driven by the keyboard backup; controllers are added by SyncPlayers.
             _keyboard = new KeyboardPlayerInput(() => _menuKey.Value);
@@ -261,6 +264,10 @@ namespace WobblyMods.HouseMenu
                 if (i == 0)
                 {
                     _keyboardPlayer.Input = _keyboard;
+                    // Nobody is playing any more (back at the title screen): close player 1's menu too. It used to
+                    // stay on screen over the title screen with no controller able to close it. Only done at the
+                    // moment the players go away, so the F1 keyboard backup still works when none are found at all.
+                    _keyboardPlayer.Menu.Close();
                 }
                 else
                 {

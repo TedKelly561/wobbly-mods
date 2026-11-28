@@ -34,7 +34,7 @@ namespace WobblyMods.HouseMenu.Tanks
             pond.transform.SetParent(root, false);
             pond.transform.localPosition = new Vector3(Width * 0.18f, FloorTop + 0.01f, 0);
             pond.transform.localScale = new Vector3(2f, 0.02f, 1.5f);
-            pond.GetComponent<Renderer>().material = TankMaterials.Tinted(Water);
+            pond.GetComponent<Renderer>().sharedMaterial = TankMaterials.SharedTinted(Water);
             for (int i = 0; i < 4; i++)
             {
                 Vector3 p = new Vector3(Width * 0.18f + Rand(rng, -0.6f, 0.6f), FloorTop + 0.04f, Rand(rng, -0.45f, 0.45f));
@@ -70,9 +70,9 @@ namespace WobblyMods.HouseMenu.Tanks
             bask.transform.SetParent(root, false);
             bask.transform.localPosition = new Vector3(-Width * 0.25f, FloorTop + 0.1f, 0);
             bask.transform.localScale = new Vector3(1.3f, 0.5f, 0.9f);
-            bask.GetComponent<Renderer>().material = TankMaterials.Solid(new Color(0.75f, 0.45f, 0.25f));
+            bask.GetComponent<Renderer>().sharedMaterial = TankMaterials.Shared(new Color(0.75f, 0.45f, 0.25f));
             FishTank.Box(root, "Heat lamp", new Vector3(-Width * 0.25f, Height - 0.15f, 0), new Vector3(0.5f, 0.15f, 0.5f),
-                         TankMaterials.Solid(Critters.Orange), false);
+                         TankMaterials.Shared(Critters.Orange), false);
             var lampLight = new GameObject("Heat lamp light").AddComponent<Light>();
             lampLight.transform.SetParent(root, false);
             lampLight.transform.localPosition = new Vector3(-Width * 0.25f, Height - 0.4f, 0);
@@ -111,7 +111,7 @@ namespace WobblyMods.HouseMenu.Tanks
 
             // Half the tank is a shallow pool.
             Vector3 poolCenter = new Vector3(Width * 0.25f, FloorTop + 0.02f, 0);
-            FishTank.Box(root, "Pool", poolCenter, new Vector3(Width * 0.45f, 0.04f, Depth - 0.3f), TankMaterials.Tinted(Water), false);
+            FishTank.Box(root, "Pool", poolCenter, new Vector3(Width * 0.45f, 0.04f, Depth - 0.3f), TankMaterials.SharedTinted(Water), false);
 
             AddPlants(root, rng, 6);
             AddRocks(root, rng, 6);
@@ -150,16 +150,16 @@ namespace WobblyMods.HouseMenu.Tanks
             FishTank.Box(root, "Glass Left", new Vector3(-Width / 2, h / 2, 0), new Vector3(Glass, h, Depth), glass, true);
             FishTank.Box(root, "Glass Right", new Vector3(Width / 2, h / 2, 0), new Vector3(Glass, h, Depth), glass, true);
 
-            Material orange = TankMaterials.Solid(Critters.Orange);
+            Material orange = TankMaterials.Shared(Critters.Orange);
             const float rim = 0.14f;
             FishTank.Box(root, "Rim Front", new Vector3(0, h, -Depth / 2), new Vector3(Width + rim, rim, rim), orange, true);
             FishTank.Box(root, "Rim Back", new Vector3(0, h, Depth / 2), new Vector3(Width + rim, rim, rim), orange, true);
             FishTank.Box(root, "Rim Left", new Vector3(-Width / 2, h, 0), new Vector3(rim, rim, Depth + rim), orange, true);
             FishTank.Box(root, "Rim Right", new Vector3(Width / 2, h, 0), new Vector3(rim, rim, Depth + rim), orange, true);
             FishTank.Box(root, "Base", new Vector3(0, 0.1f, 0), new Vector3(Width + 0.25f, 0.2f, Depth + 0.25f),
-                         TankMaterials.Solid(Critters.Green), true);
+                         TankMaterials.Shared(Critters.Green), true);
             FishTank.Box(root, "Floor", new Vector3(0, (0.2f + FloorTop) / 2, 0), new Vector3(Width - 0.15f, FloorTop - 0.2f, Depth - 0.15f),
-                         TankMaterials.Solid(floor), false);
+                         TankMaterials.Shared(floor), false);
             return root;
         }
 
@@ -199,7 +199,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 rock.transform.localScale = new Vector3(s * 1.3f, s * 0.7f, s);
                 rock.transform.localPosition = new Vector3(Rand(rng, -Width / 2 + 0.3f, Width / 2 - 0.3f), FloorTop + s * 0.15f,
                                                            Rand(rng, -Depth / 2 + 0.3f, Depth / 2 - 0.3f));
-                rock.GetComponent<Renderer>().material = TankMaterials.Solid(colors[i % colors.Length]);
+                rock.GetComponent<Renderer>().sharedMaterial = TankMaterials.Shared(colors[i % colors.Length]);
             }
         }
 
@@ -211,7 +211,7 @@ namespace WobblyMods.HouseMenu.Tanks
             disc.transform.SetParent(root, false);
             disc.transform.localPosition = pos;
             disc.transform.localScale = new Vector3(size, 0.01f, size);
-            disc.GetComponent<Renderer>().material = TankMaterials.Solid(color);
+            disc.GetComponent<Renderer>().sharedMaterial = TankMaterials.Shared(color);
         }
 
         private static float Rand(System.Random rng, float min, float max)

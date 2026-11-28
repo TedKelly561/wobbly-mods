@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.39.1";
+        public const string PluginVersion = "0.39.2";
 
         internal static ManualLogSource Log;
 
@@ -53,6 +53,9 @@ namespace WobblyMods.HouseMenu
             Tanks.BigAquarium.JungleTrees = Mathf.Clamp(Config.Bind("Aquarium", "JungleTrees", 60,
                 "How many big rainforest trees grow on the Big aquarium's top floor (0 to 80). Lower it if the top floor is " +
                 "slow on a weaker graphics card. Takes effect the next time a Big aquarium is placed.").Value, 2, 80);
+            Tanks.TankMaterials.Instancing = Config.Bind("Aquarium", "Instancing", true,
+                "Lets the graphics card draw many same-colored parts of the aquariums in one go (faster on a slow card). " +
+                "Turn off if parts of an aquarium look wrong or go missing.").Value;
             HiddenItems.Load();
             // New key names (0.34.0) so the new defaults apply on PCs that saved the old ones.
             Fun.Init(Config.Bind("Fun", "SwarmFishSize", 0.35f,

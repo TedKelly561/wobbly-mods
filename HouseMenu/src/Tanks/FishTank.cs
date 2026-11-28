@@ -84,8 +84,8 @@ namespace WobblyMods.HouseMenu.Tanks
             Box(root, "Glass Right", new Vector3(Width / 2, h / 2, 0), new Vector3(Glass, h, Depth), glass, true);
 
             // Orange rim along the top, green base along the bottom.
-            Material orange = TankMaterials.Solid(Orange);
-            Material green = TankMaterials.Solid(Green);
+            Material orange = TankMaterials.Shared(Orange);
+            Material green = TankMaterials.Shared(Green);
             const float rim = 0.18f;
             Box(root, "Rim Front", new Vector3(0, h, -Depth / 2), new Vector3(Width + rim, rim, rim), orange, true);
             Box(root, "Rim Back", new Vector3(0, h, Depth / 2), new Vector3(Width + rim, rim, rim), orange, true);
@@ -99,7 +99,7 @@ namespace WobblyMods.HouseMenu.Tanks
         private static void BuildFloor(Transform root, System.Random rng)
         {
             Box(root, "Sand", new Vector3(0, 0.2f + SandHeight / 2, 0), new Vector3(Width - 0.2f, SandHeight, Depth - 0.2f),
-                TankMaterials.Solid(SandColor), false);
+                TankMaterials.Shared(SandColor), false);
 
             Color[] rockColors = { Orange, new Color(0.55f, 0.55f, 0.55f), new Color(0.85f, 0.4f, 0.1f), new Color(0.4f, 0.4f, 0.45f) };
             for (int i = 0; i < 9; i++)
@@ -111,7 +111,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 float size = 0.25f + (float)rng.NextDouble() * 0.45f;
                 rock.transform.localScale = new Vector3(size * 1.3f, size * 0.7f, size);
                 rock.transform.localPosition = RandomFloorPoint(rng, 0.5f) + Vector3.up * (size * 0.2f);
-                rock.GetComponent<Renderer>().material = TankMaterials.Solid(rockColors[i % rockColors.Length]);
+                rock.GetComponent<Renderer>().sharedMaterial = TankMaterials.Shared(rockColors[i % rockColors.Length]);
             }
         }
 
@@ -288,7 +288,7 @@ namespace WobblyMods.HouseMenu.Tanks
             box.transform.localPosition = localPos;
             box.transform.localScale = size;
             Renderer r = box.GetComponent<Renderer>();
-            r.material = material;
+            r.sharedMaterial = material;
             r.shadowCastingMode = material.renderQueue >= (int)RenderQueue.Transparent ? ShadowCastingMode.Off : ShadowCastingMode.On;
             return box;
         }

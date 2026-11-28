@@ -107,7 +107,7 @@ namespace WobblyMods.HouseMenu.Tanks
             p.transform.localPosition = pos;
             p.transform.localRotation = rot;
             p.transform.localScale = scale;
-            p.GetComponent<Renderer>().material = TankMaterials.Solid(color);
+            p.GetComponent<Renderer>().sharedMaterial = TankMaterials.Shared(color);
             return p.transform;
         }
     }

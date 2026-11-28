@@ -47,12 +47,12 @@ namespace WobblyMods.HouseMenu.Tanks
         public static void BuildInto(Transform t, bool habitat, List<Swim> redtails, bool closed)
         {
             var rng = new System.Random(7);
-            Material water = TankMaterials.Tinted(Water);
-            Material sand = TankMaterials.Solid(Sand);
-            Material stone = TankMaterials.Solid(Stone);
+            Material water = TankMaterials.SharedTinted(Water);
+            Material sand = TankMaterials.Shared(Sand);
+            Material stone = TankMaterials.Shared(Stone);
 
             // The walkway through the middle, and the tank's sandy floor on both sides.
-            FishTank.Box(t, "walkway", new Vector3(0f, 0.06f, 0f), new Vector3(Radius * 2f - 0.2f, 0.12f, Length + 2f), TankMaterials.Solid(Wood), true);
+            FishTank.Box(t, "walkway", new Vector3(0f, 0.06f, 0f), new Vector3(Radius * 2f - 0.2f, 0.12f, Length + 2f), TankMaterials.Shared(Wood), true);
             float sideWidth = Width / 2f - Radius;
             for (int s = -1; s <= 1; s += 2)
             {
@@ -153,8 +153,8 @@ namespace WobblyMods.HouseMenu.Tanks
             }
 
             // Floating plants on the surface, and shafts of light coming down between them.
-            Material pad = TankMaterials.Solid(LeafDark);
-            Material ray = TankMaterials.Tinted(new Color(1f, 1f, 0.75f, 0.07f));
+            Material pad = TankMaterials.Shared(LeafDark);
+            Material ray = TankMaterials.SharedTinted(new Color(1f, 1f, 0.75f, 0.07f));
             for (int i = 0; closed && i < 16; i++)
             {
                 float x = ((float)rng.NextDouble() - 0.5f) * (Width - 1.5f), z = ((float)rng.NextDouble() - 0.5f) * (Length - 1.5f);
@@ -197,8 +197,8 @@ namespace WobblyMods.HouseMenu.Tanks
             root.transform.SetPositionAndRotation(position, rotation);
             Transform t = root.transform;
             var rng = new System.Random(11);
-            Material frame = TankMaterials.Solid(new Color(0.14f, 0.11f, 0.1f));
-            Material glass = TankMaterials.Tinted(new Color(0.55f, 0.9f, 0.75f, 0.16f));
+            Material frame = TankMaterials.Shared(new Color(0.14f, 0.11f, 0.1f));
+            Material glass = TankMaterials.SharedTinted(new Color(0.55f, 0.9f, 0.75f, 0.16f));
 
             FishTank.Box(t, "stand", new Vector3(0f, lift / 2f, 0f), new Vector3(w + 0.3f, lift, d + 0.2f), frame, true);
             FishTank.Box(t, "back", new Vector3(0f, lift + h / 2f, -d / 2f), new Vector3(w + 0.3f, h + 0.3f, 0.12f), frame, true);
@@ -208,7 +208,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 FishTank.Box(t, "end", new Vector3(s * (w / 2f + 0.08f), lift + h / 2f, 0f), new Vector3(0.14f, h, d + 0.2f), frame, true);
             }
             FishTank.Box(t, "glass", new Vector3(0f, lift + h / 2f, d / 2f), new Vector3(w, h, 0.06f), glass, true);
-            FishTank.Box(t, "sand", new Vector3(0f, lift + 0.08f, 0f), new Vector3(w, 0.16f, d), TankMaterials.Solid(Sand), false);
+            FishTank.Box(t, "sand", new Vector3(0f, lift + 0.08f, 0f), new Vector3(w, 0.16f, d), TankMaterials.Shared(Sand), false);
             var glow = new GameObject("tank light");
             glow.transform.SetParent(t, false);
             glow.transform.localPosition = new Vector3(0f, lift + h - 0.2f, 0f);
@@ -239,7 +239,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 Object.DestroyImmediate(body.GetComponent<Collider>());
                 body.transform.SetParent(holder.transform, false);
                 body.transform.localScale = new Vector3(0.05f, 0.09f, 0.2f);
-                body.GetComponent<Renderer>().sharedMaterial = TankMaterials.Solid(fishColors[i % fishColors.Length]);
+                body.GetComponent<Renderer>().sharedMaterial = TankMaterials.Shared(fishColors[i % fishColors.Length]);
                 Swim swim = holder.AddComponent<Swim>();
                 swim.Center = new Vector3(((float)rng.NextDouble() - 0.5f) * 1.5f, lift + 0.5f + (float)rng.NextDouble() * (h - 0.9f), 0f);
                 swim.RadiusX = 1.0f + (float)rng.NextDouble() * 1.1f;
@@ -262,11 +262,11 @@ namespace WobblyMods.HouseMenu.Tanks
             root.transform.SetPositionAndRotation(position, rotation);
             Transform t = root.transform;
             var rng = new System.Random(23);
-            Material frame = TankMaterials.Solid(new Color(0.14f, 0.11f, 0.1f));
-            Material glass = TankMaterials.Tinted(new Color(0.8f, 0.95f, 1f, 0.1f));
-            Material water = TankMaterials.Tinted(new Color(0.45f, 0.75f, 0.6f, 0.22f));
-            Material rock = TankMaterials.Solid(new Color(0.42f, 0.42f, 0.4f));
-            Material leaf = TankMaterials.Solid(Leaf);
+            Material frame = TankMaterials.Shared(new Color(0.14f, 0.11f, 0.1f));
+            Material glass = TankMaterials.SharedTinted(new Color(0.8f, 0.95f, 1f, 0.1f));
+            Material water = TankMaterials.SharedTinted(new Color(0.45f, 0.75f, 0.6f, 0.22f));
+            Material rock = TankMaterials.Shared(new Color(0.42f, 0.42f, 0.4f));
+            Material leaf = TankMaterials.Shared(Leaf);
 
             FishTank.Box(t, "stand", new Vector3(0f, lift / 2f, 0f), new Vector3(w + 0.3f, lift, d + 0.2f), frame, true);
             FishTank.Box(t, "back", new Vector3(0f, lift + h / 2f, -d / 2f), new Vector3(w + 0.3f, h, 0.12f), frame, true);
@@ -275,7 +275,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 FishTank.Box(t, "end glass", new Vector3(s * w / 2f, lift + h / 2f, 0f), new Vector3(0.06f, h, d), glass, true);
             }
             FishTank.Box(t, "front glass", new Vector3(0f, lift + h / 2f, d / 2f), new Vector3(w, h, 0.06f), glass, true);
-            FishTank.Box(t, "sand", new Vector3(0f, lift + 0.1f, 0f), new Vector3(w - 0.1f, 0.2f, d - 0.1f), TankMaterials.Solid(new Color(0.9f, 0.82f, 0.5f)), false);
+            FishTank.Box(t, "sand", new Vector3(0f, lift + 0.1f, 0f), new Vector3(w - 0.1f, 0.2f, d - 0.1f), TankMaterials.Shared(new Color(0.9f, 0.82f, 0.5f)), false);
             FishTank.Box(t, "water", new Vector3(0f, lift + waterTop / 2f + 0.1f, 0f), new Vector3(w - 0.14f, waterTop - 0.2f, d - 0.14f), water, false);
 
             for (int i = 0; i < 9; i++)
@@ -324,7 +324,7 @@ namespace WobblyMods.HouseMenu.Tanks
             for (int i = 0; i < 6; i++) Plant(t, new Vector3(((float)rng.NextDouble() - 0.5f) * (w - 1f), lift + 0.2f, 0.2f + (float)rng.NextDouble() * 0.5f), 0.4f + (float)rng.NextDouble() * 0.4f, rng);
 
             // Slim silver fish just under the surface.
-            Material silver = TankMaterials.Solid(new Color(0.82f, 0.86f, 0.88f));
+            Material silver = TankMaterials.Shared(new Color(0.82f, 0.86f, 0.88f));
             for (int i = 0; i < 7; i++)
             {
                 var holder = new GameObject("silver fish");
@@ -354,7 +354,7 @@ namespace WobblyMods.HouseMenu.Tanks
             plant.transform.SetParent(parent, false);
             plant.transform.localPosition = at;
             plant.transform.localRotation = Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f);
-            Material leaf = TankMaterials.Solid(rng.Next(3) == 0 ? LeafDark : Leaf);
+            Material leaf = TankMaterials.Shared(rng.Next(3) == 0 ? LeafDark : Leaf);
             int leaves = 3 + rng.Next(4);
             for (int i = 0; i < leaves; i++)
             {
@@ -386,7 +386,7 @@ namespace WobblyMods.HouseMenu.Tanks
             log.transform.localPosition = (from + to) / 2f;
             log.transform.localRotation = Quaternion.FromToRotation(Vector3.up, along.normalized);
             log.transform.localScale = new Vector3(radius * 2f, along.magnitude / 2f, radius * 2f); // a Unity cylinder is 2 tall
-            log.GetComponent<Renderer>().sharedMaterial = TankMaterials.Solid(Wood);
+            log.GetComponent<Renderer>().sharedMaterial = TankMaterials.Shared(Wood);
         }
 
         private static Mesh _arch, _portal;

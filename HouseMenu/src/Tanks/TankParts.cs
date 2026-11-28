@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -114,7 +115,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 b.transform.localScale = Vector3.one * size;
                 b.transform.localPosition = new Vector3(Random.Range(-0.15f, 0.15f), Random.Range(0f, Top), Random.Range(-0.15f, 0.15f));
                 Renderer r = b.GetComponent<Renderer>();
-                r.material = mat;
+                r.sharedMaterial = mat;
                 r.shadowCastingMode = ShadowCastingMode.Off;
                 _bubbles[i] = b.transform;
                 _speeds[i] = Random.Range(0.4f, 0.8f);
@@ -201,6 +202,46 @@ namespace WobblyMods.HouseMenu.Tanks
             _bubble = new Material(Glass()) { name = "Tank Bubble" };
             SetColor(_bubble, new Color(0.9f, 0.97f, 1f, 0.45f));
             return _bubble;
+        }
+
+        private static readonly Dictionary<Color32, Material> SharedSolids = new Dictionary<Color32, Material>();
+        private static readonly Dictionary<Color32, Material> SharedTints = new Dictionary<Color32, Material>();
+
+        /// <summary>Config [Aquarium] Instancing: let the graphics card draw many same-colored boxes in one go.</summary>
+        public static bool Instancing = true;
+
+        /// <summary>
+        /// One solid material per color, shared by everything that asks for that color. A big aquarium used to
+        /// make about 1,200 materials where 45 will do; sharing them lets the game draw same-colored parts together,
+        /// which matters on a slower graphics card. NEVER change a material you got from here (it would change
+        /// every object of that color): for a private one, use Solid().
+        /// </summary>
+        public static Material Shared(Color color)
+        {
+            Color32 key = color;
+            Material m;
+            if (!SharedSolids.TryGetValue(key, out m) || m == null)
+            {
+                m = Solid(color);
+                m.name = "Tank Solid (shared)";
+                m.enableInstancing = Instancing;
+                SharedSolids[key] = m;
+            }
+            return m;
+        }
+
+        /// <summary>One see-through material per color, shared. The same warning as Shared().</summary>
+        public static Material SharedTinted(Color color)
+        {
+            Color32 key = color;
+            Material m;
+            if (!SharedTints.TryGetValue(key, out m) || m == null)
+            {
+                m = Tinted(color);
+                m.name = "Tank Tinted (shared)";
+                SharedTints[key] = m;
+            }
+            return m;
         }
 
         /// <summary>A see-through colored material (water, ponds), based on the glass material.</summary>

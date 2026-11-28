@@ -88,6 +88,7 @@ namespace WobblyMods.HouseMenu
             {
                 m = TankMaterials.Solid(color);
                 m.name = "Shape model";
+                m.enableInstancing = true; // sixty trees share six shapes: let the graphics card draw each shape in one go
                 Materials[color] = m;
             }
             return m;

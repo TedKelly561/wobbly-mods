@@ -13,7 +13,8 @@ namespace WobblyMods.HouseMenu.Tanks
     /// own light:
     ///
     ///   5  Rainforest lagoon   daylight under a glass roof; the top of the river tank is an open lagoon with
-    ///                          mangrove trees; palms, flowers, butterflies, frogs, lizards and turtles
+    ///                          mangrove trees, in a jungle of about sixty rainforest giants with vines, parrots,
+    ///                          a treehouse with a rope bridge and slide, flowers, butterflies, frogs and turtles
     ///   4  Rivers, bays and beaches   light and sandy: stingray bay, touch pools, river fish, mangrove roots
     ///   3  Jellyfish and ice          the darkest floor: glowing jellyfish tubes, an ice cave, a glow reef
     ///   2  Coral reef                 bright turquoise with ripples of light on the floor
@@ -666,10 +667,33 @@ namespace WobblyMods.HouseMenu.Tanks
         private static void Rainforest(Transform t, System.Random rng)
         {
             const float y = Top;
-            // Trees and bushes all round the lagoon, kept clear of the ramp and the bounce-pad landing.
-            float[][] palms = { new[] { -20f, -20f }, new[] { 14f, -21f }, new[] { -21f, 20f }, new[] { 14f, 21f }, new[] { -10f, -22f }, new[] { 2f, 22f }, new[] { -22f, -9f } };
+            Treehouse(t, rng);
+
+            // The jungle (parent's pick: about sixty rainforest giants). Each tree is only four meshes, and the six
+            // shapes are shared between all of them, so the whole forest draws cheaply. Trees are shorter near the
+            // glass walls, where the roof is lower.
+            var trunks = new List<Vector2> { new Vector2(11f, 20f), new Vector2(20f, 20f) }; // the two treehouse trees
+            var perches = new List<KeyValuePair<Transform, Vector3>>();
+            int planted = 0;
+            for (int tries = 0; tries < 6000 && planted < JungleTrees - 2; tries++)
+            {
+                var at = new Vector2(((float)rng.NextDouble() - 0.5f) * (HX * 2f - 5f), ((float)rng.NextDouble() - 0.5f) * (HZ * 2f - 5f));
+                if (!Free(at.x, at.y)) continue;
+                bool crowded = false;
+                foreach (Vector2 other in trunks) if ((other - at).sqrMagnitude < 3.6f * 3.6f) { crowded = true; break; }
+                if (crowded) continue;
+                trunks.Add(at);
+                int variant = rng.Next(WobblyMods.Core.Shapes.RainforestTree.Variants);
+                Transform tree = Tree(t, new Vector3(at.x, y, at.y), variant, 0.8f + (float)rng.NextDouble() * 0.45f, (float)rng.NextDouble() * 360f);
+                foreach (WobblyMods.Core.Shapes.V3 p in WobblyMods.Core.Shapes.RainforestTree.Perches(variant))
+                    perches.Add(new KeyValuePair<Transform, Vector3>(tree, new Vector3(p.X, p.Y, p.Z)));
+                planted++;
+            }
+
+            // The palms and banana trees from before, between the giants, and bushes and flowers underneath.
+            float[][] palms = { new[] { -20f, -20f }, new[] { 14f, -21f }, new[] { -21f, 20f }, new[] { -10f, -22f }, new[] { -22f, -9f } };
             foreach (float[] p in palms) Greenery(t, "Resort_PalmTree.prefab", new Vector3(p[0], y, p[1]), 5f + (float)rng.NextDouble() * 2f, rng);
-            float[][] bananas = { new[] { -15f, -15f }, new[] { 12f, -14f }, new[] { -15f, 16f }, new[] { 10f, 16f }, new[] { -23f, 12f } };
+            float[][] bananas = { new[] { -15f, -15f }, new[] { 12f, -14f }, new[] { -15f, 16f }, new[] { -23f, 12f } };
             foreach (float[] p in bananas) Greenery(t, "BananaTree.prefab", new Vector3(p[0], y, p[1]), 3.2f + (float)rng.NextDouble(), rng);
             for (int i = 0; i < 16; i++)
             {
@@ -681,13 +705,48 @@ namespace WobblyMods.HouseMenu.Tanks
                 var at = Around(rng);
                 Greenery(t, i % 2 == 0 ? "Details/Flower.prefab" : "Details/Flower Yellow.prefab", new Vector3(at.x, y, at.y), 0.9f, rng);
             }
-            for (int i = 0; i < 26; i++)
+            for (int i = 0; i < 30; i++)
             {
                 var at = Around(rng);
                 Flower(t, new Vector3(at.x, y, at.y), rng);
             }
 
-            // Wildlife: the frog, lizard and turtle homes, and butterflies over the flowers.
+            // Vine gates over the paths: walk through the hanging vines (they have no solid parts except the posts' look).
+            float[][] gates =
+            {
+                new[] { -7.9f, -5f, 0f }, new[] { -7.9f, 5.5f, 0f }, new[] { 7.9f, -5f, 0f }, new[] { 7.9f, 5f, 0f },
+                new[] { -4f, -8.9f, 90f }, new[] { 4f, -8.9f, 90f }, new[] { -4.5f, 8.9f, 90f }, new[] { 5.6f, 8.9f, 90f },
+                new[] { 17.5f, 10.5f, 90f }, new[] { -2f, 13.5f, 0f }, new[] { -12f, 4f, 90f }
+            };
+            for (int i = 0; i < gates.Length; i++)
+            {
+                GameObject gate = ShapeModels.Build("Vine gate " + (i % 3), WobblyMods.Core.Shapes.RainforestTree.VineGate(i % 3, 3.3f, 4.4f));
+                gate.transform.SetParent(t, false);
+                gate.transform.localPosition = new Vector3(gates[i][0], y, gates[i][1]);
+                gate.transform.localRotation = Quaternion.Euler(0f, gates[i][2], 0f);
+            }
+
+            // Parrots: some sitting on branches, some flying loops under the glass roof.
+            for (int i = 0; i < 16 && perches.Count > 0; i++)
+            {
+                int pick = rng.Next(perches.Count);
+                KeyValuePair<Transform, Vector3> perch = perches[pick];
+                perches.RemoveAt(pick);
+                Parrot(perch.Key, perch.Value, (float)rng.NextDouble() * 360f, i, false, rng, 1f / Mathf.Max(0.1f, perch.Key.localScale.x));
+            }
+            for (int i = 0; i < 9; i++)
+            {
+                Transform bird = Parrot(t, new Vector3(0f, y + 5.5f + (float)rng.NextDouble() * 3f, 0f), 0f, i + 1, true, rng, 1f);
+                Swim swim = bird.gameObject.AddComponent<Swim>();
+                swim.Center = new Vector3(((float)rng.NextDouble() - 0.5f) * 8f, y + 5.2f + (float)rng.NextDouble() * 3.2f, ((float)rng.NextDouble() - 0.5f) * 8f);
+                swim.RadiusX = 8f + (float)rng.NextDouble() * 7f;
+                swim.RadiusZ = 8f + (float)rng.NextDouble() * 7f;
+                swim.Speed = (i % 2 == 0 ? 1f : -1f) * (0.22f + (float)rng.NextDouble() * 0.2f);
+                swim.Angle = (float)rng.NextDouble() * 6.28f;
+                swim.Bob = 0.5f;
+            }
+
+            // Wildlife on the ground: the frog, lizard and turtle homes, and butterflies over the flowers.
             Adopt(t, Terrarium.BuildFrogTank(t.TransformPoint(new Vector3(-19f, y, -15f)), t.rotation * Quaternion.Euler(0f, 90f, 0f)));
             Adopt(t, Terrarium.BuildLizardTank(t.TransformPoint(new Vector3(12f, y, -19f)), t.rotation));
             Adopt(t, Terrarium.BuildTurtleTank(t.TransformPoint(new Vector3(-12f, y, 19f)), t.rotation * Quaternion.Euler(0f, 180f, 0f)));
@@ -705,30 +764,223 @@ namespace WobblyMods.HouseMenu.Tanks
                 Flap flap = body.AddComponent<Flap>();
                 flap.Left = left; flap.Right = right; flap.Phase = i;
                 Swim swim = holder.AddComponent<Swim>();
-                swim.Center = new Vector3(at.x, y + 1.6f + (float)rng.NextDouble() * 2.5f, at.y);
-                swim.RadiusX = 1.5f + (float)rng.NextDouble() * 2.5f;
-                swim.RadiusZ = 1.5f + (float)rng.NextDouble() * 2.5f;
+                swim.Center = new Vector3(at.x, y + 1.2f + (float)rng.NextDouble() * 1.8f, at.y);
+                swim.RadiusX = 1.2f + (float)rng.NextDouble() * 1.8f;
+                swim.RadiusZ = 1.2f + (float)rng.NextDouble() * 1.8f;
                 swim.Speed = (i % 2 == 0 ? 1f : -1f) * (0.5f + (float)rng.NextDouble() * 0.5f);
                 swim.Angle = (float)rng.NextDouble() * 6.28f;
-                swim.Bob = 0.6f;
+                swim.Bob = 0.5f;
             }
             // Benches by the water.
             Material wood = TankMaterials.Solid(Wood);
             FishTank.Box(t, "bench", new Vector3(-9.5f, y + 0.35f, 0f), new Vector3(0.9f, 0.7f, 4f), wood, true);
             FishTank.Box(t, "bench", new Vector3(9.5f, y + 0.35f, 0f), new Vector3(0.9f, 0.7f, 4f), wood, true);
             Aquarium.Sign(t, new Vector3(3.2f, y, TZ + 1.6f), 0f, sign => { GameObject f = ShapeModels.Redtail(); f.transform.SetParent(sign, false); f.transform.localScale = Vector3.one * 1.1f; f.transform.localRotation = Quaternion.Euler(0f, 90f, 0f); });
+            Plugin.Log.LogInfo("Big aquarium: the rainforest has " + (planted + 2) + " giant trees, " + gates.Length + " vine gates and 25 parrots.");
         }
 
-        /// <summary>A random spot on the top floor that isn't the lagoon, the ramp, the bounce landing or right at the wall.</summary>
+        /// <summary>One rainforest giant: four shared meshes and a solid trunk. Shorter where the glass roof is lower.</summary>
+        private static Transform Tree(Transform t, Vector3 at, int variant, float scale, float yaw)
+        {
+            // The roof starts 8 m up at the walls and rises 11 m more toward the middle.
+            float toWall = Mathf.Min(HX - Mathf.Abs(at.x), HZ - Mathf.Abs(at.z));
+            float room = FH + 11f * Mathf.Clamp01(toWall / HX) - 0.4f;
+            scale = Mathf.Min(scale, room / WobblyMods.Core.Shapes.RainforestTree.Height(variant));
+            GameObject tree = ShapeModels.Build("Rainforest tree " + variant, WobblyMods.Core.Shapes.RainforestTree.Build(variant));
+            tree.transform.SetParent(t, false);
+            tree.transform.localPosition = at;
+            tree.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            tree.transform.localScale = Vector3.one * scale;
+            var trunk = tree.AddComponent<CapsuleCollider>();
+            trunk.center = new Vector3(0f, 2.6f, 0f);
+            trunk.radius = 0.5f;
+            trunk.height = 5.2f;
+            return tree.transform;
+        }
+
+        private static readonly Color[][] ParrotColors =
+        {
+            new[] { new Color(0.9f, 0.16f, 0.16f), new Color(1f, 0.82f, 0.2f), new Color(0.15f, 0.35f, 0.9f) },   // scarlet
+            new[] { new Color(0.15f, 0.45f, 0.95f), new Color(1f, 0.82f, 0.2f), new Color(0.1f, 0.25f, 0.7f) },   // blue and gold
+            new[] { new Color(0.25f, 0.7f, 0.25f), new Color(1f, 0.5f, 0.05f), new Color(0.9f, 0.2f, 0.2f) },     // green and orange (Skylar's colors)
+            new[] { new Color(1f, 0.5f, 0.05f), new Color(0.25f, 0.67f, 0.24f), new Color(1f, 0.85f, 0.2f) },     // orange and green
+            new[] { new Color(0.97f, 0.97f, 0.97f), new Color(1f, 0.9f, 0.4f), new Color(1f, 0.85f, 0.3f) },      // white cockatoo
+        };
+
+        /// <summary>
+        /// A parrot, twice life size so a small player can see it up in the trees. Sitting: wings folded. Flying:
+        /// wings flapping (the caller adds the Swim that moves it). Returns the holder; its first child is the body.
+        /// unscale = undo the parent's scale (birds on a scaled tree stay bird-sized).
+        /// </summary>
+        private static Transform Parrot(Transform parent, Vector3 at, float yaw, int look, bool flying, System.Random rng, float unscale)
+        {
+            Color[] c = ParrotColors[look % ParrotColors.Length];
+            int kind = look % ParrotColors.Length;
+            var holder = new GameObject("parrot");
+            holder.transform.SetParent(parent, false);
+            holder.transform.localPosition = at;
+            holder.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+            holder.transform.localScale = Vector3.one * 2f * unscale;
+            GameObject body = ShapeModels.Build("Parrot body " + kind, WobblyMods.Core.Shapes.BirdModel.Body(Rgb(c[0]), Rgb(c[1])));
+            body.transform.SetParent(holder.transform, false);
+            Transform[] wing = new Transform[2];
+            for (int s = 0; s < 2; s++)
+            {
+                int side = s == 0 ? -1 : 1;
+                GameObject w = ShapeModels.Build("Parrot wing " + kind + (side < 0 ? " L" : " R"), WobblyMods.Core.Shapes.BirdModel.Wing(Rgb(c[0]), Rgb(c[2]), side));
+                w.transform.SetParent(body.transform, false);
+                w.transform.localPosition = new Vector3(side * 0.07f, 0.17f, 0f);
+                // Folded down along the body when sitting.
+                if (!flying) w.transform.localRotation = Quaternion.Euler(0f, 0f, -side * 72f);
+                wing[s] = w.transform;
+            }
+            if (flying)
+            {
+                Flap flap = body.AddComponent<Flap>();
+                flap.Left = wing[0]; flap.Right = wing[1]; flap.Phase = look * 1.7f; flap.Rate = 9f; flap.Swing = 40f;
+            }
+            return holder.transform;
+        }
+
+        private static WobblyMods.Core.Shapes.Rgb Rgb(Color c)
+        {
+            Color32 b = c;
+            return new WobblyMods.Core.Shapes.Rgb(b.r, b.g, b.b);
+        }
+
+        /// <summary>
+        /// The treehouse (parent's pick): a ramp up to a hut on a platform round a big tree, a rope bridge across to
+        /// a second tree, and a slide back down. In the front right of the top floor.
+        /// </summary>
+        private static void Treehouse(Transform t, System.Random rng)
+        {
+            const float y = Top, deck = 4.2f;
+            Material wood = TankMaterials.Solid(new Color(0.62f, 0.44f, 0.27f)), darkWood = TankMaterials.Solid(Wood);
+            Material orange = TankMaterials.Solid(Orange), green = TankMaterials.Solid(Green);
+            var a = new Vector3(11f, y, 20f);
+            var b = new Vector3(20f, y, 20f);
+            Tree(t, a, 4, 1.12f, 40f);
+            Tree(t, b, 1, 1.0f, 200f);
+
+            // Platforms.
+            FishTank.Box(t, "treehouse deck", a + new Vector3(0f, deck - 0.1f, 0f), new Vector3(4.4f, 0.2f, 4.4f), wood, true);
+            FishTank.Box(t, "treehouse deck", b + new Vector3(0f, deck - 0.1f, 0f), new Vector3(4.0f, 0.2f, 4.0f), wood, true);
+
+            // The hut on the first platform: four posts and a stepped roof in her colors.
+            for (int sx = -1; sx <= 1; sx += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
+                    FishTank.Box(t, "hut post", a + new Vector3(sx * 1.95f, deck + 1.25f, sz * 1.95f), new Vector3(0.16f, 2.5f, 0.16f), darkWood, true);
+            FishTank.Box(t, "hut roof", a + new Vector3(0f, deck + 2.6f, 0f), new Vector3(4.9f, 0.18f, 4.9f), orange, true);
+            FishTank.Box(t, "hut roof", a + new Vector3(0f, deck + 2.85f, 0f), new Vector3(3.3f, 0.18f, 3.3f), green, false);
+
+            // Rails round both platforms, with gaps for the ramp (west of A), the bridge (between them) and the slide (south of B).
+            Rail(t, a + new Vector3(0f, deck, 2.15f), 4.4f, true, darkWood);
+            Rail(t, a + new Vector3(0f, deck, -2.15f), 4.4f, true, darkWood);
+            Rail(t, a + new Vector3(2.15f, deck, 1.5f), 1.4f, false, darkWood);
+            Rail(t, a + new Vector3(2.15f, deck, -1.5f), 1.4f, false, darkWood);
+            Rail(t, a + new Vector3(-2.15f, deck, 1.6f), 1.2f, false, darkWood);
+            Rail(t, a + new Vector3(-2.15f, deck, -1.6f), 1.2f, false, darkWood);
+            Rail(t, b + new Vector3(0f, deck, 1.95f), 4.0f, true, darkWood);
+            Rail(t, b + new Vector3(1.95f, deck, 0f), 4.0f, false, darkWood);
+            Rail(t, b + new Vector3(-1.95f, deck, 1.4f), 1.2f, false, darkWood);
+            Rail(t, b + new Vector3(-1.95f, deck, -1.4f), 1.2f, false, darkWood);
+            Rail(t, b + new Vector3(1.35f, deck, -1.95f), 1.3f, true, darkWood);
+            Rail(t, b + new Vector3(-1.35f, deck, -1.95f), 1.3f, true, darkWood);
+
+            // The ramp up from the floor to the first platform.
+            float x0 = -2.5f, x1 = a.x - 2.2f, run = x1 - x0, angle = Mathf.Atan2(deck, run) * Mathf.Rad2Deg, length = Mathf.Sqrt(run * run + deck * deck);
+            GameObject ramp = FishTank.Box(t, "treehouse ramp", new Vector3((x0 + x1) / 2f, y + deck / 2f - 0.1f, a.z), new Vector3(length + 0.2f, 0.2f, 1.8f), wood, true);
+            ramp.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
+            for (int s = -1; s <= 1; s += 2)
+            {
+                GameObject side = FishTank.Box(t, "ramp rail", new Vector3((x0 + x1) / 2f, y + deck / 2f + 0.45f, a.z + s * 0.9f), new Vector3(length, 0.9f, 0.1f), darkWood, true);
+                side.transform.localRotation = Quaternion.Euler(0f, 0f, angle);
+            }
+
+            // The rope bridge: sagging planks, rope sides you can't fall through.
+            float bx0 = a.x + 2.2f, bx1 = b.x - 2.0f, span = bx1 - bx0;
+            const int planks = 8;
+            for (int i = 0; i < planks; i++)
+            {
+                float f = (i + 0.5f) / planks;
+                FishTank.Box(t, "bridge plank", new Vector3(bx0 + span * f, y + deck - 0.08f - 0.22f * Mathf.Sin(f * Mathf.PI), a.z), new Vector3(span / planks - 0.07f, 0.1f, 1.4f), wood, true);
+            }
+            for (int s = -1; s <= 1; s += 2)
+            {
+                float z = a.z + s * 0.75f;
+                var from = new Vector3(bx0, y + deck + 1.0f, z);
+                var to = new Vector3(bx1, y + deck + 1.0f, z);
+                var mid = (from + to) / 2f + Vector3.down * 0.28f;
+                AquariumTunnel.Log(t, from, mid, 0.04f);
+                AquariumTunnel.Log(t, mid, to, 0.04f);
+                for (int i = 0; i <= 4; i++)
+                {
+                    float f = i / 4f;
+                    var top = Vector3.Lerp(from, to, f) + Vector3.down * 0.28f * Mathf.Sin(f * Mathf.PI);
+                    AquariumTunnel.Log(t, new Vector3(top.x, y + deck - 0.1f - 0.22f * Mathf.Sin(f * Mathf.PI), z), top, 0.025f);
+                }
+                // What actually stops a Wobbly: an unseen wall along each side.
+                var wall = new GameObject("bridge side");
+                wall.transform.SetParent(t, false);
+                wall.transform.localPosition = new Vector3((bx0 + bx1) / 2f, y + deck + 0.45f, z);
+                wall.AddComponent<BoxCollider>().size = new Vector3(span, 1.3f, 0.08f);
+            }
+
+            // The slide down from the second platform.
+            float zTop = b.z - 2.0f, zEnd = 11.6f, sRun = zTop - zEnd, sDrop = deck - 0.2f, sAngle = Mathf.Atan2(sDrop, sRun) * Mathf.Rad2Deg, sLength = Mathf.Sqrt(sRun * sRun + sDrop * sDrop);
+            var slippery = new PhysicMaterial("Wobbly slide") { dynamicFriction = 0.02f, staticFriction = 0.02f, frictionCombine = PhysicMaterialCombine.Minimum };
+            GameObject slide = FishTank.Box(t, "slide", new Vector3(b.x, y + deck / 2f, (zTop + zEnd) / 2f), new Vector3(1.4f, 0.15f, sLength + 0.3f), orange, true);
+            slide.transform.localRotation = Quaternion.Euler(-sAngle, 0f, 0f);
+            slide.GetComponent<Collider>().sharedMaterial = slippery;
+            for (int s = -1; s <= 1; s += 2)
+            {
+                GameObject lip = FishTank.Box(t, "slide side", new Vector3(b.x + s * 0.75f, y + deck / 2f + 0.25f, (zTop + zEnd) / 2f), new Vector3(0.1f, 0.5f, sLength + 0.3f), green, true);
+                lip.transform.localRotation = Quaternion.Euler(-sAngle, 0f, 0f);
+                lip.GetComponent<Collider>().sharedMaterial = slippery;
+            }
+
+            // A few parrots keeping watch from the roof and the rails.
+            Parrot(t, a + new Vector3(1.2f, deck + 3.05f, 0.8f), 200f, 2, false, rng, 1f);
+            Parrot(t, a + new Vector3(-1.6f, deck + 2.7f, -2.0f), 20f, 0, false, rng, 1f);
+            Parrot(t, b + new Vector3(1.95f, deck + 1.0f, 0.8f), 270f, 3, false, rng, 1f);
+        }
+
+        /// <summary>A waist-high fence piece on a platform. alongX = it runs along X (otherwise along Z).</summary>
+        private static void Rail(Transform t, Vector3 at, float length, bool alongX, Material material)
+        {
+            FishTank.Box(t, "treehouse rail", at + Vector3.up * 0.95f, alongX ? new Vector3(length, 0.1f, 0.1f) : new Vector3(0.1f, 0.1f, length), material, false);
+            FishTank.Box(t, "treehouse rail", at + Vector3.up * 0.5f, alongX ? new Vector3(length, 0.08f, 0.08f) : new Vector3(0.08f, 0.08f, length), material, false);
+            var solid = new GameObject("rail solid");
+            solid.transform.SetParent(t, false);
+            solid.transform.localPosition = at + Vector3.up * 0.55f;
+            solid.AddComponent<BoxCollider>().size = alongX ? new Vector3(length, 1.1f, 0.1f) : new Vector3(0.1f, 1.1f, length);
+        }
+
+        /// <summary>Is this spot on the top floor free for a tree, a bush or a flower?</summary>
+        private static bool Free(float x, float z)
+        {
+            if (Mathf.Abs(x) > HX - 2f || Mathf.Abs(z) > HZ - 2f) return false;
+            if (Mathf.Abs(x) < TX + 2.6f && Mathf.Abs(z) < TZ + 2.9f) return false;   // the lagoon and the walk round it
+            if (x > 16f && z > -13f && z < 13f) return false;                          // the ramp and the way from it
+            if (x < -15f && Mathf.Abs(z) < 8f) return false;                           // where the bounce pad lands you
+            if (x > -15f && x < -8.6f && z > 1f && z < 7f) return false;               // the way from there to the lagoon
+            if (x > -5f && x < 24.5f && z > 16.5f) return false;                       // the treehouse, its ramp and bridge
+            if (x > 17.5f && x < 22.5f && z > 9.5f && z < 17f) return false;           // the slide and its landing
+            if (x > -5f && x < 1f && z > 9.9f && z < 17f) return false;                // the way from the lagoon to the treehouse ramp
+            if (new Vector2(x + 19f, z + 15f).sqrMagnitude < 3.6f * 3.6f) return false; // frog home
+            if (new Vector2(x - 12f, z + 19f).sqrMagnitude < 3.6f * 3.6f) return false; // lizard home
+            if (new Vector2(x + 12f, z - 19f).sqrMagnitude < 3.6f * 3.6f) return false; // turtle home
+            if (Mathf.Abs(Mathf.Abs(x) - 9.5f) < 1.4f && Mathf.Abs(z) < 3f) return false; // the benches
+            return true;
+        }
+
+        /// <summary>A random free spot on the top floor (for bushes, flowers and butterflies).</summary>
         private static Vector2 Around(System.Random rng)
         {
-            for (int tries = 0; tries < 40; tries++)
+            for (int tries = 0; tries < 60; tries++)
             {
                 float x = ((float)rng.NextDouble() - 0.5f) * (HX * 2f - 4f), z = ((float)rng.NextDouble() - 0.5f) * (HZ * 2f - 4f);
-                if (Mathf.Abs(x) < TX + 2.5f && Mathf.Abs(z) < TZ + 2.8f) continue; // lagoon and the walk round it
-                if (x > 16f && z > -13f && z < 13f) continue;                        // ramp
-                if (x < -15f && Mathf.Abs(z) < 8f) continue;                         // bounce pad landing
-                return new Vector2(x, z);
+                if (Free(x, z)) return new Vector2(x, z);
             }
             return new Vector2(-18f, 22f);
         }
@@ -877,6 +1129,9 @@ namespace WobblyMods.HouseMenu.Tanks
                 ripple.Speed = (layer == 0 ? 1f : -1f) * (7f + (Mathf.Abs(at.x * 7f + at.z * 3f) % 5f));
             }
         }
+
+        /// <summary>How many rainforest giants grow on the top floor (config [Aquarium] JungleTrees; fewer for a slow graphics card).</summary>
+        public static int JungleTrees = 60;
 
         /// <summary>How strong the floor ripples are (config [Aquarium] RippleStrength; 1 = as designed).</summary>
         public static float RippleStrength = 1f;
@@ -1417,10 +1672,12 @@ namespace WobblyMods.HouseMenu.Tanks
     {
         public Transform Left, Right;
         public float Phase;
+        public float Rate = 14f;    // butterflies flutter fast; birds beat slower
+        public float Swing = 55f;
 
         private void Update()
         {
-            float a = 55f * Mathf.Sin(Time.time * 14f + Phase);
+            float a = Swing * Mathf.Sin(Time.time * Rate + Phase);
             if (Left != null) Left.localRotation = Quaternion.Euler(0f, 0f, -a);
             if (Right != null) Right.localRotation = Quaternion.Euler(0f, 0f, a);
         }

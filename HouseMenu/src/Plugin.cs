@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.38.0";
+        public const string PluginVersion = "0.38.1";
 
         internal static ManualLogSource Log;
 
@@ -47,6 +47,9 @@ namespace WobblyMods.HouseMenu
             Log = Logger;
             CustomModels.Init();
             Outfits.Init(Config);
+            Tanks.BigAquarium.RippleStrength = Mathf.Clamp(Config.Bind("Aquarium", "RippleStrength", 1f,
+                "How strong the moving ripples of light on the Big aquarium's floors are. 1 = normal, 2 = twice as bright, 0 = off. " +
+                "Takes effect the next time a Big aquarium is placed.").Value, 0f, 10f);
             HiddenItems.Load();
             // New key names (0.34.0) so the new defaults apply on PCs that saved the old ones.
             Fun.Init(Config.Bind("Fun", "SwarmFishSize", 0.35f,

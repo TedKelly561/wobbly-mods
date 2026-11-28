@@ -395,21 +395,56 @@ namespace WobblyMods.HouseMenu.Tanks
         }
 
         /// <summary>
-        /// A small model of one of the game's fish on a sign. It is turned side-on to the viewer and centered on the
-        /// plaque (first version, 2026-11-27: "some fish are in the wrong position on the signs", because the
-        /// models' own origins and directions differ).
+        /// A small model of one of the game's fish on a sign: long side across the plaque, shrunk to fit on it,
+        /// centered, with its back just touching the plaque. Everything is measured in the sign's OWN space from
+        /// the model's meshes; the earlier versions measured in world space, which goes wrong whenever the building
+        /// isn't lined up with the world (test 26: "their placement still needs work").
         /// </summary>
         internal static void MiniFish(Transform sign, string name, float size)
         {
             GameObject fish = FishTank.Place(sign, FishPath + name + "_Static.prefab", size, Vector3.zero, new System.Random(1));
             if (fish == null) return;
-            fish.transform.localRotation = Quaternion.identity;
+            Transform f = fish.transform;
+            f.localPosition = Vector3.zero;
+            f.localRotation = Quaternion.identity;
             Bounds b;
-            if (!FishTank.TryGetBounds(fish, out b)) return;
-            // Long side across the plaque, not poking out of it.
-            Vector3 size3 = sign.InverseTransformVector(b.size);
-            if (Mathf.Abs(size3.z) > Mathf.Abs(size3.x) * 1.15f) fish.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
-            if (FishTank.TryGetBounds(fish, out b)) fish.transform.position += sign.position - b.center;
+            if (!SignBounds(sign, fish, out b)) return;
+            if (b.size.z > b.size.x * 1.1f)
+            {
+                f.localRotation = Quaternion.Euler(0f, 90f, 0f);
+                if (!SignBounds(sign, fish, out b)) return;
+            }
+            // Fit the plaque's face (about 1.3 wide and 0.7 tall).
+            float fit = Mathf.Min(1f, Mathf.Min(1.2f / Mathf.Max(0.01f, b.size.x), 0.62f / Mathf.Max(0.01f, b.size.y)));
+            if (fit < 0.999f)
+            {
+                f.localScale *= fit;
+                if (!SignBounds(sign, fish, out b)) return;
+            }
+            // The sign's origin is 0.18 in front of the plaque: center it there, back of the animal 0.02 off the plaque.
+            f.localPosition -= new Vector3(b.center.x, b.center.y, b.min.z + 0.1f);
+        }
+
+        /// <summary>The box round an object's meshes, measured in the sign's own space.</summary>
+        private static bool SignBounds(Transform sign, GameObject go, out Bounds bounds)
+        {
+            bounds = new Bounds();
+            bool any = false;
+            foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+            {
+                MeshFilter mf = r.GetComponent<MeshFilter>();
+                SkinnedMeshRenderer skinned = r as SkinnedMeshRenderer;
+                Mesh mesh = mf != null ? mf.sharedMesh : (skinned != null ? skinned.sharedMesh : null);
+                if (mesh == null) continue;
+                Bounds m = mesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    Vector3 corner = m.center + Vector3.Scale(m.extents, new Vector3((i & 1) == 0 ? -1f : 1f, (i & 2) == 0 ? -1f : 1f, (i & 4) == 0 ? -1f : 1f));
+                    Vector3 local = sign.InverseTransformPoint(r.transform.TransformPoint(corner));
+                    if (!any) { bounds = new Bounds(local, Vector3.zero); any = true; } else bounds.Encapsulate(local);
+                }
+            }
+            return any;
         }
     }
 

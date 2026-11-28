@@ -48,7 +48,7 @@ namespace WobblyMods.HouseMenu.Tanks
         // The feel of each floor: floor color, wall color.
         private static readonly Color[] FloorColor =
         {
-            new Color(0.05f, 0.08f, 0.16f), new Color(0.78f, 0.72f, 0.52f), new Color(0.03f, 0.03f, 0.07f),
+            new Color(0.1f, 0.17f, 0.3f), new Color(0.78f, 0.72f, 0.52f), new Color(0.03f, 0.03f, 0.07f),
             new Color(0.82f, 0.76f, 0.58f), new Color(0.55f, 0.42f, 0.28f)
         };
         private static readonly Color[] WallColor =
@@ -377,6 +377,8 @@ namespace WobblyMods.HouseMenu.Tanks
             mind.Fish = redtails;
             mind.Interior = new Bounds(new Vector3(0f, Top / 2f, 0f), new Vector3(TX * 2f - 2.6f, Top - 2.5f, TZ * 2f - 2.6f));
             mind.Reach = 9f;
+            mind.Spread = 3.2f;     // the redtails circle a few meters out from her
+            mind.KeepLoop = 0.7f;   // and keep most of their lazy loops
             for (int f = 0; f < Floors - 1; f++)
             {
                 FeedButton(r, mind, new Vector3(-TX - 1.7f, f * FH + (f == 0 ? 0.1f : 0f), 0f), new Vector3(-TX + 1.8f, f * FH + 3.4f, 0f));
@@ -424,9 +426,9 @@ namespace WobblyMods.HouseMenu.Tanks
             junk.Finish(t, "Boot", rng);
 
             // Light: dark blue, with slow ripples on the floor as if the sea were overhead. The lobby is a bit warmer.
-            Ripples(t, new Vector3(-14f, FH - 0.7f, 0f), new Color(0.3f, 0.6f, 1f), 1.5f);
-            Ripples(t, new Vector3(4f, FH - 0.7f, -15f), new Color(0.3f, 0.6f, 1f), 1.5f);
-            Ripples(t, new Vector3(-6f, FH - 0.7f, 17f), new Color(0.45f, 0.7f, 1f), 1.3f);
+            Ripples(t, new Vector3(-14f, FH - 0.7f, 0f), new Color(0.3f, 0.6f, 1f), 7.5f);
+            Ripples(t, new Vector3(4f, FH - 0.7f, -15f), new Color(0.3f, 0.6f, 1f), 7.5f);
+            Ripples(t, new Vector3(-6f, FH - 0.7f, 17f), new Color(0.45f, 0.7f, 1f), 6.5f);
             Aquarium.Lamp(t, new Vector3(0f, 5.5f, 21f), new Color(1f, 0.85f, 0.65f), 12f, 0.9f);
             FishTank.Box(t, "front desk", new Vector3(-8f, 0.65f, 20f), new Vector3(5f, 1.1f, 1.3f), TankMaterials.Solid(Orange), true);
         }
@@ -529,10 +531,10 @@ namespace WobblyMods.HouseMenu.Tanks
             puff.Finish(t, "Pufferfish", rng);
 
             // Bright, shallow-water light with lively ripples everywhere.
-            Ripples(t, new Vector3(-14f, y + FH - 0.7f, 0f), new Color(0.6f, 1f, 0.95f), 2.2f);
-            Ripples(t, new Vector3(0f, y + FH - 0.7f, -14f), new Color(0.6f, 1f, 0.95f), 2.2f);
-            Ripples(t, new Vector3(0f, y + FH - 0.7f, 15f), new Color(0.6f, 1f, 0.95f), 2.2f);
-            Ripples(t, new Vector3(12f, y + FH - 0.7f, 14f), new Color(0.7f, 1f, 0.9f), 2.0f);
+            Ripples(t, new Vector3(-14f, y + FH - 0.7f, 0f), new Color(0.6f, 1f, 0.95f), 11.0f);
+            Ripples(t, new Vector3(0f, y + FH - 0.7f, -14f), new Color(0.6f, 1f, 0.95f), 11.0f);
+            Ripples(t, new Vector3(0f, y + FH - 0.7f, 15f), new Color(0.6f, 1f, 0.95f), 11.0f);
+            Ripples(t, new Vector3(12f, y + FH - 0.7f, 14f), new Color(0.7f, 1f, 0.9f), 10.0f);
         }
 
         // =====================================================================================================
@@ -584,7 +586,7 @@ namespace WobblyMods.HouseMenu.Tanks
             crab.Crawlers(new[] { "Giant Crab", "Giant Crab", "Spider Crab", "Spider Crab", "Sea Spider", "Lobster", "Lobster", "Prawn" }, 1.0f, rng);
             crab.Finish(t, "Giant Crab", rng);
             // Hardly any light out here: only a faint, slow ripple, so the glowing tanks stand out.
-            Ripples(t, new Vector3(8f, y + FH - 0.7f, 0f), new Color(0.3f, 0.3f, 0.9f), 0.7f);
+            Ripples(t, new Vector3(8f, y + FH - 0.7f, 0f), new Color(0.3f, 0.3f, 0.9f), 1.5f); // kept faint: this floor is meant to be dark
         }
 
         // =====================================================================================================
@@ -653,8 +655,8 @@ namespace WobblyMods.HouseMenu.Tanks
             }
             Aquarium.Lamp(t, new Vector3(-12f, y + 6.5f, 4f), lamp, 13f, 1.1f);
             Aquarium.Lamp(t, new Vector3(10f, y + 6.5f, -13f), lamp, 13f, 1.1f);
-            Ripples(t, new Vector3(-3f, y + FH - 0.7f, -17f), new Color(1f, 1f, 0.85f), 1.8f);
-            Ripples(t, new Vector3(-6f, y + FH - 0.7f, 15f), new Color(1f, 1f, 0.85f), 1.8f);
+            Ripples(t, new Vector3(-3f, y + FH - 0.7f, -17f), new Color(1f, 1f, 0.85f), 9.0f);
+            Ripples(t, new Vector3(-6f, y + FH - 0.7f, 15f), new Color(1f, 1f, 0.85f), 9.0f);
         }
 
         // =====================================================================================================
@@ -853,20 +855,31 @@ namespace WobblyMods.HouseMenu.Tanks
         /// </summary>
         private static void Ripples(Transform t, Vector3 at, Color color, float intensity)
         {
-            var go = new GameObject("ripple light");
-            go.transform.SetParent(t, false);
-            go.transform.localPosition = at;
-            Light light = go.AddComponent<Light>();
-            light.type = LightType.Spot;
-            light.spotAngle = 125f;
-            light.range = FH + 2f;
-            light.color = color;
-            light.intensity = intensity;
-            light.shadows = LightShadows.None;
-            light.cookie = CausticCookie();
-            light.renderMode = LightRenderMode.ForcePixel;
-            go.AddComponent<RippleLight>().Speed = 5f + (Mathf.Abs(at.x * 7f + at.z * 3f) % 5f);
+            // Two lights in the same place turning opposite ways: where their patterns cross, the bright spots
+            // slide and flicker like real light through water. Test 26: one faint light was "hard to tell". A
+            // spotlight is much weaker at the floor than its number suggests (it fades with distance), so these
+            // are several times brighter than before, with a longer reach.
+            for (int layer = 0; layer < 2; layer++)
+            {
+                var go = new GameObject("ripple light");
+                go.transform.SetParent(t, false);
+                go.transform.localPosition = at + new Vector3(layer * 0.8f, 0f, layer * 0.6f);
+                Light light = go.AddComponent<Light>();
+                light.type = LightType.Spot;
+                light.spotAngle = 130f;
+                light.range = FH * 1.9f;
+                light.color = color;
+                light.intensity = intensity * RippleStrength * (layer == 0 ? 1f : 0.75f);
+                light.shadows = LightShadows.None;
+                light.cookie = CausticCookie();
+                light.renderMode = LightRenderMode.ForcePixel;
+                RippleLight ripple = go.AddComponent<RippleLight>();
+                ripple.Speed = (layer == 0 ? 1f : -1f) * (7f + (Mathf.Abs(at.x * 7f + at.z * 3f) % 5f));
+            }
         }
+
+        /// <summary>How strong the floor ripples are (config [Aquarium] RippleStrength; 1 = as designed).</summary>
+        public static float RippleStrength = 1f;
 
         private static Texture2D _cookie;
 
@@ -881,13 +894,13 @@ namespace WobblyMods.HouseMenu.Tanks
             {
                 for (int xx = 0; xx < n; xx++)
                 {
-                    float u = xx / (float)n * 18f, v = yy / (float)n * 18f;
+                    float u = xx / (float)n * 9f, v = yy / (float)n * 9f;
                     float a = Mathf.Sin(u + 1.6f * Mathf.Sin(v * 0.9f)) + Mathf.Sin(v * 1.1f + 1.4f * Mathf.Sin(u * 0.8f + 1.3f));
                     float b = Mathf.Sin((u + v) * 0.75f + 1.2f * Mathf.Sin((u - v) * 0.6f));
-                    float lines = Mathf.Pow(1f - Mathf.Abs(Mathf.Sin(a * 1.3f + b)), 5f) + 0.6f * Mathf.Pow(1f - Mathf.Abs(Mathf.Sin(b * 1.7f - a * 0.6f)), 6f);
+                    float lines = Mathf.Pow(1f - Mathf.Abs(Mathf.Sin(a * 1.3f + b)), 3f) + 0.6f * Mathf.Pow(1f - Mathf.Abs(Mathf.Sin(b * 1.7f - a * 0.6f)), 4f);
                     float dx = xx / (float)n - 0.5f, dy = yy / (float)n - 0.5f;
                     float edge = Mathf.Clamp01((0.5f - Mathf.Sqrt(dx * dx + dy * dy)) / 0.12f);
-                    byte value = (byte)(255f * Mathf.Clamp01((0.22f + 0.78f * lines) * edge));
+                    byte value = (byte)(255f * Mathf.Clamp01((0.04f + 0.96f * lines) * edge));
                     px[yy * n + xx] = new Color32(value, value, value, value);
                 }
             }
@@ -1012,11 +1025,14 @@ namespace WobblyMods.HouseMenu.Tanks
 
             public void Rocks(int count, System.Random rng)
             {
+                // Rocks sit toward the back and stay low. In test 26 a big rock right at the glass hid a whole tank.
                 Material rock = TankMaterials.Solid(new Color(0.34f, 0.36f, 0.42f));
                 for (int i = 0; i < count; i++)
                 {
-                    float r = 0.5f + (float)rng.NextDouble() * 1.0f;
-                    Aquarium.Shape(_t, PrimitiveType.Sphere, OnSand(rng, 0.6f) + Vector3.up * r * 0.2f, new Vector3(r * 1.4f, r * 0.75f, r),
+                    float r = 0.4f + (float)rng.NextDouble() * 0.7f;
+                    Vector3 at = OnSand(rng, 0.6f);
+                    at.z = -_d / 2f + 0.5f + (float)rng.NextDouble() * (_d * 0.45f);
+                    Aquarium.Shape(_t, PrimitiveType.Sphere, at + Vector3.up * r * 0.2f, new Vector3(r * 1.4f, r * 0.7f, r),
                                    Quaternion.Euler((float)rng.NextDouble() * 20f, (float)rng.NextDouble() * 360f, 0f), rock);
                 }
             }
@@ -1027,6 +1043,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 for (int i = 0; i < count; i++)
                 {
                     Vector3 at = OnSand(rng, 0.5f);
+                    at.z = Mathf.Min(at.z, _d * 0.2f); // nothing tall right against the window
                     Material m = TankMaterials.Solid(coral[rng.Next(coral.Length)]);
                     int kind = rng.Next(4);
                     if (kind == 0)
@@ -1110,6 +1127,7 @@ namespace WobblyMods.HouseMenu.Tanks
                 {
                     float size = 0.7f + (float)rng.NextDouble() * 1.3f;
                     Vector3 at = OnSand(rng, 0.6f);
+                    at.z = Mathf.Min(at.z, _d * 0.15f);
                     if (i % 3 == 0) at.y = Lift + _h - size * 0.4f; else at.y += size * 0.35f;
                     Aquarium.Shape(_t, PrimitiveType.Cube, at, new Vector3(size, size * (0.6f + (float)rng.NextDouble() * 0.6f), size * 0.8f),
                                    Quaternion.Euler((float)rng.NextDouble() * 30f, (float)rng.NextDouble() * 360f, (float)rng.NextDouble() * 30f), i % 2 == 0 ? white : blue);
@@ -1187,6 +1205,8 @@ namespace WobblyMods.HouseMenu.Tanks
         public List<Swim> Fish;
         public Bounds Interior;          // where fish may gather, in this object's space
         public float Reach = 7f;         // how far from a fish's own loop it will come over
+        public float Spread = 0.9f;      // how far from the visitor the gathered fish keep their loops' middles
+        public float KeepLoop = 0.45f;   // how much of its own loop size a gathered fish keeps (1 = all of it)
 
         private Vector3[] _centers;
         private float[] _rx, _rz;
@@ -1250,16 +1270,21 @@ namespace WobblyMods.HouseMenu.Tanks
                 }
             }
 
-            float k = 1f - Mathf.Exp(-1.3f * Time.deltaTime);
+            float k = 1f - Mathf.Exp(-0.9f * Time.deltaTime); // unhurried: they drift over, they don't dart
             for (int i = 0; i < Fish.Count; i++)
             {
                 Swim fish = Fish[i];
                 if (fish == null) continue;
                 // When someone is just watching, every other fish stays on its own loop, so the tank still looks alive.
                 bool comes = target.HasValue && (feeding || i % 2 == 0) && Vector3.Distance(_centers[i], target.Value) < reach;
-                Vector3 wantCenter = comes ? Interior.ClosestPoint(target.Value + new Vector3(0f, ((i % 5) - 2) * 0.35f, 0f)) : _centers[i];
-                float wantX = comes ? 0.5f + (i % 4) * 0.22f : _rx[i];
-                float wantZ = comes ? Mathf.Min(_rz[i], 0.5f + (i % 3) * 0.3f) : _rz[i];
+                // Gathered fish keep swimming loops, only smaller and moved over: each one's loop sits on a ring
+                // round the visitor, so they circle near her and never pile up on one spot (test 26: the redtails
+                // "crowd in too close and stop looking like they swim naturally").
+                float around = i * 2.4f;
+                Vector3 ring = new Vector3(Mathf.Cos(around) * Spread, ((i % 5) - 2) * Spread * 0.35f, Mathf.Sin(around) * Spread);
+                Vector3 wantCenter = comes ? Interior.ClosestPoint(target.Value + ring) : _centers[i];
+                float wantX = comes ? Mathf.Max(0.6f, _rx[i] * KeepLoop) : _rx[i];
+                float wantZ = comes ? Mathf.Max(0.6f, _rz[i] * KeepLoop) : _rz[i];
                 fish.Center = Vector3.Lerp(fish.Center, wantCenter, k);
                 fish.RadiusX = Mathf.Lerp(fish.RadiusX, wantX, k);
                 fish.RadiusZ = Mathf.Lerp(fish.RadiusZ, wantZ, k);

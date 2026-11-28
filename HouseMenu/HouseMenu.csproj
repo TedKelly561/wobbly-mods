@@ -13,10 +13,13 @@
          Game classes are reached through reflection (GameReflection.cs). -->
     <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
 
-    <!-- Optional: copy the built DLLs into the game after each build, if the game is installed here.
-         dotnet build -p:GameDir="D:\Games\Wobbly Life"    (use -p:DeployToGame=false to skip) -->
+    <!-- A plain build never touches the game: on the play laptop that would swap the family's mods for
+         whatever branch happens to be checked out. Copying into the game is asked for on purpose:
+           dotnet build HouseMenu/HouseMenu.csproj -c Release -p:DeployToGame=true
+         (add -p:GameDir="D:\Games\Wobbly Life" if the game isn't in the default Steam folder; close the game first).
+         The updater (tools\Update-WobblyMods.ps1) builds without this and copies the files itself. -->
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Wobbly Life</GameDir>
-    <DeployToGame Condition="'$(DeployToGame)' == ''">true</DeployToGame>
+    <DeployToGame Condition="'$(DeployToGame)' == ''">false</DeployToGame>
   </PropertyGroup>
 
   <ItemGroup>

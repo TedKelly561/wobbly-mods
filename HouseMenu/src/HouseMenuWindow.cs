@@ -53,6 +53,7 @@ namespace WobblyMods.HouseMenu
         // Small and quiet in the panel's corner, so a grown-up can tell which version is running.
         private static readonly string VersionText = "v" + Plugin.PluginVersion;
         private static readonly Color VersionColor = new Color(1f, 1f, 1f, 0.4f);
+        private static bool? _updateStuck;
 
         // Mouse clicks are applied after drawing, so the menu doesn't change halfway through an IMGUI pass.
         private PlayerSession _clickSession;
@@ -427,7 +428,12 @@ namespace WobblyMods.HouseMenu
             // The plugin version, at the right end of the hint row (clear of the hints and the status line below).
             if (r.xMax - 70f > x + 8f)
             {
-                Label(new Rect(r.xMax - 70f, y, 70f, s), VersionText, 11, VersionColor, TextAnchor.LowerRight);
+                // Orange with a "!" when the last automatic update failed (the log and update-status.txt say why).
+                // (Read once: the updater only runs while the game is closed, so it can't change during play.)
+                if (!_updateStuck.HasValue) _updateStuck = UpdateStatus.Problem != null;
+                bool stuck = _updateStuck.Value;
+                Label(new Rect(r.xMax - 70f, y, 70f, s), stuck ? VersionText + " !" : VersionText, 11,
+                      stuck ? new Color(1f, 0.6f, 0.1f, 0.95f) : VersionColor, TextAnchor.LowerRight);
             }
 
             Label(new Rect(r.x, y + s + 4f, r.width, r.yMax - y - s - 4f), session.Status ?? string.Empty, 15,

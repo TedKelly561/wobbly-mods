@@ -269,6 +269,71 @@ namespace WobblyMods.BuildMode.Tests
         }
 
         [Fact]
+        public void KitUndoAndRedo_AfterSomeoneElseRemovedOnePiece()
+        {
+            const int Cousin = 1;
+            var ed = new BuildEditor(T.Model());
+            List<BlockSpec> specs = Kit(RoomKit.SmallRoom, true, GridPos.Zero, 0);
+            Assert.True(ed.PlaceMany(Skylar, specs, "Small room").Ok);
+            int whole = specs.Count;
+
+            // The cousin takes one wall out of Skylar's room (the middle of the back wall).
+            var backWall = new GridPos(0, 0, 2);
+            int wallId = ed.Model.GetBlockAt(backWall).Id;
+            Assert.True(ed.RemoveBlock(Cousin, wallId).Ok);
+            Assert.Equal(whole - 1, ed.Model.Count);
+
+            // Skylar's undo takes away the rest of the room; the missing wall doesn't stop it.
+            Assert.True(ed.Undo(Skylar).Ok);
+            Assert.Equal(0, ed.Model.Count);
+
+            // Her redo builds the whole room again, that wall included, as the same block as before.
+            Assert.True(ed.Redo(Skylar).Ok);
+            Assert.Equal(whole, ed.Model.Count);
+            Assert.Equal(wallId, ed.Model.GetBlockAt(backWall).Id);
+
+            // The cousin's "undo remove" has nothing left to put back: the wall is already there, once.
+            Assert.Equal(BuildResult.Conflict, ed.Undo(Cousin).Result);
+            Assert.Equal(whole, ed.Model.Count);
+
+            // And the room still undoes as one step, with nothing left behind.
+            Assert.True(ed.Undo(Skylar).Ok);
+            Assert.Equal(0, ed.Model.Count);
+            Assert.Equal(BuildResult.NothingToUndo, ed.Undo(Skylar).Result);
+        }
+
+        [Fact]
+        public void KitRedo_KeepsAPieceTheOtherPlayerPutBackThemselves()
+        {
+            const int Cousin = 1;
+            var ed = new BuildEditor(T.Model());
+            List<BlockSpec> specs = Kit(RoomKit.SmallRoom, false, GridPos.Zero, 0);
+            Assert.True(ed.PlaceMany(Skylar, specs, "Small room").Ok);
+            int whole = specs.Count;
+
+            var backWall = new GridPos(0, 0, 2);
+            int wallId = ed.Model.GetBlockAt(backWall).Id;
+            Assert.True(ed.RemoveBlock(Cousin, wallId).Ok);
+            Assert.True(ed.Undo(Skylar).Ok);
+            Assert.Equal(0, ed.Model.Count);
+
+            // This time the cousin undoes their remove first: the one wall stands alone.
+            Assert.True(ed.Undo(Cousin).Ok);
+            Assert.Equal(1, ed.Model.Count);
+            Assert.Equal(wallId, ed.Model.GetBlockAt(backWall).Id);
+
+            // Skylar's redo fills in everything else around it (no second wall in the same spot).
+            Assert.True(ed.Redo(Skylar).Ok);
+            Assert.Equal(whole, ed.Model.Count);
+            Assert.Equal(wallId, ed.Model.GetBlockAt(backWall).Id);
+
+            // Undoing the room again leaves the wall the cousin put back.
+            Assert.True(ed.Undo(Skylar).Ok);
+            Assert.Equal(1, ed.Model.Count);
+            Assert.Equal(wallId, ed.Model.GetBlockAt(backWall).Id);
+        }
+
+        [Fact]
         public void TrimmedCatalog_FallsBackToWalls()
         {
             var c = new BuildCatalog();

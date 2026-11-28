@@ -5,8 +5,8 @@ namespace WobblyMods.HouseMenu
 {
     /// <summary>
     /// Where Skylar's saved houses and builds live. Default: BepInEx\config (as before). The config entry
-    /// [Saves] SaveFolder can point both PCs (the office laptop and REMOTEWS2 in the living room) at the same
-    /// cloud-synced folder, e.g. %OneDrive%\WobblyLifeSaves, so her houses and builds follow her (parent's request).
+    /// [Saves] SaveFolder can point every PC she plays on at the same cloud-synced folder (on the play laptop:
+    /// G:\My Drive\WobblyLifeSaves), so her houses and builds follow her (parent's request).
     /// Environment variables like %OneDrive% are expanded.
     ///
     /// The shared folder is checked again on EVERY save and load, not just once when the game starts: a cloud

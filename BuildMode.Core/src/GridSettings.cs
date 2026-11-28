@@ -99,7 +99,11 @@ namespace WobblyMods.BuildMode
             return WorldToCell(hitPoint + hitNormal * (CellSize * 0.5f));
         }
 
-        /// <summary>The cell a hit point belongs to (steps half a cell into the surface). Use for remove/paint.</summary>
+        /// <summary>
+        /// The cell half a cell behind a hit point. Right for full blocks, but NOT for thin pieces: a floor's top
+        /// is near the bottom of its cell, so half a cell behind it is the cell below. To find the piece a player
+        /// is looking at, use <see cref="BlockPickMap{TKey}"/> instead.
+        /// </summary>
         public GridPos CellBehindSurface(Vec3 hitPoint, Vec3 hitNormal)
         {
             return WorldToCell(hitPoint - hitNormal * (CellSize * 0.5f));

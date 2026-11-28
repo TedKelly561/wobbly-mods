@@ -115,18 +115,28 @@ namespace WobblyMods.Core.Shapes
 
         private static void FishRug(List<ColoredMesh> p)
         {
-            // Outline in XY (nose toward +X), then laid flat.
-            var outline = new List<V3>();
-            float[] xy =
+            // Outline in XY (nose toward +X), then laid flat. The body and the forked tail are two pieces that
+            // meet at x = -0.3: Extrude fans each face from the middle of its outline, and from the middle of the
+            // whole fish the tail's outer edges can't be seen (those triangles came out inside out).
+            float[] body =
             {
-                0.6f, 0f, 0.5f, 0.2f, 0.25f, 0.32f, -0.05f, 0.3f, -0.3f, 0.14f, -0.6f, 0.36f, -0.52f, 0f,
-                -0.6f, -0.36f, -0.3f, -0.14f, -0.05f, -0.3f, 0.25f, -0.32f, 0.5f, -0.2f
+                0.6f, 0f, 0.5f, 0.2f, 0.25f, 0.32f, -0.05f, 0.3f, -0.3f, 0.14f,
+                -0.3f, -0.14f, -0.05f, -0.3f, 0.25f, -0.32f, 0.5f, -0.2f
             };
-            for (int i = 0; i + 1 < xy.Length; i += 2) outline.Add(new V3(xy[i] + 0.06f, xy[i + 1], 0f));
-            p.Add(new ColoredMesh(Shapes.Extrude(outline, 0.03f).Transformed(One, 0f, 90f, new V3(0f, 0.015f, 0f)), Orange));
+            float[] tail = { -0.3f, 0.14f, -0.6f, 0.36f, -0.52f, 0f, -0.6f, -0.36f, -0.3f, -0.14f };
+            ShapeMesh rug = Shapes.Extrude(RugOutline(body), 0.03f);
+            rug.Append(Shapes.Extrude(RugOutline(tail), 0.03f));
+            p.Add(new ColoredMesh(rug.Transformed(One, 0f, 90f, new V3(0f, 0.015f, 0f)), Orange));
             p.Add(Post(Black, 0.035f, 0.035f, 0.42f, 0f, -0.1f));
             p.Add(Box(Green, 0.05f, 0.032f, 0.5f, 0.1f, 0.016f, 0f));   // stripes
             p.Add(Box(Green, 0.05f, 0.032f, 0.4f, -0.1f, 0.016f, 0f));
+        }
+
+        private static List<V3> RugOutline(float[] xy)
+        {
+            var outline = new List<V3>();
+            for (int i = 0; i + 1 < xy.Length; i += 2) outline.Add(new V3(xy[i] + 0.06f, xy[i + 1], 0f));
+            return outline;
         }
 
         private static void MonsterTruck(List<ColoredMesh> p)

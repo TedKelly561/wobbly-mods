@@ -515,18 +515,17 @@ namespace WobblyMods.HouseMenu.Build
             Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             RaycastHit[] hits = Physics.RaycastAll(ray, 40f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
             System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
-            foreach (RaycastHit hit in hits)
+            // The nearest thing on the ray that is a piece of the build: the renderer knows which block each of
+            // its colliders belongs to. (Working the cell out from the hit point removed the wrong piece: a floor
+            // and a wall share a cell, so looking at the floor beside a wall took the wall.) Anything else on the
+            // ray, like the ground or the player's own body, is skipped.
+            int blockId;
+            if (!_renderer.FirstBlockHit(hits, _model, out blockId))
             {
-                // The cell just inside the surface that was hit; a thin wall can sit on the cell's edge, so also
-                // try the cell just outside it.
-                PlacedBlock block = _model.GetBlockAt(_grid.CellBehindSurface(BuildRenderer.ToCore(hit.point), BuildRenderer.ToCore(hit.normal)))
-                                    ?? _model.GetBlockAt(_grid.WorldToCell(BuildRenderer.ToCore(hit.point - hit.normal * 0.02f)))
-                                    ?? _model.GetBlockAt(_grid.WorldToCell(BuildRenderer.ToCore(hit.point + hit.normal * 0.02f)));
-                if (block == null) continue;
-                EditResult r = _editor.RemoveBlock(playerIndex, block.Id);
-                return r.Ok ? "Removed the piece you were looking at." : r.Message + ".";
+                return "Look right at a piece you built, then hold LB.";
             }
-            return "Look right at a piece you built, then hold LB.";
+            EditResult r = _editor.RemoveBlock(playerIndex, blockId);
+            return r.Ok ? "Removed the piece you were looking at." : r.Message + ".";
         }
 
         public string Undo(BuildPlayer p)
@@ -569,6 +568,9 @@ namespace WobblyMods.HouseMenu.Build
             float next = PieceSizes[(i + 1) % PieceSizes.Length];
             _grid = new GridSettings(next, _grid.Origin);
             _gridLocked = false;
+            // Undo steps remember cells, not metres: after "Clear build", "Undo build" would bring the old
+            // build back at the new size (and on a grid that still follows the ground). So forget them here.
+            _editor.ClearAllHistory();
             return "Pieces are now " + next + " m.";
         }
 
@@ -586,11 +588,26 @@ namespace WobblyMods.HouseMenu.Build
             return Path.Combine(SavePaths.Folder("WobblyBuilds"), "build" + slot + ".txt");
         }
 
+        /// <summary>The slot's file on this computer (where builds go while the shared folder can't be reached).</summary>
+        private static string LocalSlotPath(int slot)
+        {
+            return Path.Combine(SavePaths.LocalFolder("WobblyBuilds"), "build" + slot + ".txt");
+        }
+
+        /// <summary>
+        /// The file to read for a slot: the newer of the one in the saves folder and the one on this computer
+        /// (a build saved while the shared folder was away is on this computer). Null if there is neither.
+        /// </summary>
+        private static string NewestSlotPath(int slot)
+        {
+            return WobblyMods.Core.SaveFiles.Newer(SlotPath(slot), LocalSlotPath(slot));
+        }
+
         public static bool SlotExists(int slot)
         {
             try
             {
-                return File.Exists(SlotPath(slot));
+                return NewestSlotPath(slot) != null;
             }
             catch (Exception)
             {
@@ -607,15 +624,14 @@ namespace WobblyMods.HouseMenu.Build
             string path = SlotPath(slot);
             try
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
                 string text = BuildSerializer.Write(_model, _grid, "Build " + slot);
-                // Write to a temporary file first so a crash mid-save can't wreck the old save.
-                string temp = path + ".tmp";
-                File.WriteAllText(temp, text);
-                if (File.Exists(path)) File.Delete(path);
-                File.Move(temp, path);
+                // Written beside the old save and swapped in, keeping the last three as build1.bak1 (newest) to .bak3.
+                WobblyMods.Core.SaveFiles.WriteWithBackups(path, text, 3);
                 Plugin.Log.LogInfo("Build: saved " + _model.Count + " blocks to " + path);
-                return "Saved Build " + slot + " (" + _model.Count + " blocks).";
+                // SlotPath falls back to this computer when the shared saves folder can't be reached: say so.
+                bool localOnly = SavePaths.HasShared && path == LocalSlotPath(slot);
+                if (localOnly) Plugin.Log.LogWarning("Build: saved ON THIS COMPUTER ONLY: the shared saves folder can't be reached.");
+                return "Saved Build " + slot + " (" + _model.Count + " blocks)" + (localOnly ? " on this computer only. The shared folder isn't connected." : ".");
             }
             catch (Exception e)
             {
@@ -630,11 +646,12 @@ namespace WobblyMods.HouseMenu.Build
         /// </summary>
         public string Load(int slot)
         {
-            string path = SlotPath(slot);
+            string path = null;
             string text;
             try
             {
-                if (!File.Exists(path))
+                path = NewestSlotPath(slot);
+                if (path == null)
                 {
                     return "Build " + slot + " is empty.";
                 }

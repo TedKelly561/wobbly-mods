@@ -52,6 +52,34 @@ namespace WobblyMods.BuildMode.Tests
         }
 
         [Fact]
+        public void CellBehindSurface_PicksTheCellOfTheSolidThatWasHit()
+        {
+            var grid = new GridSettings();
+            // The top of a full block in cell (0,0,0): hit at y = 1, normal up.
+            Assert.Equal(new GridPos(0, 0, 0), grid.CellBehindSurface(new Vec3(0.3f, 1f, 0.7f), new Vec3(0, 1, 0)));
+            // Its underside, seen from below.
+            Assert.Equal(new GridPos(0, 0, 0), grid.CellBehindSurface(new Vec3(0.3f, 0f, 0.7f), new Vec3(0, -1, 0)));
+            // Its -Z side, in a cell with negative numbers.
+            Assert.Equal(new GridPos(-2, 0, -1), grid.CellBehindSurface(new Vec3(-1.5f, 0.5f, -1f), new Vec3(0, 0, -1)));
+
+            // Bigger pieces and a moved grid: the +X side of cell (1,0,0), which spans x = 12 to 14.
+            var big = new GridSettings(2f, new Vec3(10f, 5f, 0f));
+            Assert.Equal(new GridPos(1, 0, 0), big.CellBehindSurface(new Vec3(14f, 6f, 1f), new Vec3(1, 0, 0)));
+            // It is always the opposite step to CellAgainstSurface.
+            Assert.Equal(new GridPos(2, 0, 0), big.CellAgainstSurface(new Vec3(14f, 6f, 1f), new Vec3(1, 0, 0)));
+        }
+
+        [Fact]
+        public void CellBehindSurface_GoesTooFarForThinPieces()
+        {
+            // A floor is a thin slab at the bottom of its cell. With 2 m pieces its top is 0.2 m up, and half
+            // a cell (1 m) behind that is the cell BELOW the floor. So this can't be trusted to find the piece
+            // someone is looking at; the game layer asks BlockPickMap instead (see PickMapTests).
+            var grid = new GridSettings(2f);
+            Assert.Equal(new GridPos(0, -1, 0), grid.CellBehindSurface(new Vec3(1f, 0.2f, 1f), new Vec3(0, 1, 0)));
+        }
+
+        [Fact]
         public void BadCellSize_Throws()
         {
             Assert.Throws<System.ArgumentOutOfRangeException>(() => new GridSettings(0f));

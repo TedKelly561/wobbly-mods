@@ -79,61 +79,55 @@ namespace WobblyMods.Core.Shapes
             if (radius <= 0 || height <= 0) throw new ArgumentOutOfRangeException("Size", "Radius and height must be > 0");
 
             var mesh = new ShapeMesh();
-            
-            // Tip at y=height, Base at y=0
+
+            // Tip at y = height, base circle at y = 0.
+            // The slanted side and the flat base each get their own vertices, because they need different
+            // normals: the side's lean outward and up, the base's point straight down. (They used to share one
+            // ring with "down" normals, so the side was lit as if it faced the floor.)
             V3 tip = new V3(0f, height, 0f);
-            int tipIdx = mesh.AddVertex(tip, V3.Up); // Approx normal for tip? Actually tip is singular. Let's use Up or Zero. 
-            // Better: The normal at the tip is undefined. We'll set it to Up arbitrarily, it won't matter much for lighting if it's a point.
-            
-            // Base vertices
-            int baseStartIdx = mesh.Vertices.Count;
+            float slope = (float)Math.Sqrt(height * height + radius * radius);
+
+            // Side: one tip vertex per segment (the tip has no single normal), then a ring of segments + 1.
+            int sideTipStart = mesh.Vertices.Count;
+            for (int i = 0; i < segments; i++)
+            {
+                float mid = 2f * (float)Math.PI * (i + 0.5f) / segments;
+                mesh.AddVertex(tip, SideNormal(mid, radius, height, slope));
+            }
+            int sideRingStart = mesh.Vertices.Count;
             for (int i = 0; i <= segments; i++)
             {
                 float theta = 2f * (float)Math.PI * i / segments;
-                float x = radius * (float)Math.Cos(theta);
-                float z = radius * (float)Math.Sin(theta);
-                
-                V3 pos = new V3(x, 0f, z);
-                // Normal for side of cone at base edge points outward and slightly up/down depending on slope.
-                // For the cap, normal is Down (0,-1,0).
-                mesh.AddVertex(pos, new V3(0f, -1f, 0f));
+                V3 pos = new V3(radius * (float)Math.Cos(theta), 0f, radius * (float)Math.Sin(theta));
+                mesh.AddVertex(pos, SideNormal(theta, radius, height, slope));
             }
-
-            // Side triangles
             for (int i = 0; i < segments; i++)
             {
-                int p0 = tipIdx;
-                int p1 = baseStartIdx + i;
-                int p2 = baseStartIdx + i + 1;
-                
-                // Winding: Cross(p1-p0, p2-p0) should point outward.
-                // p0 is top. p1, p2 are on circle.
-                // If we go counter-clockwise around Y axis (standard), p1->p2 is CCW.
-                // Vector from tip to base is down.
-                // Let's check: Center of triangle is roughly (x,y,z). Normal should point away from axis.
-                mesh.AddTriangle(p0, p2, p1); // Reverse order to ensure outward normal for standard CCW ring
+                // Cross(b - a, c - a) points outward (and a little up) with this order.
+                mesh.AddTriangle(sideTipStart + i, sideRingStart + i + 1, sideRingStart + i);
             }
 
-            // Base cap triangles
-            int centerIdx = mesh.Vertices.Count;
-            mesh.AddVertex(new V3(0f, 0f, 0f), new V3(0f, -1f, 0f));
-            
+            // Base cap: its own ring and centre, all facing down.
+            V3 down = new V3(0f, -1f, 0f);
+            int capRingStart = mesh.Vertices.Count;
+            for (int i = 0; i <= segments; i++)
+            {
+                float theta = 2f * (float)Math.PI * i / segments;
+                mesh.AddVertex(new V3(radius * (float)Math.Cos(theta), 0f, radius * (float)Math.Sin(theta)), down);
+            }
+            int centerIdx = mesh.AddVertex(new V3(0f, 0f, 0f), down);
             for (int i = 0; i < segments; i++)
             {
-                int p0 = centerIdx;
-                int p1 = baseStartIdx + i;
-                int p2 = baseStartIdx + i + 1;
-                
-                // Normal is Down. Cross(p1-p0, p2-p0) should point Down (negative Y).
-                // p1, p2 are CCW around center.
-                // Cross(Left, Right) with Up normal points Out? 
-                // Standard: (p0, p1, p2) with normal pointing towards viewer.
-                // Here we want normal to point Down (-Y).
-                // If viewed from below, CCW is p1->p2.
-                mesh.AddTriangle(p0, p1, p2);
+                mesh.AddTriangle(centerIdx, capRingStart + i, capRingStart + i + 1);
             }
 
             return mesh;
+        }
+
+        /// <summary>The outward normal of a cone's side at angle theta (unit length).</summary>
+        private static V3 SideNormal(float theta, float radius, float height, float slope)
+        {
+            return new V3(height * (float)Math.Cos(theta) / slope, radius / slope, height * (float)Math.Sin(theta) / slope);
         }
 
         public static ShapeMesh Cylinder(float radius, float height, int segments = 12)

@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.39.4";
+        public const string PluginVersion = "0.40.0";
 
         internal static ManualLogSource Log;
 
@@ -123,6 +123,10 @@ namespace WobblyMods.HouseMenu
 
             _window = new HouseMenuWindow(_sessions);
             Log.LogInfo(PluginName + " " + PluginVersion + " loaded.");
+            // What the automatic updater last did on this PC. If it failed, say so loudly here; the menu also
+            // shows the version in orange with a "!" so a grown-up notices that updates have stopped.
+            Log.LogInfo(UpdateStatus.Summary);
+            if (UpdateStatus.Problem != null) Log.LogWarning(UpdateStatus.Problem);
         }
 
         private void Update()

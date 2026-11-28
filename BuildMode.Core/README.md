@@ -17,6 +17,7 @@ colliders, a ghost preview per player and the menu's Build tab.
 | `BlockType`, `BuildMaterial`, `PaintColor`, `BuildCatalog` | `src/Catalog.cs` | Blocks (floor, wall, half wall, roof slope, flat roof, stairs, door, window, pillar, beam) with a footprint in cells, materials (wood, brick, stone, glass, concrete, roof tiles, plaster) and RGBA paint. Ids are stable lowercase strings (`BuildCatalog.Ids`), used in save files. Never rename one. |
 | `Footprint` | `src/Footprint.cs` | Which cells a block covers for a given anchor and rotation. |
 | `BuildModel`, `BlockSpec`, `PlacedBlock` | `src/BuildModel.cs` | The build. Place, remove, repaint, query; overlaps are rejected. Chunk index and dirty-chunk tracking. |
+| `BlockPickMap` | `src/BlockPickMap.cs` | Which block each solid part (collider) of the drawn build belongs to, kept per chunk, so "remove the piece I'm looking at" removes the piece the aim ray really hit. |
 | `BuildEditor`, `BuildHistory` | `src/BuildHistory.cs` | The front door for edits. Records every change in the acting **player's own** undo/redo history. Fill a box as one undo step. |
 | `PlayerBuildState` | `src/PlayerBuildState.cs` | One player's selection (block, material, paint, rotation, cursor) with controller-friendly "cycle"/"rotate"/"move" calls. Takes an optional paint palette (favourite colours first). |
 | `RoomKits`, `RoomKit`, `KitPiece` | `src/RoomKits.cs` | Ready-made kits (small room, big room with windows, floors 3x3 and 5x5, wall lines of 3 and 5, stairs up with a landing) as block lists from an anchor cell and a facing. Rooms are centred on the anchor and run forward from it, door in the middle of the front wall, L-shaped `corner_wall` pieces in the corners, walls as tall as the door, optional flat roof. Place with `PlaceMany` (one undo step, blocked cells skipped). |
@@ -88,7 +89,10 @@ end
    `rotation = Quaternion.Euler(0, spec.Rotation.Degrees, 0)`. Convert with tiny helpers
    (`new Vector3(v.X, v.Y, v.Z)`).
 3. **Aiming.** Raycast from **that player's camera** (not `Camera.main`). Build cell:
-   `CellAgainstSurface(hit.point, hit.normal)`; remove/paint cell: `CellBehindSurface(...)`.
+   `CellAgainstSurface(hit.point, hit.normal)`. To remove or paint the piece a player is looking at, don't
+   work a cell out from the hit point (`CellBehindSurface` lands in the wrong cell for thin floors and roofs, and
+   a floor and a wall share a cell): note each collider's block in a `BlockPickMap` as chunks are drawn and ask it
+   which block was hit (`FirstBlock`), then `RemoveBlock(player, id)`.
    With no hit, the D-pad moves the cursor with `PlayerBuildState.MoveCursor(..., cameraYaw)`.
 4. **Ghost preview.** Each frame, draw the selected mesh at the cursor, tinted green or red by
    `model.CanPlace(type, cursor, rotation)`. This allocates nothing.

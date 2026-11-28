@@ -35,6 +35,11 @@ namespace WobblyMods.HouseMenu.Build
         private readonly List<ChunkPos> _dirty = new List<ChunkPos>();
         private readonly List<PlacedBlock> _blocks = new List<PlacedBlock>();
         private readonly Dictionary<string, LookGroup> _groups = new Dictionary<string, LookGroup>();
+
+        // Which block each collider belongs to (by the collider's instance id), so "remove the piece I'm
+        // looking at" removes the piece the aim ray really hit. Kept in step with the chunks as they're redrawn.
+        private readonly BlockPickMap<int> _pick = new BlockPickMap<int>();
+        private readonly List<int> _hitIds = new List<int>();
         private GameObject _root;
 
         /// <summary>
@@ -78,6 +83,22 @@ namespace WobblyMods.HouseMenu.Build
                 DestroyView(view);
             }
             _chunks.Clear();
+            _pick.Clear();
+        }
+
+        /// <summary>
+        /// From the things an aim ray went through (sorted nearest first): the first one that is a piece of
+        /// the build. Anything else in the way (the ground, a prop, the player's own body) is skipped.
+        /// </summary>
+        public bool FirstBlockHit(RaycastHit[] hitsNearestFirst, BuildModel model, out int blockId)
+        {
+            _hitIds.Clear();
+            for (int i = 0; i < hitsNearestFirst.Length; i++)
+            {
+                Collider c = hitsNearestFirst[i].collider;
+                if (c != null) _hitIds.Add(c.GetInstanceID());
+            }
+            return _pick.FirstBlock(_hitIds, model, out blockId);
         }
 
         private void ForgetAll()
@@ -91,6 +112,7 @@ namespace WobblyMods.HouseMenu.Build
                 }
             }
             _chunks.Clear();
+            _pick.Clear();
         }
 
         private static void DestroyView(ChunkView view)
@@ -131,6 +153,8 @@ namespace WobblyMods.HouseMenu.Build
                 DestroyView(old);
                 _chunks.Remove(chunk);
             }
+            // The old colliders go with the old view (also when the chunk was only half drawn before).
+            _pick.RemoveChunk(chunk);
 
             _blocks.Clear();
             model.GetBlocksInChunk(chunk, _blocks);
@@ -193,6 +217,7 @@ namespace WobblyMods.HouseMenu.Build
                             BoxCollider box = view.Root.AddComponent<BoxCollider>();
                             box.center = center;
                             box.size = size;
+                            _pick.Add(chunk, box.GetInstanceID(), _blocks[b].Id);
                             colliders++;
                         }
                     }
@@ -209,6 +234,7 @@ namespace WobblyMods.HouseMenu.Build
                             ramp.transform.rotation = yaw * Quaternion.Euler(part.TiltX, 0f, 0f);
                             BoxCollider box = ramp.AddComponent<BoxCollider>();
                             box.size = size;
+                            _pick.Add(chunk, box.GetInstanceID(), _blocks[b].Id);
                             colliders++;
                         }
                     }

@@ -3,20 +3,32 @@
   One-time setup of automatic mod updates (and shared saves) on a PC that plays Wobbly Life.
 
 .DESCRIPTION
-  Run once on each PC (REMOTEWS2 in the living room, and the office laptop), in a normal PowerShell window:
+  Run once on a PC that plays Wobbly Life (today that is the laptop ROADWS3), in a normal PowerShell window:
       powershell -ExecutionPolicy Bypass -File .\Install-WobblyUpdater.ps1
   It:
     1. Checks git and the .NET SDK are installed (and says how to install them if not).
-    2. Clones the mods from GitHub to C:\dev\wobbly-mods (or updates an existing copy).
+    2. Clones the mods from GitHub to -RepoDir (default C:\dev\wobbly-mods), or fetches into a copy already there.
+       Best is a clone that only the updater uses: the updater stops, without building, if its copy has changes
+       or commits that are not on GitHub. (ROADWS3 was set up with
+       -RepoDir C:\dev\personal-TedKelly561\wobbly-mods-main, a folder that sessions also work in.)
     3. Registers the scheduled task "Wobbly Mods Updater": runs Update-WobblyMods.ps1 at sign-in and every hour,
        hidden. It never changes anything while the game is running.
-    4. Points the mod's save folder at a cloud-synced folder (default %OneDrive%\WobblyLifeSaves), so Skylar's
-       houses and builds follow her between PCs, and copies any existing saves there (never overwriting).
+    4. Shared saves: a PC whose mod config already has a save folder keeps it (ROADWS3: G:\My Drive\WobblyLifeSaves)
+       unless -SaveFolder is given. A PC without one gets %OneDrive%\WobblyLifeSaves if OneDrive is set up, and
+       any existing saves are copied there (never overwriting).
     5. Runs the first update now.
-  Works in Windows PowerShell 5.1 and PowerShell 7. Safe to run again.
+  Works in Windows PowerShell 5.1 and PowerShell 7 (keep this file plain ASCII). Safe to run again: give the same
+  -RepoDir and -Branch as before, or the task is pointed at the defaults.
+
+.PARAMETER RepoDir
+  Where the updater's copy of the mods lives. The scheduled task remembers it.
+
+.PARAMETER Branch
+  The GitHub branch to follow. The scheduled task remembers it.
 
 .PARAMETER SaveFolder
-  Cloud-synced folder for saves. Default: %OneDrive%\WobblyLifeSaves if OneDrive is set up. Use "" for no sync.
+  Cloud-synced folder for saves, e.g. "G:\My Drive\WobblyLifeSaves". Without it, a folder already set in the
+  mod's config is kept; otherwise %OneDrive%\WobblyLifeSaves is used if OneDrive is set up.
 #>
 [CmdletBinding()]
 param(
@@ -55,6 +67,10 @@ if (Test-Path (Join-Path $RepoDir ".git")) {
 
 # 3. The scheduled task.
 $updater = Join-Path $RepoDir "tools\Update-WobblyMods.ps1"
+if (-not (Test-Path $updater)) {
+    # The task would point at a file that isn't there and fail every hour without a trace.
+    throw "There is no tools\Update-WobblyMods.ps1 in '$RepoDir'. That copy is probably on another branch: run  git -C `"$RepoDir`" checkout $Branch  and then run this again."
+}
 $arguments = ('-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "{0}" -RepoDir "{1}" -Branch "{2}" -GameDir "{3}"' -f
               $updater, $RepoDir, $Branch, $GameDir)
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $arguments
@@ -68,11 +84,24 @@ Register-ScheduledTask -TaskName "Wobbly Mods Updater" -Action $action -Trigger 
 Say "Scheduled task 'Wobbly Mods Updater' registered (at sign-in and every hour)."
 
 # 4. Shared saves.
-if ($SaveFolder -eq "<auto>") {
+$cfg = Join-Path $GameDir "BepInEx\config\wobblymods.housemenu.cfg"
+
+# A PC that was set up before keeps its save folder unless -SaveFolder is given. (Running this again used to
+# switch it to OneDrive, and the saves in the old folder then looked as if they were gone.)
+$existingSaveFolder = ""
+if (Test-Path $cfg) {
+    foreach ($l in (Get-Content $cfg)) {
+        if ($l -match '^\s*SaveFolder\s*=\s*(.*)$') { $existingSaveFolder = $Matches[1].Trim() }
+    }
+}
+$keepSaveFolder = (-not $PSBoundParameters.ContainsKey("SaveFolder")) -and ($existingSaveFolder -ne "")
+
+if ((-not $keepSaveFolder) -and ($SaveFolder -eq "<auto>")) {
     if ($env:OneDrive) { $SaveFolder = Join-Path $env:OneDrive "WobblyLifeSaves" } else { $SaveFolder = "" }
 }
-$cfg = Join-Path $GameDir "BepInEx\config\wobblymods.housemenu.cfg"
-if ($SaveFolder) {
+if ($keepSaveFolder) {
+    Say "Saves stay in $existingSaveFolder (already set in $cfg). To move them, run this again with -SaveFolder <folder>."
+} elseif ($SaveFolder) {
     New-Item -ItemType Directory -Force -Path $SaveFolder | Out-Null
     foreach ($kind in @("WobblyHouse", "WobblyBuilds")) {
         $old = Join-Path $GameDir ("BepInEx\config\" + $kind)

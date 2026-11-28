@@ -132,6 +132,32 @@ namespace WobblyMods.Core.Shapes
             return result;
         }
 
+        /// <summary>
+        /// Looks straight down from a point: how far below it is the first surface of this mesh?
+        /// Returns false if there is nothing within maxDrop. (For standing a bird on a branch.)
+        /// </summary>
+        public bool TryDropOnto(V3 from, float maxDrop, out float drop)
+        {
+            drop = float.MaxValue;
+            var down = new V3(0f, -1f, 0f);
+            for (int i = 0; i + 2 < Triangles.Count; i += 3)
+            {
+                V3 a = Vertices[Triangles[i]], b = Vertices[Triangles[i + 1]], c = Vertices[Triangles[i + 2]];
+                V3 e1 = b - a, e2 = c - a, h = V3.Cross(down, e2);
+                float det = V3.Dot(e1, h);
+                if (Math.Abs(det) < 1e-9f) continue;
+                V3 s = from - a;
+                float u = V3.Dot(s, h) / det;
+                if (u < 0f || u > 1f) continue;
+                V3 q = V3.Cross(s, e1);
+                float v = V3.Dot(down, q) / det;
+                if (v < 0f || u + v > 1f) continue;
+                float t = V3.Dot(e2, q) / det;
+                if (t > 0f && t < drop) drop = t;
+            }
+            return drop <= maxDrop;
+        }
+
         public V3 Min
         {
             get

@@ -26,8 +26,10 @@ namespace WobblyMods.Core.Shapes
         private sealed class Plan
         {
             public readonly ShapeMesh Wood = new ShapeMesh(), Leaf = new ShapeMesh(), LeafDark = new ShapeMesh(), Blossom = new ShapeMesh();
-            public readonly List<V3> Perches = new List<V3>();
-            public float Height;
+            public readonly List<V3> Perches = new List<V3>(), LowPerches = new List<V3>();
+            public readonly List<V3> ClumpCenters = new List<V3>(), ClumpRadii = new List<V3>();
+            public readonly List<V3> Points = new List<V3>();
+            public float Height, CanopyBottom, TrunkTop;
         }
 
         private static readonly Dictionary<int, Plan> Plans = new Dictionary<int, Plan>();
@@ -52,6 +54,30 @@ namespace WobblyMods.Core.Shapes
             return PlanFor(variant).Height;
         }
 
+        /// <summary>The lowest point of the leaf clumps: below this there is only trunk, roots and thin vines.</summary>
+        public static float CanopyBottom(int variant)
+        {
+            return PlanFor(variant).CanopyBottom;
+        }
+
+        /// <summary>Every corner point of the tree (for checking that a placed tree fits under a roof). Read only.</summary>
+        public static IReadOnlyList<V3> Points(int variant)
+        {
+            return PlanFor(variant).Points;
+        }
+
+        /// <summary>Is this point inside (or within margin of) one of the tree's leaf clumps?</summary>
+        public static bool InLeaves(int variant, V3 point, float margin = 0f)
+        {
+            return InClumps(PlanFor(variant), point, margin);
+        }
+
+        /// <summary>Low spots on the roots where a bird can sit at a child's eye level.</summary>
+        public static List<V3> LowPerches(int variant)
+        {
+            return new List<V3>(PlanFor(variant).LowPerches);
+        }
+
         private static Plan PlanFor(int variant)
         {
             variant = ((variant % Variants) + Variants) % Variants;
@@ -65,6 +91,27 @@ namespace WobblyMods.Core.Shapes
                 }
             }
             return plan;
+        }
+
+        /// <summary>The spot on top of the wood straight above or below this point (so a bird's feet really touch it).</summary>
+        private static bool OnWood(Plan p, V3 near, out V3 sit)
+        {
+            float drop;
+            sit = near;
+            if (!p.Wood.TryDropOnto(near + new V3(0f, 0.6f, 0f), 1.2f, out drop)) return false;
+            sit = new V3(near.X, near.Y + 0.6f - drop + 0.005f, near.Z);
+            return true;
+        }
+
+        private static bool InClumps(Plan p, V3 point, float margin)
+        {
+            for (int i = 0; i < p.ClumpCenters.Count; i++)
+            {
+                V3 d = point - p.ClumpCenters[i];
+                float flat = Math.Max(p.ClumpRadii[i].X, p.ClumpRadii[i].Z) + margin, tall = p.ClumpRadii[i].Y + margin;
+                if ((d.X * d.X + d.Z * d.Z) / (flat * flat) + d.Y * d.Y / (tall * tall) < 1f) return true;
+            }
+            return false;
         }
 
         private static Plan Grow(int variant)
@@ -82,8 +129,28 @@ namespace WobblyMods.Core.Shapes
             for (int i = 0; i < trunk.Count; i++) trunkR.Add(0.56f - 0.26f * i / (trunk.Count - 1));
             p.Wood.Append(Shapes.Tube(trunk, trunkR, 10));
 
+            // Two short bare branches low on the trunk, for birds to sit where a child on the ground can see them.
+            // (No random numbers here, so the rest of the tree keeps its shape.)
+            var stubSpots = new List<V3>();
+            for (int k = 0; k < 2; k++)
+            {
+                float height = 2.7f + k * 1.0f, a = variant * 1.3f + k * 2.5f;
+                V3 at = trunk[0];
+                for (int i = 1; i < trunk.Count; i++)
+                {
+                    if (trunk[i].Y < height) continue;
+                    at = V3.Lerp(trunk[i - 1], trunk[i], (height - trunk[i - 1].Y) / Math.Max(0.01f, trunk[i].Y - trunk[i - 1].Y));
+                    break;
+                }
+                var dir = new V3((float)Math.Cos(a), 0f, (float)Math.Sin(a));
+                V3 tip = at + dir * 1.35f + new V3(0f, 0.3f, 0f), mid = at + dir * 0.75f + new V3(0f, 0.22f, 0f);
+                p.Wood.Append(Shapes.Tube(new List<V3> { at, mid, tip }, new List<float> { 0.13f, 0.1f, 0.05f }, 6));
+                stubSpots.Add(V3.Lerp(mid, tip, 0.35f));
+            }
+
             // Buttress roots: fins spreading from the trunk to the ground.
             int roots = 5 + rng.Next(3);
+            var rootMids = new List<V3>();
             for (int i = 0; i < roots; i++)
             {
                 float a = i * 6.28f / roots + r01() * 0.5f, reach = 1.5f + r01() * 0.9f, up = 1.5f + r01() * 0.9f;
@@ -91,11 +158,14 @@ namespace WobblyMods.Core.Shapes
                 var hip = new V3((float)Math.Cos(a) * 0.3f, up, (float)Math.Sin(a) * 0.3f);
                 var mid = new V3((float)Math.Cos(a) * reach * 0.45f, up * 0.3f, (float)Math.Sin(a) * reach * 0.45f);
                 p.Wood.Append(Shapes.Tube(new List<V3> { hip, mid, foot }, new List<float> { 0.2f, 0.17f, 0.07f }, 7));
+                rootMids.Add(mid);
             }
 
             // Big branches reaching out and up from the top of the trunk, each ending in clumps of leaves.
             int branches = 4 + rng.Next(2);
             var clumps = new List<V3> { top + new V3(0f, 1.3f, 0f) };
+            var branchFrom = new List<V3>();
+            var branchElbow = new List<V3>();
             for (int i = 0; i < branches; i++)
             {
                 float a = i * 6.28f / branches + r01() * 0.7f, reach = 2.0f + r01() * 1.3f, rise = 0.7f + r01() * 1.4f;
@@ -103,7 +173,8 @@ namespace WobblyMods.Core.Shapes
                 var tip = top + new V3((float)Math.Cos(a) * reach, rise, (float)Math.Sin(a) * reach);
                 var elbow = V3.Lerp(from, tip, 0.5f) + new V3(0f, 0.35f, 0f);
                 p.Wood.Append(Shapes.Tube(new List<V3> { from, elbow, tip }, new List<float> { 0.2f, 0.14f, 0.06f }, 7));
-                p.Perches.Add(elbow + new V3(0f, 0.16f, 0f));
+                branchFrom.Add(from);
+                branchElbow.Add(elbow);
                 clumps.Add(tip);
                 clumps.Add(V3.Lerp(elbow, tip, 0.55f) + new V3((r01() - 0.5f) * 1.2f, 0.6f + r01() * 0.5f, (r01() - 0.5f) * 1.2f));
             }
@@ -116,6 +187,8 @@ namespace WobblyMods.Core.Shapes
                 ShapeMesh clump = Shapes.Ellipsoid(radii, 10, 6).Transformed(One, r01() * 360f, 0f, clumps[i]);
                 (i % 3 == 1 ? p.LeafDark : p.Leaf).Append(clump);
                 highest = Math.Max(highest, clumps[i].Y + radii.Y);
+                p.ClumpCenters.Add(clumps[i]);
+                p.ClumpRadii.Add(radii);
                 // Blossoms on top of some clumps (not every tree flowers).
                 if (variant % 2 == 0 && i % 2 == 0)
                 {
@@ -140,6 +213,40 @@ namespace WobblyMods.Core.Shapes
                 p.Leaf.Append(Shapes.Ellipsoid(new V3(0.14f, 0.05f, 0.09f), 6, 4).Transformed(One, r01() * 360f, 0f, end));
             }
             p.Height = Math.Max(Math.Max(p.Wood.Max.Y, p.Leaf.Max.Y), Math.Max(p.LeafDark.Max.Y, p.Blossom.Triangles.Count > 0 ? p.Blossom.Max.Y : 0f));
+            p.TrunkTop = top.Y;
+            p.CanopyBottom = float.MaxValue;
+            for (int i = 0; i < p.ClumpCenters.Count; i++) p.CanopyBottom = Math.Min(p.CanopyBottom, p.ClumpCenters[i].Y - p.ClumpRadii[i].Y);
+            p.Points.AddRange(p.Wood.Vertices);
+            p.Points.AddRange(p.Leaf.Vertices);
+            p.Points.AddRange(p.LeafDark.Vertices);
+            p.Points.AddRange(p.Blossom.Vertices);
+
+            // Where a bird can sit (worked out last, and without the random numbers, so the trees stay the same
+            // shape): on each big branch at the spot nearest its elbow that is clear of the leaves, so the bird can
+            // be seen; and low down on two of the roots, at a child's eye level.
+            for (int i = 0; i < branchFrom.Count; i++)
+            {
+                for (float along = 1f; along >= 0.15f; along -= 0.17f)
+                {
+                    V3 on = V3.Lerp(branchFrom[i], branchElbow[i], along);
+                    V3 sit;
+                    if (!OnWood(p, on, out sit)) continue;
+                    // A bird is about 0.6 tall at the size the game draws it: its head must be clear too.
+                    if (InClumps(p, sit, 0.1f) || InClumps(p, sit + new V3(0f, 0.6f, 0f), 0.1f)) continue;
+                    p.Perches.Add(sit);
+                    break;
+                }
+            }
+            foreach (V3 spot in stubSpots)
+            {
+                V3 sit;
+                if (OnWood(p, spot, out sit)) p.LowPerches.Add(sit);
+            }
+            for (int i = 0; i < rootMids.Count && i < 4; i += 2)
+            {
+                V3 sit;
+                if (OnWood(p, rootMids[i], out sit)) p.LowPerches.Add(sit);
+            }
             return p;
         }
 

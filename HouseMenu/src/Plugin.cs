@@ -16,7 +16,7 @@ namespace WobblyMods.HouseMenu
     {
         public const string PluginGuid = "wobblymods.housemenu";
         public const string PluginName = "Wobbly House Menu";
-        public const string PluginVersion = "0.39.0";
+        public const string PluginVersion = "0.39.1";
 
         internal static ManualLogSource Log;
 

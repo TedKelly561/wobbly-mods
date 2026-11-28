@@ -50,9 +50,22 @@ public class RainforestTreeTests
         List<ColoredMesh> a = RainforestTree.Build(variant), b = RainforestTree.Build(variant);
         Assert.Equal(a.Count, b.Count);
         for (int i = 0; i < a.Count; i++) Assert.Equal(a[i].Mesh.Vertices.Count, b[i].Mesh.Vertices.Count);
-        List<V3> perches = RainforestTree.Perches(variant);
-        Assert.InRange(perches.Count, 4, 5);
-        foreach (V3 p in perches) Assert.InRange(p.Y, 4f, 9f);
+        // Birds sit where they can be seen: every perch is clear of the leaves (head included) and on wood.
+        List<V3> low = RainforestTree.LowPerches(variant), high = RainforestTree.Perches(variant);
+        Assert.InRange(low.Count, 3, 4);
+        foreach (V3 p in low) Assert.InRange(p.Y, 0.5f, 4.6f);
+        foreach (V3 p in high) Assert.InRange(p.Y, 4f, 9f);
+        ShapeMesh wood = a[0].Mesh;
+        var all = new List<V3>(low);
+        all.AddRange(high);
+        foreach (V3 p in all)
+        {
+            Assert.False(RainforestTree.InLeaves(variant, p), "perch inside the leaves");
+            Assert.False(RainforestTree.InLeaves(variant, p + new V3(0f, 0.6f, 0f)), "bird's head inside the leaves");
+            float drop;
+            Assert.True(wood.TryDropOnto(p + new V3(0f, 0.3f, 0f), 1f, out drop), "no wood under the bird");
+            Assert.InRange(drop - 0.3f, -0.02f, 0.02f);
+        }
         Assert.Equal(RainforestTree.Build(variant + RainforestTree.Variants)[0].Mesh.Vertices.Count, a[0].Mesh.Vertices.Count); // wraps round
     }
 

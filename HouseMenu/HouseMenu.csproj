@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- BepInEx 5 Unity Mono plugin for Wobbly Life (Steam, "Play Crossplay" build).
+         netstandard2.1 because the game is Unity 2022.3, whose reference DLLs need it. -->
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>WobblyMods.HouseMenu</AssemblyName>
+    <RootNamespace>WobblyMods.HouseMenu</RootNamespace>
+    <Description>Wobbly Life house decorating menu (BepInEx 5)</Description>
+
+    <!-- BepInEx and Unity reference DLLs come from the BepInEx NuGet feed, so building needs no game files.
+         Game classes are reached through reflection (GameReflection.cs). -->
+    <RestoreAdditionalProjectSources>https://nuget.bepinex.dev/v3/index.json</RestoreAdditionalProjectSources>
+
+    <!-- A plain build never touches the game: on the play laptop that would swap the family's mods for
+         whatever branch happens to be checked out. Copying into the game is asked for on purpose:
+           dotnet build HouseMenu/HouseMenu.csproj -c Release -p:DeployToGame=true
+         (add -p:GameDir="D:\Games\Wobbly Life" if the game isn't in the default Steam folder; close the game first).
+         The updater (tools\Update-WobblyMods.ps1) builds without this and copies the files itself. -->
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Wobbly Life</GameDir>
+    <DeployToGame Condition="'$(DeployToGame)' == ''">false</DeployToGame>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Compile-time only; the game supplies the real ones at runtime. Unity version matches the game (Scout). -->
+    <PackageReference Include="BepInEx.Core" Version="5.4.21" IncludeAssets="compile" />
+    <PackageReference Include="UnityEngine.Modules" Version="2022.3.62" IncludeAssets="compile" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Core\WobblyMods.Core.csproj" />
+    <ProjectReference Include="..\Visuals\WobblyMods.Visuals.csproj" />
+    <!-- Sandbox build mode logic (pure C#, netstandard2.0). Deployed next to the plugin. -->
+    <ProjectReference Include="..\BuildMode.Core\BuildMode.Core.csproj" />
+  </ItemGroup>
+
+  <Target Name="DeployToGame" AfterTargets="Build"
+          Condition="'$(DeployToGame)' == 'true' And Exists('$(GameDir)\BepInEx\core')">
+    <Copy SourceFiles="$(TargetPath);$(TargetDir)WobblyMods.Core.dll;$(TargetDir)WobblyMods.BuildMode.Core.dll;$(TargetDir)WobblyMods.Visuals.dll" DestinationFolder="$(GameDir)\BepInEx\plugins\WobblyMods" />
+    <!-- Model packs (models\**: .obj/.mtl furniture) go next to the plugin. -->
+    <ItemGroup>
+      <WobblyModelFiles Include="$(MSBuildProjectDirectory)\..\models\**\*.obj;$(MSBuildProjectDirectory)\..\models\**\*.mtl" />
+    </ItemGroup>
+    <Copy SourceFiles="@(WobblyModelFiles)" DestinationFolder="$(GameDir)\BepInEx\plugins\WobblyMods\models\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

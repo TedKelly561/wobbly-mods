@@ -1,0 +1,13 @@
+# Unity-generated folders
+Library/
+Temp/
+Logs/
+obj/
+UserSettings/
+*.csproj
+*.sln
+# Built bundles and third-party models stay on the PC
+BuiltBundles/
+Assets/Models/*
+!Assets/Models/README.md
+!Assets/Models/README.md.meta

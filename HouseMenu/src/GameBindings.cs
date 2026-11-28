@@ -28,6 +28,7 @@ namespace WobblyMods.HouseMenu
         /// <summary>Tracks an object made outside the catalog (a world copy), so it can be moved, colored and undone.</summary>
         public static void Register(GameObject placed, int playerIndex)
         {
+            ForgetGone();
             Spawned.Add(new Placed { Item = placed, Owner = playerIndex, CatalogId = null });
         }
 
@@ -122,6 +123,7 @@ namespace WobblyMods.HouseMenu
                 {
                     placed.transform.localScale = placed.transform.localScale * item.Scale;
                 }
+                ForgetGone();
                 Spawned.Add(new Placed { Item = placed, Owner = playerIndex, CatalogId = item.Id });
                 Plugin.Log.LogInfo("Placed " + item.Id + " for player " + (playerIndex + 1) + " at " + placed.transform.position.ToString("0.0") + ".");
                 done(placed, null);
@@ -189,7 +191,9 @@ namespace WobblyMods.HouseMenu
 
             RaycastHit hit;
             Vector3 rayStart = new Vector3(spot.x, origin.y + 1.5f, spot.z);
-            position = Physics.Raycast(rayStart, Vector3.down, out hit, 10f) ? hit.point + Vector3.up * 0.05f : spot;
+            // Only solid things count as floor: an invisible trigger area (a shop zone, water) would leave the item floating on top of it.
+            position = Physics.Raycast(rayStart, Vector3.down, out hit, 10f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                ? hit.point + Vector3.up * 0.05f : spot;
             rotation = Quaternion.LookRotation(-forward, Vector3.up);
             return true;
         }
@@ -391,6 +395,12 @@ namespace WobblyMods.HouseMenu
         public static void Forget(GameObject target)
         {
             Spawned.RemoveAll(p => p.Item == target);
+        }
+
+        /// <summary>Drops things that no longer exist (the world was left, or the game removed them), so the list can't grow forever.</summary>
+        private static void ForgetGone()
+        {
+            Spawned.RemoveAll(p => p.Item == null);
         }
     }
 }

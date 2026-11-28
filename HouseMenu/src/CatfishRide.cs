@@ -50,6 +50,17 @@ namespace WobblyMods.HouseMenu
             Ride ride;
             if (Rides.TryGetValue(vehicle, out ride))
             {
+                if (ride.FromWorldMode)
+                {
+                    // "Every car a catfish" already changed this one. Putting it back was pointless (the next sweep
+                    // made it a catfish again two seconds later), so picking it makes it HER catfish: invincible,
+                    // and it stays when "every car a catfish" is switched off.
+                    ride.FromWorldMode = false;
+                    ride.Invincible = SetInvincible(ride, true);
+                    Plugin.Log.LogInfo("Catfish ride: " + vehicle.name + " (already a catfish from catfish world) is now her own" +
+                                       (ride.Invincible ? ", invincible." : ", but invincibility didn't switch on."));
+                    return "Your " + Nice(vehicle.name) + " is an INVINCIBLE CATFISH!";
+                }
                 Restore(ride);
                 Rides.Remove(vehicle);
                 return "Back to a normal " + Nice(vehicle.name) + ".";

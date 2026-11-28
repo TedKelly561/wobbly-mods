@@ -71,7 +71,11 @@ namespace WobblyMods.HouseMenu
         public static string Fire(int player)
         {
             string said;
-            switch (Tools[player & 7])
+            if (Tools[player & 7] == Tool.None) return "no tool";
+            // RB is also the game's own "next tab" button. While the game has taken the player's controls for one of
+            // its own screens (pause menu, a shop, the map), a tap there must not shoot, paint or copy behind it.
+            if (!GameControlsOn(player)) said = "Not while the game's own menu is open.";
+            else switch (Tools[player & 7])
             {
                 case Tool.Bubble: said = BubbleGun(player); break;
                 case Tool.Paint: said = Paint(player); break;
@@ -89,6 +93,18 @@ namespace WobblyMods.HouseMenu
         private static readonly float[] HudSaidUntil = new float[8];
 
         /// <summary>
+        /// True while that player's own game controls are on: the game's PlayerControllerInputManager
+        /// .IsGameplayInputEnabled(), the same check the costume powers use. True if it can't be read.
+        /// </summary>
+        internal static bool GameControlsOn(int player)
+        {
+            List<object> locals = GameReflection.LocalPlayerControllers();
+            if (player < 0 || player >= locals.Count) return true;
+            object on = GameReflection.Call(GameReflection.InputManagerOf(locals[player]), "IsGameplayInputEnabled");
+            return !(on is bool) || (bool)on;
+        }
+
+        /// <summary>
         /// Paints the thing in front of that player with their next color, by giving it a plain material in that
         /// color. (Setting the color on the game's own materials changed nothing on screen in test 2026-11-22: its
         /// shaders don't use the usual color properties.) The plain color replaces any texture.
@@ -104,13 +120,37 @@ namespace WobblyMods.HouseMenu
                 // The thing's renderers: on its physics body, or the first parent that has anything to see.
                 Transform root = hit.attachedRigidbody != null ? hit.attachedRigidbody.transform : hit.transform;
                 Renderer[] renderers = root.GetComponentsInChildren<Renderer>();
+                bool climbed = false;
                 for (int i = 0; i < 4 && renderers.Length == 0 && root.parent != null; i++)
                 {
                     root = root.parent;
                     renderers = root.GetComponentsInChildren<Renderer>();
+                    climbed = true;
                 }
                 if (renderers.Length == 0) return Said(player, "paint", hit.name + " has nothing to paint (" + how + ")");
                 if (renderers.Length > 150) return Said(player, "paint", root.name + " is too big to paint, " + renderers.Length + " parts (" + how + ")");
+
+                // A Wobbly is only painted when the brush points at that Wobbly: painting a car must not paint the
+                // people sitting in it (their faces and colors would be gone), and painting a Wobbly paints only it.
+                Type character = GameReflection.FindType("PlayerCharacter");
+                Component hitWobbly = character != null ? hit.GetComponentInParent(character) : null;
+
+                // The part that was hit had nothing to see, so a parent is being painted instead. That parent can be a
+                // whole room or house (a wall's collider with the meshes elsewhere): too big, leave it alone.
+                // (Not for a Wobbly: only that Wobbly is painted anyway, and its mesh reports a far bigger box than it is.)
+                if (climbed && hitWobbly == null)
+                {
+                    Bounds size = new Bounds();
+                    bool any = false;
+                    foreach (Renderer r in renderers)
+                    {
+                        if (r is ParticleSystemRenderer || !r.enabled) continue;
+                        if (character != null && r.GetComponentInParent(character) != hitWobbly) continue;
+                        if (!any) { size = r.bounds; any = true; } else size.Encapsulate(r.bounds);
+                    }
+                    float longest = Mathf.Max(size.size.x, Mathf.Max(size.size.y, size.size.z));
+                    if (longest > MaxPaintClimbSize) return Said(player, "paint", root.name + " is too big to paint, " + longest.ToString("0") + " m across (" + how + ")");
+                }
 
                 Color color = NextPaint(player);
                 Material paint = PaintMaterial(color);
@@ -119,6 +159,7 @@ namespace WobblyMods.HouseMenu
                 foreach (Renderer r in renderers)
                 {
                     if (r is ParticleSystemRenderer || !r.enabled) continue;
+                    if (character != null && r.GetComponentInParent(character) != hitWobbly) continue;
                     Material[] old = r.sharedMaterials;
                     if (old.Length == 0) continue;
                     var now = new Material[old.Length];
@@ -142,18 +183,27 @@ namespace WobblyMods.HouseMenu
             }
         }
 
+        private const float MaxPaintClimbSize = 12f; // as "Copy this": bigger than this is a room or a building
+
         private static readonly Dictionary<Color, Material> PaintMaterials = new Dictionary<Color, Material>();
 
-        private static Material PaintMaterial(Color color)
+        /// <summary>The one plain material for that color, shared by everything painted with it. Never change it: swap it.</summary>
+        internal static Material PaintMaterial(Color color)
         {
             Material m;
             if (!PaintMaterials.TryGetValue(color, out m) || m == null)
             {
-                m = TankMaterials.Solid(color);
+                m = TankMaterials.Solid(color); // a fresh material of our own (not one of the shared ones)
                 m.name = "Wobbly paint";
                 PaintMaterials[color] = m;
             }
             return m;
+        }
+
+        /// <summary>True for one of the paint materials above.</summary>
+        internal static bool IsPaint(Material material)
+        {
+            return material != null && PaintMaterials.ContainsValue(material);
         }
 
         // ---------- Bubble gun ----------
@@ -169,8 +219,10 @@ namespace WobblyMods.HouseMenu
                 if (bodies.Count == 0) return Said(player, "bubble", hit.name + " is stuck down (" + how + ")");
                 if (FloatBubble.Holds(bodies[0])) return Said(player, "bubble", "already in a bubble");
 
+                Type character = GameReflection.FindType("PlayerCharacter");
+                bool wobbly = character != null && hit.GetComponentInParent(character) != null;
                 var go = new GameObject("Wobbly bubble");
-                go.AddComponent<FloatBubble>().Begin(bodies);
+                go.AddComponent<FloatBubble>().Begin(bodies, wobbly);
                 return Said(player, "bubble", "bubbled " + bodies[0].transform.root.name + ", " + bodies.Count + " bodies (" + how + ")");
             }
             catch (Exception e)
@@ -215,6 +267,7 @@ namespace WobblyMods.HouseMenu
             foreach (Collider c in near)
             {
                 if (c == null || c.isTrigger || !Usable(c, needBody)) continue;
+                if (needBody && FloatBubble.Holds(c.attachedRigidbody)) continue; // already floating: take the next thing
                 if (me != null && character != null && c.GetComponentInParent(character) == me) continue;
                 if (c.GetComponentInParent<FloatBubble>() != null || c.GetComponentInParent<Follower>() != null) continue;
                 Vector3 to = c.bounds.center - cam.transform.position;
@@ -255,6 +308,7 @@ namespace WobblyMods.HouseMenu
         private static PhysicMaterial _grippy;
 
         private static int _swarmCount = 50;
+        private const int MaxSwarmFish = 300; // in the world at once, however many times the tile is pressed
 
         public static void Init(float swarmFishLength, int swarmCount)
         {
@@ -333,11 +387,12 @@ namespace WobblyMods.HouseMenu
                 float gap = _swarmLength * 1.4f;
                 var rng = new System.Random();
                 int made = 0;
+                var parts = WobblyMods.Core.Shapes.RedtailModel.BuildSimple(); // every fish is the same shape: work it out once
                 for (int i = 0; i < _swarmCount; i++)
                 {
                     int x = i % 5, z = (i / 5) % 5, y = i / 25;
                     Vector3 at = position + rotation * new Vector3((x - 2) * gap, 0.4f + y * gap, (z - 2) * gap);
-                    GameObject fish = ShapeModels.Build("Swarm redtail", WobblyMods.Core.Shapes.RedtailModel.BuildSimple());
+                    GameObject fish = ShapeModels.Build("Swarm redtail", parts);
                     fish.name = "Little redtail";
                     fish.transform.localScale = Vector3.one * _swarmLength;
                     fish.transform.SetPositionAndRotation(at, Quaternion.Euler(0f, (float)rng.NextDouble() * 360f, 0f));
@@ -355,6 +410,13 @@ namespace WobblyMods.HouseMenu
                     made++;
                 }
                 SwarmFish.RemoveAll(f => f == null);
+                // Each press adds to the pile. Past about 300 the game slows to a crawl, so the oldest swim home.
+                int tooMany = SwarmFish.Count - MaxSwarmFish;
+                if (tooMany > 0)
+                {
+                    for (int i = 0; i < tooMany; i++) UnityEngine.Object.Destroy(SwarmFish[i]);
+                    SwarmFish.RemoveRange(0, tooMany);
+                }
                 Plugin.Log.LogInfo("Fun: player " + (player + 1) + " catfish swarm: made " + made + " fish, " + _swarmLength.ToString("0.00") +
                                    " m long, at " + position.ToString("0.0") + " (" + SwarmFish.Count + " in the world).");
                 return made + " little catfish! Scoop them up.";
@@ -508,6 +570,9 @@ namespace WobblyMods.HouseMenu
         private readonly List<Rigidbody> _bodies = new List<Rigidbody>();
         private readonly List<bool> _hadGravity = new List<bool>();
         private readonly List<bool> _wasKinematic = new List<bool>();
+        private readonly List<Vector3> _wasAt = new List<Vector3>();          // where it sat on its parent
+        private readonly List<Quaternion> _wasTurned = new List<Quaternion>();
+        private Rigidbody _staysLoose; // the car's or prop's main body: left loose after the pop so it can drop
         private Transform _ball;
         private float _popAt;
         private float _radius;
@@ -517,14 +582,21 @@ namespace WobblyMods.HouseMenu
             return Held.Contains(body);
         }
 
-        public void Begin(List<Rigidbody> bodies)
+        /// <summary>wobbly = the bodies are one Wobbly's (then none of them is a "main body" to leave loose).</summary>
+        public void Begin(List<Rigidbody> bodies, bool wobbly)
         {
             Bounds b = new Bounds(bodies[0].worldCenterOfMass, Vector3.zero);
+            _staysLoose = wobbly ? null : bodies[0];
             foreach (Rigidbody rb in bodies)
             {
+                // Already floating in another bubble (someone sitting in this car): that bubble has it, and remembers
+                // how to put it back. Taking it here too would remember it as weightless, and leave it so.
+                if (Held.Contains(rb)) continue;
                 _bodies.Add(rb);
                 _hadGravity.Add(rb.useGravity);
                 _wasKinematic.Add(rb.isKinematic);
+                _wasAt.Add(rb.transform.localPosition);
+                _wasTurned.Add(rb.transform.localRotation);
                 rb.isKinematic = false; // a held-still body can't float
                 rb.useGravity = false;
                 Held.Add(rb);
@@ -556,6 +628,10 @@ namespace WobblyMods.HouseMenu
             foreach (Rigidbody rb in _bodies)
             {
                 if (rb == null) continue;
+                // If the game takes it back mid-float (holds it still again, or switches its weight back on), it
+                // would stop rising inside the bubble: keep it floating until the pop.
+                if (rb.isKinematic) rb.isKinematic = false;
+                if (rb.useGravity) rb.useGravity = false;
                 // Drift up, slower near the end, and calm any spinning: a gentle float, not a launch.
                 Vector3 want = new Vector3(rb.velocity.x * 0.96f, left > 1.5f ? 1.6f : 0.3f, rb.velocity.z * 0.96f);
                 rb.velocity = Vector3.Lerp(rb.velocity, want, 0.12f);
@@ -584,11 +660,25 @@ namespace WobblyMods.HouseMenu
         {
             for (int i = 0; i < _bodies.Count; i++)
             {
-                if (_bodies[i] == null) continue;
-                _bodies[i].useGravity = _hadGravity[i];
-                // Things the game was holding still stay loose after the pop so they can drop; the game takes them
-                // back when it next settles them.
-                Held.Remove(_bodies[i]);
+                Rigidbody rb = _bodies[i];
+                Held.Remove(rb); // also when it no longer exists, so the list can't fill up with dead things
+                if (rb == null) continue;
+                rb.useGravity = _hadGravity[i];
+                // The main body of a car or prop the game was holding still stays loose after the pop so it can drop;
+                // the game takes it back when it next settles it. Every other part that was held still (helper parts
+                // inside a car or a Wobbly, someone held in a seat) goes back to being held, in its old place on its
+                // parent: left loose, it would fall off and stay broken.
+                if (_wasKinematic[i] && rb != _staysLoose)
+                {
+                    rb.isKinematic = true;
+                    // Back to its old place ON ITS PARENT (which floated along with it). A part with no parent is
+                    // left where it now is: its old place would be back on the ground where the bubble began.
+                    if (rb.transform.parent != null)
+                    {
+                        rb.transform.localPosition = _wasAt[i];
+                        rb.transform.localRotation = _wasTurned[i];
+                    }
+                }
             }
             _bodies.Clear();
         }

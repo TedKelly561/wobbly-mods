@@ -151,7 +151,7 @@ namespace WobblyMods.HouseMenu
             p.transform.SetParent(parent, false);
             p.transform.localPosition = pos;
             p.transform.localScale = scale;
-            p.GetComponent<Renderer>().material = TankMaterials.Solid(color);
+            p.GetComponent<Renderer>().sharedMaterial = TankMaterials.Solid(color); // shared; a glow ball takes its own copy in Glow
             return p.transform;
         }
     }

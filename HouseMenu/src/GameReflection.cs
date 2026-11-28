@@ -19,12 +19,57 @@ namespace WobblyMods.HouseMenu
 
         private static readonly Dictionary<string, Type> TypeCache = new Dictionary<string, Type>();
 
+        // Looking a method up by name is slow and makes garbage, and some callers ask every frame (followers, the
+        // tool crosshair, costume powers). A class's methods never change while the game runs, so each answer
+        // (found or not) is kept, by class, name and number of arguments.
+        private struct MethodKey : IEquatable<MethodKey>
+        {
+            public Type Type;
+            public string Name;
+            public int Arguments;
+
+            public bool Equals(MethodKey other)
+            {
+                return Type == other.Type && Arguments == other.Arguments && Name == other.Name;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is MethodKey && Equals((MethodKey)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return Type.GetHashCode() ^ (Name.GetHashCode() * 31) ^ Arguments;
+            }
+        }
+
+        private static readonly Dictionary<MethodKey, MethodInfo> MethodCache = new Dictionary<MethodKey, MethodInfo>();
+
+        /// <summary>The first method with that name and that many arguments (as before, just remembered), or null.</summary>
+        private static MethodInfo FindMethod(Type type, string method, int arguments)
+        {
+            var key = new MethodKey { Type = type, Name = method, Arguments = arguments };
+            MethodInfo m;
+            if (MethodCache.TryGetValue(key, out m)) return m;
+            m = type.GetMethods(Any).FirstOrDefault(x => x.Name == method && x.GetParameters().Length == arguments);
+            MethodCache[key] = m;
+            return m;
+        }
+
+        // The local players are asked for many times in one frame; the game is only asked once per frame.
+        private static List<object> _locals;
+        private static int _localsFrame = -1;
+
         /// <summary>
         /// The game's local player controllers in split-screen order, or an empty list.
         /// GameInstance.Instance.GetLocalPlayerControllers() (CONFIRMED in research).
         /// </summary>
         public static List<object> LocalPlayerControllers()
         {
+            int frame = UnityEngine.Time.frameCount;
+            if (_locals != null && _localsFrame == frame) return _locals;
+
             var result = new List<object>();
             object gameInstance = GetStatic("GameInstance", "Instance");
             IEnumerable locals = Call(gameInstance, "GetLocalPlayerControllers") as IEnumerable;
@@ -35,6 +80,8 @@ namespace WobblyMods.HouseMenu
                     if (c != null) result.Add(c);
                 }
             }
+            _locals = result;
+            _localsFrame = frame;
             return result;
         }
 
@@ -79,8 +126,7 @@ namespace WobblyMods.HouseMenu
             if (target == null) return false;
             try
             {
-                MethodInfo m = target.GetType().GetMethods(Any)
-                    .FirstOrDefault(x => x.Name == method && x.GetParameters().Length == args.Length);
+                MethodInfo m = FindMethod(target.GetType(), method, args.Length);
                 if (m == null) return false;
                 m.Invoke(m.IsStatic ? null : target, args);
                 return true;
@@ -126,8 +172,7 @@ namespace WobblyMods.HouseMenu
             if (target == null) return null;
             try
             {
-                MethodInfo m = target.GetType().GetMethods(Any)
-                    .FirstOrDefault(x => x.Name == method && x.GetParameters().Length == 0);
+                MethodInfo m = FindMethod(target.GetType(), method, 0);
                 return m == null ? null : m.Invoke(m.IsStatic ? null : target, null);
             }
             catch (Exception)

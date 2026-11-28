@@ -146,6 +146,8 @@ namespace WobblyMods.HouseMenu
                 // A fun tool (bubble gun, paint) is in this player's hands: tap RB shoots it, with the menu closed.
                 if (pair.Value.QuickPlaceTapped && menuClosed && Fun.HasTool(pair.Key))
                 {
+                    // In one of the game's own screens RB belongs to the game: stay quiet (no shot, no pop).
+                    if (!Fun.GameControlsOn(pair.Key)) continue;
                     string shot = Fun.Fire(pair.Key);
                     Log.LogInfo("Player " + (pair.Key + 1) + " fun tool: " + shot);
                     MenuSounds.Play(MenuSound.Pop);

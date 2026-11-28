@@ -178,11 +178,15 @@ namespace WobblyMods.HouseMenu
                 if (buildingAt >= 0f && hit.distance - buildingAt > LookPast) break;
 
                 GameObject root = PickRoot(hit.collider);
-                if (root != null) return root;
+                // Scenery glued into the building can't be copied. It is looked past like the building itself (as it
+                // always was, when its size was measured wrongly as building-sized), but with the right words.
+                bool glued = root != null && Glued(root);
+                if (root != null && !glued) return root;
                 if (buildingAt < 0f)
                 {
                     buildingAt = hit.distance;
-                    reason = "Too big to copy: that's a whole building! Point the + at one thing.";
+                    reason = glued ? "That one is glued into the building. Try a different one."
+                                   : "Too big to copy: that's a whole building! Point the + at one thing.";
                 }
             }
             if (buildingAt >= 0f) return null;
@@ -201,7 +205,7 @@ namespace WobblyMods.HouseMenu
                 float angle = Vector3.Angle(look, to);
                 if (angle >= bestAngle) continue;
                 GameObject root = PickRoot(c);
-                if (root == null) continue;
+                if (root == null || Glued(root)) continue;
                 RaycastHit seen;
                 if (Physics.Raycast(eye, to.normalized, out seen, to.magnitude + 0.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore) &&
                     !seen.collider.transform.IsChildOf(root.transform) &&
@@ -212,26 +216,64 @@ namespace WobblyMods.HouseMenu
             return best;
         }
 
+        // Working out "the whole thing" means measuring every mesh under it and under its parents, which is slow, and
+        // the crosshair asks a few times a second for every player holding the tool. Within one frame nothing moves,
+        // so each answer is kept until the next frame (many colliders belong to the same thing).
+        private static readonly Dictionary<Transform, GameObject> RootsOfBodies = new Dictionary<Transform, GameObject>();
+        private static readonly Dictionary<Transform, GameObject> RootsOfStatics = new Dictionary<Transform, GameObject>();
+        private static int _rootsFrame = -1;
+
         private static GameObject PickRoot(Collider hit)
         {
-            Transform start = hit.attachedRigidbody != null ? hit.attachedRigidbody.transform : hit.transform;
+            if (_rootsFrame != Time.frameCount)
+            {
+                _rootsFrame = Time.frameCount;
+                RootsOfBodies.Clear();
+                RootsOfStatics.Clear();
+            }
+            bool body = hit.attachedRigidbody != null;
+            Transform from = body ? hit.attachedRigidbody.transform : hit.transform;
+            Dictionary<Transform, GameObject> known = body ? RootsOfBodies : RootsOfStatics;
+            GameObject root;
+            if (!known.TryGetValue(from, out root))
+            {
+                root = FindRoot(from, body);
+                known[from] = root;
+            }
+            return root;
+        }
+
+        private static GameObject FindRoot(Transform start, bool body)
+        {
             // Nothing to see here (a "Collider" child, or a group whose meshes are in a sibling): climb a little.
             for (int i = 0; i < 4 && start != null && !Sized(start.gameObject); i++) start = start.parent;
-            if (start == null || !FurnitureSized(start.gameObject)) return null;
-            if (hit.attachedRigidbody != null) return start.gameObject;
+            Bounds mine;
+            if (start == null || !FurnitureSized(start.gameObject, out mine)) return null;
+            if (body) return start.gameObject;
 
             // A static prop: climb only while the parent is still the same object (hardly any bigger).
-            Bounds mine;
-            MeshBounds(start.gameObject, false, out mine);
             for (Transform up = start.parent; up != null; up = up.parent)
             {
                 Bounds theirs;
-                if (!FurnitureSized(up.gameObject) || !MeshBounds(up.gameObject, false, out theirs)) break;
+                if (!FurnitureSized(up.gameObject, out theirs)) break;
                 if (theirs.size.magnitude > mine.size.magnitude * 1.25f + 0.2f) break;
                 start = up;
                 mine = theirs;
             }
             return start.gameObject;
+        }
+
+        /// <summary>True if every mesh in it is glued into the scenery's combined mesh, so there is nothing to take out.</summary>
+        private static bool Glued(GameObject go)
+        {
+            bool any = false;
+            foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+            {
+                if (r is ParticleSystemRenderer || MeshOf(r) == null) continue;
+                if (!r.isPartOfStaticBatch) return false;
+                any = true;
+            }
+            return any;
         }
 
         private static bool Sized(GameObject go)
@@ -240,11 +282,13 @@ namespace WobblyMods.HouseMenu
             return MeshBounds(go, false, out b);
         }
 
-        private static bool FurnitureSized(GameObject go)
+        /// <summary>Not a building: few enough parts and small enough. Also gives its size (one look at its parts, not two).</summary>
+        private static bool FurnitureSized(GameObject go, out Bounds b)
         {
-            if (go.GetComponentsInChildren<Renderer>().Length > MaxRenderers) return false;
-            Bounds b;
-            if (!MeshBounds(go, false, out b)) return false;
+            b = new Bounds();
+            Renderer[] renderers = go.GetComponentsInChildren<Renderer>();
+            if (renderers.Length > MaxRenderers) return false;
+            if (!MeshBounds(renderers, out b)) return false;
             return Mathf.Max(b.size.x, Mathf.Max(b.size.y, b.size.z)) <= MaxSize;
         }
 
@@ -388,11 +432,23 @@ namespace WobblyMods.HouseMenu
         /// </summary>
         private static bool MeshBounds(GameObject go, bool includeInactive, out Bounds bounds)
         {
+            return MeshBounds(go.GetComponentsInChildren<Renderer>(includeInactive), out bounds);
+        }
+
+        private static bool MeshBounds(Renderer[] renderers, out Bounds bounds)
+        {
             bounds = new Bounds();
             bool any = false;
-            foreach (Renderer r in go.GetComponentsInChildren<Renderer>(includeInactive))
+            foreach (Renderer r in renderers)
             {
                 if (r is ParticleSystemRenderer) continue;
+                if (r.isPartOfStaticBatch)
+                {
+                    // Glued into the scenery's big combined mesh: its "mesh" is now that whole combined mesh, so the
+                    // mesh's own box is the size of a building. The renderer still knows its own box in the world.
+                    if (!any) { bounds = r.bounds; any = true; } else bounds.Encapsulate(r.bounds);
+                    continue;
+                }
                 Mesh mesh = MeshOf(r);
                 if (mesh == null) continue;
                 Bounds local = mesh.bounds;
